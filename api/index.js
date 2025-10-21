@@ -1,24 +1,51 @@
 // Vercel serverless handler for Express app
-// Note: We use dynamic import to avoid top-level await issues in Vercel
+// Cache the app module to avoid re-importing on every request
+
+let cachedApp = null;
 
 export default async function handler(req, res) {
-  console.log('[Vercel] Handler invoked:', req.method, req.url);
+  console.log('[Vercel] Handler START:', req.method, req.url);
+  console.log('[Vercel] Environment:', {
+    nodeVersion: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    hasDatabase: !!process.env.DATABASE_URL,
+    vercel: process.env.VERCEL
+  });
   
   try {
-    // Lazy-load the Express app on each request (Vercel caches module between invocations)
-    const { default: app } = await import('../app.js');
-    console.log('[Vercel] App loaded, passing request to Express');
+    // Load app once and cache it
+    if (!cachedApp) {
+      console.log('[Vercel] Loading app.js for the first time...');
+      const appModule = await import('../app.js');
+      cachedApp = appModule.default;
+      console.log('[Vercel] App loaded successfully, type:', typeof cachedApp);
+    } else {
+      console.log('[Vercel] Using cached app');
+    }
     
-    // Let Express handle the request
-    return app(req, res);
+    if (typeof cachedApp !== 'function') {
+      throw new Error(`App is not a function, got: ${typeof cachedApp}`);
+    }
+    
+    console.log('[Vercel] Passing request to Express...');
+    return cachedApp(req, res);
+    
   } catch (error) {
-    console.error('[Vercel] Handler error:', error.message, error.stack);
+    console.error('[Vercel] CRASH:', {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      stack: error.stack
+    });
     
+    // Always return a response
     if (!res.headersSent) {
       res.status(500).json({ 
-        error: 'Server initialization failed', 
+        error: 'Function crashed', 
         message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        code: error.code,
+        type: error.name
       });
     }
   }

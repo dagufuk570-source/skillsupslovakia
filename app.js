@@ -1,15 +1,21 @@
+console.log('[app.js] Module loading START');
 import express from 'express';
+console.log('[app.js] express imported');
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+console.log('[app.js] dotenv imported');
 import multer from 'multer';
+console.log('[app.js] multer imported');
 import sharp from 'sharp';
+console.log('[app.js] sharp imported');
 import fsSync from 'fs';
 import crypto from 'crypto';
 import helmet from 'helmet';
 import nodemailer from 'nodemailer';
 import https from 'https';
 dotenv.config();
+console.log('[app.js] dotenv configured');
 
 let db = null;
 let useDb = true; // enforce DB-only
@@ -3693,5 +3699,6 @@ if (!isServerless) {
   }
 }
 
+console.log('[app.js] Module loading COMPLETE, exporting app');
 // Export the app for serverless platforms (Vercel, etc.)
 export default app;
