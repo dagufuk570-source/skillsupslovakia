@@ -3641,19 +3641,28 @@ app.get('/news/:slug', async (req, res) => {
   return res.render('page', { menu, page: { title: '', content: html, image_url: news.image_url || '' }, lang: res.locals.lang, slider: null, sectionHeader: sh, backLink: `/news?lang=${res.locals.lang}`, t: res.locals.t });
 });
 
-const server = app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+// In serverless environments (e.g., Vercel) we do NOT call listen();
+// instead, we export the Express app for the platform to handle requests.
+let server;
+const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+if (!isServerless) {
+  server = app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
 
-// Graceful shutdown handlers
-process.on('SIGTERM', () => {
-  try { server.close(() => process.exit(0)); } catch { process.exit(0); }
-});
-process.on('SIGINT', () => {
-  try { server.close(() => process.exit(0)); } catch { process.exit(0); }
-});
+  // Graceful shutdown handlers (only when we own the listener)
+  process.on('SIGTERM', () => {
+    try { server.close(() => process.exit(0)); } catch { process.exit(0); }
+  });
+  process.on('SIGINT', () => {
+    try { server.close(() => process.exit(0)); } catch { process.exit(0); }
+  });
 
-// Keep the process alive in terminals that auto-close when stdio ends
-if (process.stdin && typeof process.stdin.resume === 'function') {
-  try { process.stdin.resume(); } catch {}
+  // Keep the process alive in terminals that auto-close when stdio ends
+  if (process.stdin && typeof process.stdin.resume === 'function') {
+    try { process.stdin.resume(); } catch {}
+  }
 }
+
+// Export the app for serverless platforms (Vercel, etc.)
+export default app;
