@@ -76,7 +76,9 @@ This project is configured for Vercel serverless deployment:
 Set these in Project Settings > Environment Variables:
 
 - `DATABASE_URL`: PostgreSQL connection string (e.g., Supabase)
-  - Example: `postgresql://user:pass@db.xxx.supabase.co:5432/postgres`
+  - ⚠️ **IMPORTANT for Supabase:** Use the **Session Pooler** (port 6543), not Direct Connection (port 5432)
+  - Example: `postgresql://postgres.xxx:[password]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`
+  - Find in: Supabase Dashboard > Settings > Database > Connection Pooling > Connection string (Session mode)
 - `DATABASE_SSL=1` (optional; auto-detected for Supabase)
 - `ADMIN_USER`, `ADMIN_PASS` (optional; protect `/admin` with Basic Auth)
 - SMTP settings (optional; for contact form email):
@@ -84,6 +86,24 @@ Set these in Project Settings > Environment Variables:
   - `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`, `CONTACT_TO`
 - reCAPTCHA (optional; for contact form):
   - `RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET`
+
+### Why Session Pooler for Supabase?
+
+Serverless functions (Vercel, AWS Lambda) create new connections on every cold start. Without pooling:
+- ❌ Connection timeout errors
+- ❌ "Too many connections" errors
+- ❌ Slow performance
+
+**Solution:** Use Supabase's **Session Pooler** (port 6543) instead of Direct Connection (port 5432).
+
+### File uploads limitation
+
+⚠️ Vercel serverless has **read-only filesystem**. File uploads (`/admin` image uploads) will NOT work unless you integrate:
+- Vercel Blob Storage (recommended)
+- Cloudinary
+- AWS S3 / DigitalOcean Spaces
+
+For now, pre-existing images in `public/uploads/` (committed to git) will work.
 
 ### Deploy workflow
 

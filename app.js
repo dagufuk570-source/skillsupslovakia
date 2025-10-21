@@ -14,6 +14,8 @@ import crypto from 'crypto';
 import helmet from 'helmet';
 import nodemailer from 'nodemailer';
 import https from 'https';
+import { uploadFile, deleteFile } from './lib/storage.js';
+console.log('[app.js] storage imported');
 dotenv.config();
 console.log('[app.js] dotenv configured');
 
@@ -495,15 +497,11 @@ if(!fsSync.existsSync(uploadsDir)){
     }
   }
 }
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const base = path.basename(file.originalname, ext).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-    const stamp = Date.now();
-    cb(null, `${base}-${stamp}${ext}`);
-  }
-});
+
+// Multer: use memory storage (files as buffers) instead of disk
+// We'll handle actual storage (Blob or disk) manually via uploadFile()
+const storage = multer.memoryStorage();
+
 // Non-fatal image-only filter for galleries: skip non-image files silently
 const imageFilter = (req, file, cb) => {
   if(/^image\//.test(file.mimetype)) return cb(null, true);
@@ -522,30 +520,44 @@ const docFileFilter = (req, file, cb) => {
   return cb(new Error('Unsupported file type'));
 };
 const uploadImages = multer({ storage, fileFilter: imageFilter });
+const uploadFiles = multer({ storage, fileFilter: docFileFilter });
 
-// Optimize and resize uploaded raster images in-place to reduce size and standardize dimensions
-async function optimizeUploadedImage(absPath) {
+// Helper: Generate safe filename
+function generateFilename(originalname, prefix = '') {
+  const ext = path.extname(originalname).toLowerCase();
+  const base = path.basename(originalname, ext).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  const stamp = Date.now();
+  return prefix ? `${prefix}/${base}-${stamp}${ext}` : `${base}-${stamp}${ext}`;
+}
+
+// Optimize and resize image buffer, returns optimized buffer
+async function optimizeImageBuffer(buffer, maxWidth = 1600, maxHeight = 1200, quality = 80) {
   try {
-    const ext = path.extname(absPath).toLowerCase();
-    if (!['.jpg', '.jpeg', '.png', '.webp', '.avif'].includes(ext)) return;
-    let pipeline = sharp(absPath)
+    const metadata = await sharp(buffer).metadata();
+    const ext = metadata.format;
+    
+    if (!['jpeg', 'jpg', 'png', 'webp', 'avif'].includes(ext)) {
+      return buffer; // No optimization for unsupported formats
+    }
+    
+    let pipeline = sharp(buffer)
       .rotate() // honor EXIF orientation
-      .resize({ width: 1600, height: 1200, fit: 'inside', withoutEnlargement: true });
-    if (ext === '.jpg' || ext === '.jpeg') {
-      pipeline = pipeline.jpeg({ quality: 80, mozjpeg: true });
-    } else if (ext === '.png') {
+      .resize({ width: maxWidth, height: maxHeight, fit: 'inside', withoutEnlargement: true });
+    
+    if (ext === 'jpeg' || ext === 'jpg') {
+      pipeline = pipeline.jpeg({ quality, mozjpeg: true });
+    } else if (ext === 'png') {
       pipeline = pipeline.png({ compressionLevel: 8, adaptiveFiltering: true });
-    } else if (ext === '.webp') {
-      pipeline = pipeline.webp({ quality: 80 });
-    } else if (ext === '.avif') {
+    } else if (ext === 'webp') {
+      pipeline = pipeline.webp({ quality });
+    } else if (ext === 'avif') {
       pipeline = pipeline.avif({ quality: 50 });
     }
-    const tmp = absPath + '.opt';
-    await pipeline.toFile(tmp);
-    try { if (fsSync.existsSync(absPath)) fsSync.unlinkSync(absPath); } catch {}
-    fsSync.renameSync(tmp, absPath);
+    
+    return await pipeline.toBuffer();
   } catch (e) {
-    console.warn('optimizeUploadedImage: error, skipping', e?.message || e);
+    console.warn('[optimizeImageBuffer] Failed, using original:', e?.message);
+    return buffer;
   }
 }
 
@@ -581,21 +593,26 @@ const uploadTeam = multer({
 async function processTeamImage(buffer, originalname){
   const ext = '.jpg';
   const baseName = safeSlugFilename(path.basename(originalname || 'member', path.extname(originalname || 'member')), ext);
-  const outPath = path.join(teamUploadsDir, baseName);
-  const thumbName = baseName.replace(ext, `-thumb${ext}`);
-  const outThumb = path.join(teamUploadsDir, thumbName);
-  // Ensure square crop center and reasonable quality
-  await sharp(buffer)
+  
+  // Resize main photo (600x600)
+  const mainBuffer = await sharp(buffer)
     .resize(600, 600, { fit: 'cover', position: 'centre' })
     .jpeg({ quality: 82 })
-    .toFile(outPath);
-  await sharp(buffer)
+    .toBuffer();
+  
+  // Resize thumbnail (150x150)
+  const thumbBuffer = await sharp(buffer)
     .resize(150, 150, { fit: 'cover', position: 'centre' })
     .jpeg({ quality: 80 })
-    .toFile(outThumb);
+    .toBuffer();
+  
+  // Upload to storage (Blob or disk)
+  const photoUrl = await uploadFile(mainBuffer, `team/${baseName}`, 'image/jpeg');
+  const thumbUrl = await uploadFile(thumbBuffer, `team/${baseName.replace(ext, `-thumb${ext}`)}`, 'image/jpeg');
+  
   return {
-    photo_url: `/uploads/team/${baseName}`,
-    thumb_url: `/uploads/team/${thumbName}`
+    photo_url: photoUrl,
+    thumb_url: thumbUrl
   };
 }
 
@@ -617,7 +634,6 @@ app.use((err, req, res, next) => {
   }
   return next(err);
 });
-const uploadFiles = multer({ storage, fileFilter: docFileFilter });
 
 // Log whether admin auth is enabled
 const adminAuthEnabled = Boolean(process.env.ADMIN_USER && process.env.ADMIN_PASS);
@@ -1467,7 +1483,14 @@ app.post('/admin/documents', basicAuth, uploadFiles.single('file'), async (req,r
   const sort_order = parseInt(req.body.sort_order || '0', 10) || 0;
   const published = (req.body.published === 'on' || req.body.published === 'true');
   const file = req.file;
-  const file_url = file ? `/uploads/${file.filename}` : '';
+  
+  // Upload file to storage
+  let file_url = '';
+  if (file) {
+    const filename = generateFilename(file.originalname, 'documents');
+    file_url = await uploadFile(file.buffer, filename, file.mimetype);
+  }
+  
   const groupId = crypto.randomUUID();
   // Create one base record to attach group, then update titles by language
   const sourceLang = langs.find(l => titles[l]) || 'en';
@@ -1521,10 +1544,17 @@ app.post('/admin/documents/:id', basicAuth, uploadFiles.single('file'), async (r
   const sort_order = parseInt(req.body.sort_order || String(existing.sort_order || 0), 10) || (existing.sort_order || 0);
   const published = (req.body.published === 'on' || req.body.published === 'true');
   const file = req.file;
-  const newFileUrl = file ? `/uploads/${file.filename}` : existing.file_url;
-  // If file uploaded, propagate to all in group
-  if(file && typeof db.updateDocumentFileForGroup === 'function'){
-    await db.updateDocumentFileForGroup(groupId, newFileUrl);
+  
+  // Upload new file to storage
+  let newFileUrl = existing.file_url;
+  if (file) {
+    const filename = generateFilename(file.originalname, 'documents');
+    newFileUrl = await uploadFile(file.buffer, filename, file.mimetype);
+    
+    // If file uploaded, propagate to all in group
+    if(typeof db.updateDocumentFileForGroup === 'function'){
+      await db.updateDocumentFileForGroup(groupId, newFileUrl);
+    }
   }
   // Determine source language for autofill
   const sourceLang = langs.find(l => titles[l] || descriptions[l]) || null;
@@ -1666,11 +1696,18 @@ app.post('/admin/events', basicAuth, uploadImages.any(), async (req,res)=>{
   // Handle additional images for the last created event (representing the group)
   const filesArr = Array.isArray(req.files) ? req.files : [];
   const additionalFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
-  // Optimize uploaded additional images
-  try { await Promise.all(additionalFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
   const ownerId = createdByLang.en || createdByLang.sk || createdByLang.hu || Object.values(createdByLang).find(Boolean);
+  
   if(additionalFiles.length > 0 && ownerId) {
-    const imageUrls = additionalFiles.map(file => `/uploads/${file.filename}`);
+    // Upload images to storage (Blob or disk)
+    const imageUrls = [];
+    for (const file of additionalFiles) {
+      const optimized = await optimizeImageBuffer(file.buffer);
+      const filename = generateFilename(file.originalname, 'events');
+      const url = await uploadFile(optimized, filename, file.mimetype);
+      imageUrls.push(url);
+    }
+    
     await db.addAdditionalImages('event', ownerId, imageUrls);
     const lead = imageUrls[0];
     if(db.updateEventImageForGroup){
@@ -1750,10 +1787,17 @@ app.post('/admin/events/:id', basicAuth, uploadImages.any(), async (req,res)=>{
     const kept = existing.filter(img => !removeSet.has(Number(img.id)));
 
     const filesArr = Array.isArray(req.files) ? req.files : [];
-  const newFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
-  // Optimize newly uploaded images
-  try { await Promise.all(newFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
-    const newItems = newFiles.map((f, idx) => ({ image_url: `/uploads/${f.filename}`, alt_text: '', sort_order: kept.length + idx }));
+    const newFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+    
+    // Upload new files to storage
+    const newItems = [];
+    for (let idx = 0; idx < newFiles.length; idx++) {
+      const f = newFiles[idx];
+      const optimized = await optimizeImageBuffer(f.buffer);
+      const filename = generateFilename(f.originalname, 'events');
+      const url = await uploadFile(optimized, filename, f.mimetype);
+      newItems.push({ image_url: url, alt_text: '', sort_order: kept.length + idx });
+    }
 
     const finalItems = [
       ...kept.map((img, idx) => ({ image_url: img.image_url, alt_text: img.alt_text || '', sort_order: idx })),
@@ -1900,15 +1944,26 @@ app.post('/admin/themes', basicAuth, uploadImages.any(), async (req, res) => {
     const filesArr = Array.isArray(req.files) ? req.files : [];
     const coverFile = filesArr.find(f => f.fieldname === 'cover_image');
     const additionalFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+    
     if((coverFile || additionalFiles.length > 0) && lastThemeId) {
-  // Optimize uploaded additional & cover images
-  try { await Promise.all(additionalFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
-  if (coverFile) { try { await optimizeUploadedImage(path.join(uploadsDir, coverFile.filename)); } catch {} }
-  let imageUrls = additionalFiles.map(file => `/uploads/${file.filename}`);
+      let imageUrls = [];
+      
+      // Upload additional images
+      for (const file of additionalFiles) {
+        const optimized = await optimizeImageBuffer(file.buffer);
+        const filename = generateFilename(file.originalname, 'themes');
+        const url = await uploadFile(optimized, filename, file.mimetype);
+        imageUrls.push(url);
+      }
+      
+      // Upload cover image (prepend to list)
       if(coverFile){
-        const coverUrl = `/uploads/${coverFile.filename}`;
+        const optimized = await optimizeImageBuffer(coverFile.buffer);
+        const filename = generateFilename(coverFile.originalname, 'themes');
+        const coverUrl = await uploadFile(optimized, filename, coverFile.mimetype);
         imageUrls = [coverUrl, ...imageUrls];
       }
+      
       if(imageUrls.length){
         await db.addAdditionalImages('theme', lastThemeId, imageUrls);
         const lead = imageUrls[0];
@@ -1975,18 +2030,28 @@ app.post('/admin/themes/:id', basicAuth, uploadImages.any(), async (req,res)=>{
     const filesArr = Array.isArray(req.files) ? req.files : [];
     const newFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
     const coverFile = filesArr.find(f => f.fieldname === 'cover_image');
-  // Optimize newly uploaded additional & cover images
-  try { await Promise.all(newFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
-  if (coverFile) { try { await optimizeUploadedImage(path.join(uploadsDir, coverFile.filename)); } catch {} }
-  const newItemsRaw = newFiles.map((f, idx) => ({ image_url: `/uploads/${f.filename}`, alt_text: '', sort_order: kept.length + idx }));
+    
+    // Upload new files to storage
+    const newItemsRaw = [];
+    for (let idx = 0; idx < newFiles.length; idx++) {
+      const f = newFiles[idx];
+      const optimized = await optimizeImageBuffer(f.buffer);
+      const filename = generateFilename(f.originalname, 'themes');
+      const url = await uploadFile(optimized, filename, f.mimetype);
+      newItemsRaw.push({ image_url: url, alt_text: '', sort_order: kept.length + idx });
+    }
+    
     let finalItems = [
       ...kept.map((img, idx) => ({ image_url: img.image_url, alt_text: img.alt_text || '', sort_order: idx })),
       ...newItemsRaw
     ];
+    
     // If a new cover uploaded, put it first
     let coverUrl = null;
     if(coverFile){
-      coverUrl = `/uploads/${coverFile.filename}`;
+      const optimized = await optimizeImageBuffer(coverFile.buffer);
+      const filename = generateFilename(coverFile.originalname, 'themes');
+      coverUrl = await uploadFile(optimized, filename, coverFile.mimetype);
       finalItems = [{ image_url: coverUrl, alt_text: '', sort_order: 0 }, ...finalItems.map((it, i) => ({ ...it, sort_order: i+1 }))];
     }
 
@@ -2317,12 +2382,19 @@ app.post('/admin/news', basicAuth, uploadImages.any(), async (req,res)=>{
   }
     
     // Handle additional images for the last created news (representing the group)
-  const filesArr = Array.isArray(req.files) ? req.files : [];
-  const additionalFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+    const filesArr = Array.isArray(req.files) ? req.files : [];
+    const additionalFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+    
     if(additionalFiles.length > 0 && lastNewsId) {
-  // Optimize uploaded images
-  try { await Promise.all(additionalFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
-  const imageUrls = additionalFiles.map(file => `/uploads/${file.filename}`);
+      // Upload images to storage
+      const imageUrls = [];
+      for (const file of additionalFiles) {
+        const optimized = await optimizeImageBuffer(file.buffer);
+        const filename = generateFilename(file.originalname, 'news');
+        const url = await uploadFile(optimized, filename, file.mimetype);
+        imageUrls.push(url);
+      }
+      
       await db.addAdditionalImages('news', lastNewsId, imageUrls);
       const lead = imageUrls[0];
       if(db.updateNewsImageForGroup){
@@ -2379,11 +2451,18 @@ app.post('/admin/news/:id', basicAuth, uploadImages.any(), async (req,res)=>{
     const removeSet = new Set(removeIds.map(id => Number(id)));
     const kept = existing.filter(img => !removeSet.has(Number(img.id)));
 
-  const filesArr = Array.isArray(req.files) ? req.files : [];
-  const newFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
-  // Optimize uploaded images
-  try { await Promise.all(newFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
-  const newItems = newFiles.map((f, idx) => ({ image_url: `/uploads/${f.filename}`, alt_text: '', sort_order: kept.length + idx }));
+    const filesArr = Array.isArray(req.files) ? req.files : [];
+    const newFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+    
+    // Upload new images to storage
+    const newItems = [];
+    for (let idx = 0; idx < newFiles.length; idx++) {
+      const file = newFiles[idx];
+      const optimized = await optimizeImageBuffer(file.buffer);
+      const filename = generateFilename(file.originalname, 'news');
+      const url = await uploadFile(optimized, filename, file.mimetype);
+      newItems.push({ image_url: url, alt_text: '', sort_order: kept.length + idx });
+    }
 
     const finalItems = [
       ...kept.map((img, idx) => ({ image_url: img.image_url, alt_text: img.alt_text || '', sort_order: idx })),
@@ -2607,8 +2686,10 @@ app.post('/admin/settings/slider', basicAuth, uploadImages.any(), async (req, re
   for (const f of (req.files || [])){
     const fname = f.fieldname || '';
     if (fname === 'slider_bg_image' || fname === 'slider_bg_images' || fname === 'slider_bg_images[]'){
-      try { await optimizeUploadedImage(path.join(uploadsDir, f.filename)); } catch {}
-      uploaded.push(`/uploads/${f.filename}`);
+      const optimized = await optimizeImageBuffer(f.buffer);
+      const filename = generateFilename(f.originalname, 'slider');
+      const url = await uploadFile(optimized, filename, f.mimetype);
+      uploaded.push(url);
     }
   }
   if (uploaded.length){
@@ -2866,22 +2947,22 @@ app.post('/admin/pages/:slug', basicAuth, uploadImages.any(), async (req, res) =
   const filesArr = Array.isArray(req.files) ? req.files : [];
   const imageFile = filesArr.find(f => f.fieldname === 'image' && /^image\//.test(f.mimetype));
   if(imageFile){
-    image_url = `/uploads/${imageFile.filename}`;
-    // Optimize newly uploaded image
-    try { await optimizeUploadedImage(path.join(uploadsDir, imageFile.filename)); } catch {}
-    // If a new file uploaded, remove old local image
+    // Upload to storage
+    const optimized = await optimizeImageBuffer(imageFile.buffer);
+    const filename = generateFilename(imageFile.originalname, 'pages');
+    image_url = await uploadFile(optimized, filename, imageFile.mimetype);
+    
+    // If a new file uploaded, remove old image from storage
     const oldUrl = existingPage?.image_url;
-    if (oldUrl && typeof oldUrl === 'string' && oldUrl.startsWith('/uploads/')){
-      const p = path.join(__dirname, 'public', oldUrl.replace(/^\//, ''));
-      try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+    if (oldUrl && typeof oldUrl === 'string'){
+      try { await deleteFile(oldUrl); } catch {}
     }
   } else if(req.body.remove_image === '1') {
     image_url = null;
-    // If explicitly removed, delete old local file
+    // If explicitly removed, delete old file from storage
     const oldUrl = existingPage?.image_url;
-    if (oldUrl && typeof oldUrl === 'string' && oldUrl.startsWith('/uploads/')){
-      const p = path.join(__dirname, 'public', oldUrl.replace(/^\//, ''));
-      try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+    if (oldUrl && typeof oldUrl === 'string'){
+      try { await deleteFile(oldUrl); } catch {}
     }
   } // else undefined -> keep existing
   await db.upsertPage({ lang: res.locals.lang, slug, title, content, image_url });
@@ -2963,8 +3044,9 @@ app.post('/admin/pages/:slug/multi', basicAuth, uploadImages.any(), async (req,r
               const filesArr = Array.isArray(req.files) ? req.files : [];
               const file = filesArr.find(f => f.fieldname === `about_block_image_${i}_${l}` && /^image\//.test(f.mimetype));
               if (file){
-                image_url = `/uploads/${file.filename}`;
-                try { await optimizeUploadedImage(path.join(uploadsDir, file.filename)); } catch {}
+                const optimized = await optimizeImageBuffer(file.buffer);
+                const filename = generateFilename(file.originalname, 'pages');
+                image_url = await uploadFile(optimized, filename, file.mimetype);
               } else if (req.body[`about_block_remove_image_${i}_${l}`] === '1'){
                 image_url = '';
               }
@@ -2977,7 +3059,7 @@ app.post('/admin/pages/:slug/multi', basicAuth, uploadImages.any(), async (req,r
           const url = (typeof it.image_url === 'undefined') ? (ex ? ex.image_url : '') : it.image_url;
           return { image_url: url || '', alt_text: it.alt_text || '', sort_order: idx };
         });
-        // Unlink replaced/removed old files (EN only)
+        // Delete replaced/removed old files from storage (EN only)
         if (l === 'en'){
           try {
             for (let i=0;i<4;i++){
@@ -2986,9 +3068,8 @@ app.post('/admin/pages/:slug/multi', basicAuth, uploadImages.any(), async (req,r
               if(!ex || !ex.image_url) continue;
               const replaced = (typeof cur.image_url !== 'undefined' && cur.image_url && cur.image_url !== ex.image_url);
               const removed = (cur.image_url === '');
-              if ((replaced || removed) && ex.image_url.startsWith('/uploads/')){
-                const p = path.join(__dirname, 'public', ex.image_url.replace(/^\//, ''));
-                try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+              if (replaced || removed){
+                try { await deleteFile(ex.image_url); } catch {}
               }
             }
           } catch {}
