@@ -2268,12 +2268,32 @@ app.post('/admin/team/:id', basicAuth, uploadTeam.single('photo'), async (req,re
     const { linkedin, facebook, twitter } = body;
     const sort_order = Number.isInteger(parseInt(body.sort_order, 10)) ? parseInt(body.sort_order, 10) : 0;
     let photo_url = existing?.photo_url || null;
+    
+    // Handle photo removal
     if(body.remove_photo === '1'){
-      photo_url = null;
+      if(photo_url){
+        try {
+          await deleteFile(photo_url);
+          console.log('[team] Deleted photo:', photo_url);
+        } catch (err) {
+          console.warn('[team] Failed to delete photo:', err.message);
+        }
+      }
+      photo_url = '';
     }
+    
+    // Handle new photo upload
     if(req.file){
       try{
         const processed = await processTeamImage(req.file.buffer, req.file.originalname || name);
+        // Delete old photo if exists
+        if(photo_url && photo_url !== processed.photo_url){
+          try {
+            await deleteFile(photo_url);
+          } catch (err) {
+            console.warn('[team] Failed to delete old photo:', err.message);
+          }
+        }
         photo_url = processed.photo_url;
       }catch(e){
         const member = existing;
@@ -2318,10 +2338,14 @@ app.post('/admin/team/:id', basicAuth, uploadTeam.single('photo'), async (req,re
       }
     }
     // Propagate shared fields and photo to group
-    await db.updateTeamPhotoForGroup(groupId, photo_url);
+    console.log('[team] Updating photo for group:', groupId, photo_url);
+    await db.updateTeamPhotoForGroup(groupId, photo_url || '');
+    console.log('[team] Updating shared fields for group:', groupId);
     await db.updateTeamSharedForGroup(groupId, { name, linkedin, facebook, twitter, sort_order });
+    console.log('[team] Redirecting to list...');
     res.redirect(`/admin/team?lang=${res.locals.lang}&success=updated`);
   } catch (e) {
+    console.error('[team] Update error:', e);
     const member = await db.getTeamMember(req.params.id).catch(() => null);
     return res.status(500).render('admin-team-form', { lang: res.locals.lang, member, membersByLang: null, error: e?.message || 'Beklenmeyen bir hata oluştu.' });
   }
