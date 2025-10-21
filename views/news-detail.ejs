@@ -1,0 +1,109 @@
+<%- include('layout-charitize', { title: news.title, lang, menu, slider, t }) %>
+
+<div class="container-xxl py-5">
+  <div class="container">
+    <div class="row g-5">
+      <div class="col-lg-8">
+        <!-- News Header -->
+        <div class="mb-5 bg-white p-4 rounded">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="/?lang=<%= lang %>">Home</a></li>
+              <li class="breadcrumb-item"><a href="/news?lang=<%= lang %>">News</a></li>
+              <li class="breadcrumb-item active" aria-current="page"><%= news.title %></li>
+            </ol>
+          </nav>
+          <h1 class="display-5 mb-3"><%= news.title %></h1>
+          <% if(news.published_at) { %>
+            <p class="text-muted small mb-0">
+              <i class="fas fa-calendar me-1"></i>
+              <%= new Date(news.published_at).toLocaleDateString() %>
+            </p>
+          <% } %>
+        </div>
+
+        <!-- Lead Image -->
+        <% if(news.image_url) { %>
+          <div class="mb-5 bg-white p-4 rounded">
+            <img src="<%= news.image_url %>" class="img-fluid rounded shadow" alt="<%= news.title %>">
+          </div>
+        <% } %>
+
+        <!-- Article Content -->
+        <div class="mb-5">
+          <% if(news.summary) { %>
+            <p class="lead mb-4 text-dark" style="font-size:1.2rem;"> <%= news.summary %> </p>
+          <% } %>
+          <div class="content lead">
+            <% if(news.content) { %>
+              <%- news.content %>
+            <% } else { %>
+              <p class="text-muted">No content available.</p>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Gallery -->
+        <% if(additionalImages && additionalImages.length > 0) { %>
+          <div class="mb-5">
+            <h3 class="mb-4">Gallery</h3>
+            <div class="row" id="news-gallery">
+              <% additionalImages.forEach(function(image, index) { %>
+                <div class="col-lg-4 col-md-6 mb-4">
+                  <div class="card bg-light">
+                    <img src="<%= image.image_url %>" class="card-img-top" alt="Gallery image <%= index + 1 %>"
+                         style="height: 200px; object-fit: cover;"
+                         data-bs-toggle="modal"
+                         data-bs-target="#imageModal<%= index %>"
+                         role="button">
+                  </div>
+                </div>
+
+                <!-- Modal for each image -->
+                <div class="modal fade" id="imageModal<%= index %>" tabindex="-1" aria-labelledby="imageModalLabel<%= index %>" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="imageModalLabel<%= index %>">Gallery Image <%= index + 1 %></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body text-center">
+                        <img src="<%= image.image_url %>" class="img-fluid" alt="Gallery image <%= index + 1 %>">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <div class="bg-light p-4 rounded">
+          <h4 class="mb-4">Article Info</h4>
+          <% if(news.published_at) { %>
+            <div class="mb-3">
+              <strong><i class="fas fa-calendar me-2 text-primary"></i>Published:</strong>
+              <div class="ms-4"><%= new Date(news.published_at).toLocaleDateString() %></div>
+            </div>
+          <% } %>
+          <% if(news.created_at) { %>
+            <div class="mb-3">
+              <strong><i class="fas fa-plus-circle me-2 text-primary"></i>Created:</strong>
+              <div class="ms-4"><%= new Date(news.created_at).toLocaleDateString() %></div>
+            </div>
+          <% } %>
+          <div class="d-grid gap-2 mt-4">
+            <a href="/news?lang=<%= lang %>" class="btn btn-outline-primary">
+              <i class="fas fa-arrow-left me-2"></i>Back to News
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('layout-charitize-bottom') %>

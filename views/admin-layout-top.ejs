@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title || 'Admin' %> - SkillsUp Slovakia Admin</title>
+    
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Open+Sans&display=swap" rel="stylesheet">
+    
+    <!-- Icon Font Stylesheet -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Libraries Stylesheet -->
+    <link href="/lib/animate/animate.min.css" rel="stylesheet">
+    
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Template Stylesheet -->
+    <link href="/css/style.css" rel="stylesheet">
+  <!-- Admin Responsive Stylesheet -->
+  <link href="/css/admin-responsive.css" rel="stylesheet">
+    
+    <style>
+      .admin-shell { 
+        min-height: 100vh; 
+        display: flex !important;
+      }
+      .admin-sidebar { 
+        width: 280px; 
+        min-width: 280px;
+        background: #2c3e50 !important; 
+        flex-shrink: 0;
+        position: fixed;
+        height: 100vh;
+        z-index: 1000;
+        overflow-y: auto;
+      }
+      .admin-main {
+        flex: 1;
+        margin-left: 280px;
+        max-width: calc(100vw - 280px);
+      }
+      @media (max-width: 991.98px) { 
+        .admin-sidebar { 
+          width: 100%; 
+          position: static; 
+        }
+        .admin-main {
+          margin-left: 0;
+          max-width: 100%;
+        }
+      }
+      .sidebar-sticky { position: sticky; top: 0; max-height: 100vh; overflow-y: auto; }
+      .admin-sidebar .nav-link { 
+        color: rgba(255,255,255,0.8); 
+        border-radius: 8px; 
+        margin: 2px 8px;
+        transition: all 0.3s ease;
+      }
+      .admin-sidebar .nav-link:hover { 
+        background: rgba(255,255,255,0.1); 
+        color: white; 
+        transform: translateX(2px);
+      }
+      .admin-sidebar .nav-link.active { 
+        background: #3498db; 
+        color: white; 
+        font-weight: 600; 
+        transform: translateX(2px);
+      }
+      .admin-brand { 
+        color: #3498db !important; 
+        font-family: 'Josefin Sans', sans-serif; 
+        font-weight: 700; 
+      }
+      .admin-content { background: #f8f9fa; }
+      .card { border: none; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); }
+      
+      /* Make content area a bit smaller */
+      .container-fluid {
+        max-width: 1400px;
+        padding-left: 2rem;
+        padding-right: 2rem;
+      }
+    </style>
+  </head>
+  <body class="admin-content">
+    <div class="admin-shell">
+      <!-- Sidebar toggle button for mobile -->
+      <button class="admin-sidebar-toggle d-lg-none" type="button" aria-label="Toggle menu" onclick="document.body.classList.toggle('admin-sidebar-open')">
+        <i class="fas fa-bars"></i>
+      </button>
+      <aside class="admin-sidebar">
+        <div class="sidebar-sticky p-3">
+          <div class="text-center mb-4">
+            <a class="admin-brand text-decoration-none display-6" href="/admin">
+              <i class="fas fa-cogs me-2"></i>Admin
+            </a>
+            <div class="mt-2">
+              <span class="badge <%= useDb ? 'bg-success' : 'bg-warning' %>">
+                <i class="fas fa-<%= useDb ? 'database' : 'file' %> me-1"></i>
+                <%= useDb ? 'DB mode' : 'File mode' %>
+              </span>
+            </div>
+          </div>
+          <nav class="nav flex-column">
+            <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/admin">
+              <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            </a>
+            <a class="nav-link <%= active === 'themes' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/themes' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-tags me-2"></i>Themes
+            </a>
+            <a class="nav-link <%= active === 'events' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/events' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-calendar-alt me-2"></i>Events
+            </a>
+            <a class="nav-link <%= active === 'team' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/team' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-users me-2"></i>Our Team
+            </a>
+            <a class="nav-link <%= active === 'news' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/news' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-newspaper me-2"></i>News
+            </a>
+            <a class="nav-link <%= active === 'documents' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/documents' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-file-alt me-2"></i>Documents
+            </a>
+            <a class="nav-link <%= active === 'focus-areas' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/focus-areas?lang=' + lang) : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-bullseye me-2"></i>Focus Areas
+            </a>
+            <div class="ms-2 mt-2 text-white-50 small">Settings</div>
+            <a class="nav-link <%= active === 'settings-slider' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/settings/slider?lang=' + lang) : '#' %>">
+              <i class="fas fa-sliders-h me-2"></i>Slider
+            </a>
+            <a class="nav-link <%= active === 'settings-contact' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/settings/contact?lang=' + lang) : '#' %>">
+              <i class="fas fa-address-book me-2"></i>Contact
+            </a>
+            <a class="nav-link <%= active === 'settings-gdpr' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/settings/gdpr?lang=' + lang) : '#' %>">
+              <i class="fas fa-user-shield me-2"></i>GDPR
+            </a>
+            <a class="nav-link <%= active === 'settings-stats' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/settings/stats?lang=' + lang) : '#' %>">
+              <i class="fas fa-chart-line me-2"></i>Stats / Counters
+            </a>
+            <!-- Focus Area Columns settings removed (columns are fixed) -->
+            <div class="ms-2 mt-3 text-white-50 small">Pages</div>
+            <a class="nav-link <%= active === 'page-home' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/pages/home?lang=' + lang) : '#' %>">
+              <i class="fas fa-home me-2"></i>Home
+            </a>
+            <a class="nav-link <%= active === 'page-about' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/pages/about-us?lang=' + lang) : '#' %>">
+              <i class="fas fa-info-circle me-2"></i>About Us
+            </a>
+            <!-- Old Focus Areas page link removed to avoid confusion; use the main Focus Areas (Data) link above -->
+            <hr class="sidebar-divider" style="border-color: rgba(255,255,255,0.2);">
+            <a class="nav-link" href="/?lang=en" target="_blank">
+              <i class="fas fa-external-link-alt me-2"></i>View Site
+            </a>
+          </nav>
+        </div>
+      </aside>
+      <main class="admin-main">
+        <!-- Top Header -->
+        <div class="bg-white shadow-sm border-bottom">
+          <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center py-3">
+              <div>
+                <h1 class="h4 mb-0 text-primary"><%= title || 'Admin' %></h1>
+                <small class="text-muted">SkillsUp Slovakia Administration</small>
+              </div>
+              <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-info">
+                  <i class="fas fa-globe me-1"></i>Multi-Language Content
+                </span>
+                <a class="btn btn-sm btn-outline-secondary" href="/?lang=en" target="_blank">
+                  <i class="fas fa-external-link-alt me-1"></i>View Site
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Content Area -->
+        <div class="container-fluid py-4">
+          <% if(!useDb){ %>
+            <div class="alert alert-warning d-flex align-items-center" role="alert">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <div>
+                <strong>Database Required:</strong> Events/Team management require the PostgreSQL backend. Start your DB and set DATABASE_URL, then restart the app.
+              </div>
+            </div>
+          <% } %>
+          <!-- page content starts -->

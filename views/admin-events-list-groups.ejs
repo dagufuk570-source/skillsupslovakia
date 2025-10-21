@@ -1,0 +1,73 @@
+<%- include('admin-layout-top', { lang }) %>
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Events › Groups (All Languages)</h2>
+    <div>
+      <a href="/admin/events?lang=<%= lang %>" class="btn btn-secondary btn-sm">Back to Events</a>
+    </div>
+  </div>
+
+  <p class="text-muted">Use this page to see all event variants across languages grouped together. You can delete unwanted language variants that don't appear in the regular list.</p>
+
+  <% if (success) { %>
+    <div class="alert alert-success"><%= success %></div>
+  <% } %>
+
+  <% if (!grouped || !grouped.length) { %>
+    <div class="alert alert-info">No events found.</div>
+  <% } %>
+
+  <div class="accordion" id="groupsAccordion">
+    <% (grouped || []).forEach(function(group, gi){ %>
+      <div class="accordion-item mb-2">
+        <h2 class="accordion-header" id="heading-<%= gi %>">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<%= gi %>" aria-expanded="false" aria-controls="collapse-<%= gi %>">
+            Group: <code class="ms-2"><%= (group.group_id || '').toString() %></code>
+          </button>
+        </h2>
+        <div id="collapse-<%= gi %>" class="accordion-collapse collapse" aria-labelledby="heading-<%= gi %>" data-bs-parent="#groupsAccordion">
+          <div class="accordion-body">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Lang</th>
+                    <th>Title</th>
+                    <th>Date</th>
+                    <th>Location</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% (group.items || []).forEach(function(ev){ %>
+                    <tr>
+                      <td><code><%= ev.id %></code></td>
+                      <td><strong><%= (ev.lang || '').toUpperCase() %></strong></td>
+                      <td><%= ev.title %></td>
+                      <td><%= ev.event_date ? new Date(ev.event_date).toLocaleDateString() : '' %></td>
+                      <td><%= ev.location || '' %></td>
+                      <td class="text-nowrap">
+                        <a class="btn btn-sm btn-outline-primary" href="/admin/events/<%= ev.id %>/edit?lang=<%= lang %>">Edit</a>
+                        <form method="post" action="/admin/events/<%= ev.id %>/delete?lang=<%= lang %>" class="d-inline" onsubmit="return confirm('Delete this variant (ID <%= ev.id %>)?');">
+                          <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <div class="mt-4">
+    <a href="/admin/events?lang=<%= lang %>" class="btn btn-secondary">Back to Events</a>
+  </div>
+</div>
+
+<%- include('admin-layout-bottom') %>

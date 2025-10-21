@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="<%= lang %>">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= page.title %></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/lux/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand fw-bold" href="/?lang=<%= lang %>">SkillsUp Slovakia</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-lg-center">
+            <% if (menu) { %>
+              <% menu.forEach(item => { %>
+                <li class="nav-item"><a class="nav-link" href="/page/<%= item.slug %>?lang=<%= lang %>"><%= item.label %></a></li>
+              <% }) %>
+            <% } %>
+            <li class="nav-item"><a class="nav-link" href="/events?lang=<%= lang %>">Events</a></li>
+            <li class="nav-item"><a class="nav-link" href="/themes?lang=<%= lang %>">Themes</a></li>
+            <li class="nav-item"><a class="nav-link" href="/focus-areas?lang=<%= lang %>">Focus Areas</a></li>
+            <li class="nav-item"><a class="nav-link" href="/team?lang=<%= lang %>">Our Team</a></li>
+            <li class="nav-item"><a class="nav-link" href="/?lang=<%= lang %>">Home</a></li>
+          </ul>
+          <div class="d-flex gap-2">
+            <a class="btn btn-outline-light btn-sm" href="?<%= 'lang=en' %>">EN</a>
+            <a class="btn btn-outline-light btn-sm" href="?<%= 'lang=sk' %>">SK</a>
+            <a class="btn btn-outline-light btn-sm" href="?<%= 'lang=hu' %>">HU</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container py-5">
+      <% if (typeof slider !== 'undefined' && Array.isArray(slider) && slider.length > 0) { %>
+        <div id="homeCarousel" class="carousel slide mb-4" data-bs-ride="carousel">
+          <div class="carousel-indicators">
+            <% slider.forEach((s, idx) => { %>
+              <button type="button" data-bs-target="#homeCarousel" data-bs-slide-to="<%= idx %>" class="<%= idx===0 ? 'active' : '' %>" aria-current="<%= idx===0 ? 'true' : 'false' %>" aria-label="Slide <%= idx+1 %>"></button>
+            <% }) %>
+          </div>
+          <div class="carousel-inner">
+            <% slider.forEach((s, idx) => { %>
+              <div class="carousel-item <%= idx===0 ? 'active' : '' %>">
+                <% if (s.link) { %><a href="<%= s.link %>"><% } %>
+                <img src="<%= s.image_url %>" class="d-block w-100" alt="<%= s.title || ('Slide ' + (idx+1)) %>">
+                <% if (s.link) { %></a><% } %>
+                <% if (s.title || s.caption) { %>
+                  <div class="carousel-caption d-none d-md-block">
+                    <% if (s.title) { %><h5><%= s.title %></h5><% } %>
+                    <% if (s.caption) { %><p><%= s.caption %></p><% } %>
+                  </div>
+                <% } %>
+              </div>
+            <% }) %>
+          </div>
+          <button class="carousel-control-prev" type="button" data-bs-target="#homeCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#homeCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+          </button>
+        </div>
+      <% } %>
+      <div class="row">
+        <div class="col-lg-10 mx-auto">
+          <h1 class="mb-4"><%= page.title %></h1>
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <div class="content"><%- page.content %></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer class="bg-dark py-4 mt-auto text-white-50">
+      <div class="container d-flex justify-content-between align-items-center">
+        <small>Multilingual demo - <%= lang %></small>
+        <small>&copy; <%= new Date().getFullYear() %> SkillsUp Slovakia</small>
+      </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+  </html>

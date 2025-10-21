@@ -1,0 +1,124 @@
+<%- include('layout-charitize', { title: theme.title, lang, menu, slider, t }) %>
+
+<div class="container-xxl py-5">
+  <div class="container">
+    <div class="row g-5">
+      <div class="col-lg-8">
+        <!-- Theme Header -->
+  <div class="mb-5 bg-white p-4 rounded">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="/?lang=<%= lang %>"><%= t('home') %></a></li>
+              <li class="breadcrumb-item"><a href="/themes?lang=<%= lang %>"><%= t('themes') %></a></li>
+              <li class="breadcrumb-item active" aria-current="page"><%= theme.title %></li>
+            </ol>
+          </nav>
+          <h1 class="display-5 mb-4"><%= theme.title %></h1>
+          <div class="d-flex align-items-center mb-3">
+            <small class="text-muted">
+              <i class="fas fa-tag me-1"></i>Theme
+            </small>
+          </div>
+        </div>
+
+        <!-- Theme Image -->
+        <% if(theme.image_url) { %>
+          <div class="mb-5 bg-white p-4 rounded">
+            <img src="<%= theme.image_url %>" class="img-fluid rounded shadow" alt="<%= theme.title %>">
+          </div>
+        <% } %>
+
+        <!-- Theme Content -->
+        <div class="mb-5">
+          <h3 class="mb-4"><%= t('aboutThisTheme') %></h3>
+          <div class="content lead">
+            <% if(theme.description) { %>
+              <%- theme.description %>
+            <% } else { %>
+              <p class="text-muted"><%= t('noDescriptionAvailable') %></p>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Gallery Section -->
+        <% if(additionalImages && additionalImages.length > 0) { %>
+          <div class="mb-5">
+            <h3 class="mb-4"><%= t('gallery') %></h3>
+            <div class="row" id="theme-gallery">
+              <% additionalImages.forEach(function(image, index) { %>
+                <div class="col-lg-4 col-md-6 mb-4">
+                  <div class="card bg-light">
+                    <img src="<%= image.image_url %>" class="card-img-top" alt="Gallery image <%= index + 1 %>" 
+                         style="height: 200px; object-fit: cover;" 
+                         data-bs-toggle="modal" 
+                         data-bs-target="#imageModal<%= index %>"
+                         role="button">
+                  </div>
+                </div>
+                
+                <!-- Modal for each image -->
+                <div class="modal fade" id="imageModal<%= index %>" tabindex="-1" aria-labelledby="imageModalLabel<%= index %>" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="imageModalLabel<%= index %>"><%= t('galleryImageLabel') %> <%= index + 1 %></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body text-center">
+                        <img src="<%= image.image_url %>" class="img-fluid" alt="Gallery image <%= index + 1 %>">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="mb-5">
+            <h3 class="mb-4"><%= t('gallery') %></h3>
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              <%= t('noAdditionalImages') %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <div class="bg-light p-4 rounded">
+          <h4 class="mb-4"><%= t('themeInformation') %></h4>
+          
+          <div class="mb-3">
+            <strong><%= t('slug') %>:</strong>
+            <code class="ms-2"><%= theme.slug %></code>
+          </div>
+          
+          <% if(theme.created_at) { %>
+            <div class="mb-3">
+              <strong><%= t('created') %>:</strong>
+              <span class="ms-2"><%= new Date(theme.created_at).toLocaleDateString() %></span>
+            </div>
+          <% } %>
+
+          <div class="d-grid gap-2 mt-4">
+            <a href="/themes?lang=<%= lang %>" class="btn btn-outline-primary">
+              <i class="fas fa-arrow-left me-2"></i><%= t('backToThemes') %>
+            </a>
+          </div>
+        </div>
+
+        <!-- Related Themes (Future Feature) -->
+        <div class="bg-light p-4 rounded mt-4">
+          <h4 class="mb-4"><%= t('relatedThemes') %></h4>
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Related themes will be displayed here in future updates.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('layout-charitize-bottom') %>

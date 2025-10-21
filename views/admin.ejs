@@ -1,0 +1,213 @@
+<%- include('admin-layout-top', { title: 'Dashboard', lang, useDb, active: 'dashboard' }) %>
+
+<style>
+  .dash-tile {
+    min-height: 140px;
+    color: #fff;
+    border: 0;
+    border-radius: 0.75rem;
+    box-shadow: 0 0.15rem 1.25rem rgba(0,0,0,0.12);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .dash-tile:hover { transform: translateY(-2px); box-shadow: 0 0.35rem 1.5rem rgba(0,0,0,0.18); }
+  .dash-tile .icon { opacity: .9; }
+  .dash-tile .stretched-link { position: static; }
+  .disabled-tile { opacity: .6; pointer-events: none; filter: grayscale(0.1); }
+</style>
+
+<div class="row g-3 wow fadeIn" data-wow-delay="0.05s">
+  <!-- Dashboard (self) -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile" style="background: linear-gradient(45deg,#2c3e50,#4b6584);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Dashboard</div>
+          <small class="opacity-75">Quick access</small>
+        </div>
+        <i class="fas fa-tachometer-alt fa-2x icon"></i>
+      </div>
+      <a href="/admin" class="stretched-link" aria-label="Open Dashboard"></a>
+    </div>
+  </div>
+  <!-- Themes -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#6f42c1,#b07bff);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Themes</div>
+          <small class="opacity-75">Manage topics</small>
+        </div>
+        <i class="fas fa-tags fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? '/admin/themes' : '#' %>" class="stretched-link" aria-label="Manage Themes" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- Events -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#0d6efd,#00b4d8);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Events</div>
+          <small class="opacity-75">Create & edit events</small>
+        </div>
+        <i class="fas fa-calendar-alt fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? '/admin/events' : '#' %>" class="stretched-link" aria-label="Manage Events" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- Team -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#17a2b8,#20c997);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Our Team</div>
+          <small class="opacity-75">Manage members</small>
+        </div>
+        <i class="fas fa-users fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? '/admin/team' : '#' %>" class="stretched-link" aria-label="Manage Team" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- News -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#fd7e14,#ffc107);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">News</div>
+          <small class="opacity-75">Publish posts</small>
+        </div>
+        <i class="fas fa-newspaper fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? '/admin/news' : '#' %>" class="stretched-link" aria-label="Manage News" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- Documents -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#6c757d,#95a5a6);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Documents</div>
+          <small class="opacity-75">Upload files</small>
+        </div>
+        <i class="fas fa-file-alt fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? '/admin/documents' : '#' %>" class="stretched-link" aria-label="Manage Documents" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- Focus Areas -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#198754,#34d399);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Focus Areas</div>
+          <small class="opacity-75">Manage data</small>
+        </div>
+        <i class="fas fa-bullseye fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? ('/admin/focus-areas?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Manage Focus Areas" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- Settings: Slider -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#e83e8c,#ff6b6b);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Slider</div>
+          <small class="opacity-75">Hero & slides</small>
+        </div>
+        <i class="fas fa-sliders-h fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? ('/admin/settings/slider?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Slider Settings" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- Settings: Contact -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#0dcaf0,#5ac8fa);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Contact</div>
+          <small class="opacity-75">Contact details</small>
+        </div>
+        <i class="fas fa-address-book fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? ('/admin/settings/contact?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Contact Settings" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- Settings: GDPR -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#6610f2,#9b59b6);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">GDPR</div>
+          <small class="opacity-75">Privacy notice</small>
+        </div>
+        <i class="fas fa-user-shield fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? ('/admin/settings/gdpr?lang=' + lang) : '#' %>" class="stretched-link" aria-label="GDPR Settings" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- Pages: Home -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#20bf6b,#26de81);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Page: Home</div>
+          <small class="opacity-75">Edit content</small>
+        </div>
+        <i class="fas fa-home fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? ('/admin/pages/home?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Edit Home Page" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- Pages: About Us -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#1e90ff,#00a8ff);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Page: About Us</div>
+          <small class="opacity-75">Edit content</small>
+        </div>
+        <i class="fas fa-info-circle fa-2x icon"></i>
+      </div>
+      <a href="<%= useDb ? ('/admin/pages/about-us?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Edit About Us Page" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+    </div>
+  </div>
+  <!-- View Site -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile" style="background: linear-gradient(45deg,#2d3436,#636e72);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">View Site</div>
+          <small class="opacity-75">Open website</small>
+        </div>
+        <i class="fas fa-external-link-alt fa-2x icon"></i>
+      </div>
+      <a href="/<%= '?lang=' + (lang || 'en') %>" target="_blank" rel="noopener" class="stretched-link" aria-label="Open Site"></a>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom info bar: Multi-Language Content -->
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="card shadow-sm wow fadeInUp" data-wow-delay="0.1s">
+      <div class="card-body d-flex flex-wrap align-items-center justify-content-between">
+        <div class="d-flex align-items-center mb-2 mb-md-0">
+          <i class="fas fa-globe fa-lg text-secondary me-3"></i>
+          <div>
+            <strong>Multi-Language Content</strong>
+            <div class="text-muted small">Admin interface: English</div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-primary">EN</span>
+          <span class="badge bg-success">SK</span>
+          <span class="badge bg-danger">HU</span>
+          <span class="text-muted small ms-2">Supported languages</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('admin-layout-bottom') %>

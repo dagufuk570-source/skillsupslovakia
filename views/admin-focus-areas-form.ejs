@@ -1,0 +1,80 @@
+<%- include('admin-layout-top', { title: (typeof title !== 'undefined' ? title : ((typeof baseId !== 'undefined') ? 'Edit Focus Area' : 'New Focus Area')), lang, useDb, active: 'focus-areas' }) %>
+<div class="row g-3">
+  <div class="col-12">
+    <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+    <div class="card wow fadeIn" data-wow-delay="0.1s">
+      <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#1A685B;">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-bullseye fa-lg me-2"></i>
+          <h5 class="mb-0"><%= (typeof title !== 'undefined' ? title : ((typeof baseId !== 'undefined') ? 'Edit Focus Area' : 'New Focus Area')) %></h5>
+        </div>
+        <small class="badge bg-dark">Multi-language</small>
+      </div>
+      <div class="card-body">
+        <form method="post" action="<%= (typeof formAction !== 'undefined' && formAction) ? formAction : ((typeof baseId !== 'undefined') ? ('/admin/focus-areas/' + baseId + '?lang=' + lang) : ('/admin/focus-areas?lang=' + lang)) %>">
+      <% 
+        const fixedCols = ['group','field','experts','description','activity_description','type_of_activity'];
+        const colsArr = Array.isArray(cols) && cols.length ? cols : fixedCols;
+        const labelMap = {
+          group: 'Group',
+          field: 'Field',
+          experts: 'Expert(s)',
+          description: 'Description',
+          activity_description: 'Activity - Description',
+          type_of_activity: 'Type of activity'
+        };
+        const langs = ['en','sk','hu'];
+        const tabId = 'fa-tabs-' + (typeof baseId !== 'undefined' ? baseId : 'new');
+      %>
+
+  <ul class="nav nav-tabs sticky-top bg-white" style="top: 0; z-index: 1020;" role="tablist">
+        <% langs.forEach((l, i) => { %>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link <%= i===0 ? 'active' : '' %>" id="<%= tabId %>-<%= l %>-tab" data-bs-toggle="tab" data-bs-target="#<%= tabId %>-<%= l %>" type="button" role="tab" aria-controls="<%= tabId %>-<%= l %>" aria-selected="<%= i===0 ? 'true' : 'false' %>"><%= l.toUpperCase() %></button>
+          </li>
+        <% }) %>
+      </ul>
+      <% const rowsML = (typeof rowsByLang !== 'undefined' && rowsByLang) ? rowsByLang : { en: null, sk: null, hu: null }; %>
+      <div class="tab-content border border-top-0 p-3">
+        <% langs.forEach((l, i) => { const rec = rowsML[l] || null; const f = (rec && rec.fields) ? rec.fields : {}; %>
+          <div class="tab-pane fade <%= i===0 ? 'show active' : '' %>" id="<%= tabId %>-<%= l %>" role="tabpanel" aria-labelledby="<%= tabId %>-<%= l %>-tab">
+            <div class="row g-3">
+              <% colsArr.forEach((c, idx) => { const lb = (Array.isArray(labels) && labels[idx]) || labelMap[c] || c.replace(/_/g,' '); const longField = (c === 'description' || c === 'activity_description'); %>
+                <div class="<%= longField ? 'col-12' : 'col-md-6' %>">
+                  <% const fieldId = `${c}_${l}`; %>
+                  <label class="form-label text-capitalize" for="<%= fieldId %>"><%= lb %> (<%= l.toUpperCase() %>)</label>
+                  <% if (longField) { %>
+                    <textarea id="<%= fieldId %>" class="form-control" name="<%= c %>_<%= l %>" rows="4"><%= f[c] || '' %></textarea>
+                  <% } else { %>
+                    <input id="<%= fieldId %>" type="text" class="form-control" name="<%= c %>_<%= l %>" value="<%= f[c] || '' %>">
+                  <% } %>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="row g-3 mt-3">
+        <div class="col-md-3">
+          <label class="form-label" for="fa_sort_order">Sort Order</label>
+          <input id="fa_sort_order" type="number" class="form-control" name="sort_order" value="<%= (rowsML.en?.sort_order ?? rowsML.sk?.sort_order ?? rowsML.hu?.sort_order ?? 0) %>">
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="published" id="published" <%= ((rowsML.en?.published ?? rowsML.sk?.published ?? rowsML.hu?.published) !== false) ? 'checked' : '' %> />
+            <label class="form-check-label" for="published">Published</label>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3">
+        <button class="btn btn-warning" type="submit"><i class="fas fa-save me-1"></i>Save</button>
+        <a class="btn btn-secondary" href="/admin/focus-areas?lang=<%= lang %>">Cancel</a>
+      </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- Removed right-side info/settings to simplify UI -->
+</div>
+<%- include('admin-layout-bottom') %>

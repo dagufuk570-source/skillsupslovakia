@@ -1,0 +1,96 @@
+<%- include('admin-layout-top', { title: (doc ? 'Edit Document' : 'New Document'), lang, useDb: true, active: 'documents' }) %>
+  <% if (doc) { %>
+    <div class="mb-3 rounded" style="background: linear-gradient(90deg, #0069ff 0%, #00d4ff 100%); color: #fff;">
+      <div class="d-flex justify-content-between align-items-center px-3 py-2">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-file-alt me-2"></i>
+          <strong>Editing Document</strong>
+          <span class="ms-2 small" style="opacity:.85;">ID: <%= doc.id %></span>
+        </div>
+        <a class="btn btn-light btn-sm" href="/admin/documents?lang=<%= lang %>">← Back to list</a>
+      </div>
+    </div>
+  <% } %>
+  <% if (!doc) { %>
+    <div class="mb-3 rounded" style="background: linear-gradient(90deg, #ff7a18 0%, #ffd11a 100%); color: #2b2b2b;">
+      <div class="d-flex justify-content-between align-items-center px-3 py-2">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-file-circle-plus me-2"></i>
+          <strong>Creating New Document</strong>
+        </div>
+        <a class="btn btn-dark btn-sm" href="/admin/documents?lang=<%= lang %>">← Back to list</a>
+      </div>
+    </div>
+  <% } %>
+  <form method="post" enctype="multipart/form-data" action="<%= doc ? ('/admin/documents/' + doc.id + '?lang=' + lang) : ('/admin/documents?lang=' + lang) %>">
+    <% const langs = ['en','sk','hu']; %>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="form-label">Published</div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="published" id="published" <%= !doc || doc.published ? 'checked' : '' %> />
+          <label class="form-check-label" for="published">Visible on site</label>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="sort_order">Sort Order</label>
+        <input id="sort_order" type="number" name="sort_order" class="form-control" value="<%= doc ? (doc.sort_order || 0) : 0 %>" />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="doc_file">File <small class="text-muted">(pdf, docx, xlsx, pptx, txt, image)</small></label>
+        <input id="doc_file" type="file" name="file" class="form-control" <%= doc ? '' : 'required' %> />
+        <% if (doc && doc.file_url) { %>
+          <div class="mt-2">
+            Current: <a href="<%= doc.file_url %>" target="_blank" rel="noopener">download</a>
+          </div>
+        <% } %>
+      </div>
+      <div class="col-12">
+        <ul class="nav nav-tabs sticky-top bg-white" style="top: 0; z-index: 1020;" role="tablist">
+          <% langs.forEach((l, i) => { %>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link <%= i===0 ? 'active' : '' %>" id="doc-<%= l %>-tab" data-bs-toggle="tab" data-bs-target="#doc-<%= l %>" type="button" role="tab" aria-controls="doc-<%= l %>" aria-selected="<%= i===0 ? 'true' : 'false' %>"><%= l.toUpperCase() %></button>
+            </li>
+          <% }) %>
+        </ul>
+        <div class="tab-content border border-top-0 p-3">
+          <% if (typeof docsByLang !== 'undefined' && docsByLang) { %>
+            <% langs.forEach((l, i) => { const d = docsByLang[l]; %>
+              <div class="tab-pane fade <%= i===0 ? 'show active' : '' %>" id="doc-<%= l %>" role="tabpanel" aria-labelledby="doc-<%= l %>-tab">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label" for="title_<%= l %>">Title (<%= l.toUpperCase() %>)</label>
+                    <input id="title_<%= l %>" type="text" name="title_<%= l %>" class="form-control" value="<%= d ? (d.title || '') : '' %>" />
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="description_<%= l %>">Description (<%= l.toUpperCase() %>)</label>
+                    <textarea id="description_<%= l %>" name="description_<%= l %>" class="form-control wysiwyg" rows="4"><%= d ? (d.description || '') : '' %></textarea>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <% langs.forEach((l, i) => { %>
+              <div class="tab-pane fade <%= i===0 ? 'show active' : '' %>" id="doc-<%= l %>" role="tabpanel" aria-labelledby="doc-<%= l %>-tab">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label" for="title_<%= l %>">Title (<%= l.toUpperCase() %>)</label>
+                    <input id="title_<%= l %>" type="text" name="title_<%= l %>" class="form-control" />
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="description_<%= l %>">Description (<%= l.toUpperCase() %>)</label>
+                    <textarea id="description_<%= l %>" name="description_<%= l %>" class="form-control wysiwyg" rows="4"></textarea>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <div class="mt-3">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save</button>
+      <a href="/admin/documents?lang=<%= lang %>" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+<%- include('admin-layout-bottom') %>

@@ -1,0 +1,29 @@
+<%- include('admin-layout-top', { title: 'Settings › Focus Area Columns', lang, useDb, active: 'settings-focus' }) %>
+<div class="row g-3">
+  <div class="col-lg-9">
+    <div class="card">
+      <div class="card-header bg-warning text-dark">
+        <i class="fas fa-bullseye me-2"></i>Focus Area Columns
+      </div>
+      <div class="card-body">
+        <form method="post" action="/admin/settings/focus-areas?lang=<%= lang %>">
+          <div class="mb-3">
+            <label class="form-label" for="columns_textarea">Columns (one per line)</label>
+            <textarea id="columns_textarea" class="form-control" name="columns" rows="10" placeholder="e.g.\nGroup\nName\nDescription\nOwner\nLocation\nContact\nStatus"><%= (columns || []).join('\n') %></textarea>
+            <div class="form-text">These define the fields that appear in the Focus Area form and the public table, in order. Names will be normalized to snake_case keys.</div>
+          </div>
+          <button class="btn btn-warning" type="submit"><i class="fas fa-save me-1"></i>Save</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="card">
+      <div class="card-header bg-light">Tips</div>
+      <div class="card-body small">
+        <p>Paste the column headers from your Google Sheet, one per line. We’ll generate matching input fields in the Focus Area form and public table columns in the same order.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('admin-layout-bottom') %>

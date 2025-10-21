@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="<%= lang %>">
+
+<head>
+    <meta charset="utf-8">
+    <title><%= page.title %> - SkillsUp Slovakia</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="" name="keywords">
+    <meta content="" name="description">
+
+    <!-- Favicon -->
+    <link href="/img/favicon.ico" rel="icon">
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Open+Sans&display=swap" rel="stylesheet">
+
+    <!-- Icon Font Stylesheet -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link href="/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Template Stylesheet -->
+    <link href="/css/style.css?v=20251010-2" rel="stylesheet">
+</head>
+
+<body>
+    <% if (typeof t === 'undefined' || !t) { 
+        var t = function(k){ try { return (typeof lang !== 'undefined' && lang.toLowerCase() === 'sk') ? k : k; } catch(e){ return k; } } 
+    } %>
+    <!-- Spinner Start -->
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    </div>
+    <!-- Spinner End -->
+
+    <!-- Topbar Start -->
+    <div class="container-fluid bg-secondary top-bar wow fadeIn" data-wow-delay="0.1s">
+        <div class="row align-items-center h-100">
+            <div class="col-lg-4 text-center text-lg-start">
+                <a href="/?lang=<%= lang %>" class="d-inline-flex align-items-center">
+                    <img src="/img/logo.png" alt="SkillsUp Slovakia" class="img-fluid site-logo" style="max-height:64px; width:auto;" />
+                    <span class="visually-hidden">SkillsUp Slovakia</span>
+                </a>
+            </div>
+            <div class="col-lg-8 d-none d-lg-block">
+                <div class="row">
+                    <div class="col-lg-4">
+                        <div class="d-flex justify-content-end">
+                            <div class="flex-shrink-0 btn-square bg-primary">
+                                <i class="fa fa-phone-alt text-dark"></i>
+                            </div>
+                            <div class="ms-2">
+                                <h6 class="text-primary mb-0"><%= t('callUs') %></h6>
+                                <span class="text-white"><%= (typeof site !== 'undefined' && site.contact && site.contact.phone) ? site.contact.phone : '+421 123 456 789' %></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="d-flex justify-content-end">
+                            <div class="flex-shrink-0 btn-square bg-primary">
+                                <i class="fa fa-envelope-open text-dark"></i>
+                            </div>
+                            <div class="ms-2">
+                                <h6 class="text-primary mb-0"><%= t('mailUs') %></h6>
+                                <span class="text-white"><%= (typeof site !== 'undefined' && site.contact && site.contact.email) ? site.contact.email : 'info@skillsupslovakia.sk' %></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="d-flex justify-content-end">
+                            <div class="flex-shrink-0 btn-square bg-primary">
+                                <i class="fa fa-map-marker-alt text-dark"></i>
+                            </div>
+                            <div class="ms-2">
+                                <h6 class="text-primary mb-0"><%= t('address') %></h6>
+                                <span class="text-white"><%= (typeof site !== 'undefined' && site.contact && site.contact.address) ? site.contact.address : 'Bratislava, Slovakia' %></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Topbar End -->
+
+    <!-- Navbar Start -->
+    <div class="container-fluid bg-secondary px-0 wow fadeIn" data-wow-delay="0.1s">
+        <div class="nav-bar">
+            <nav class="navbar navbar-expand-lg bg-primary navbar-dark px-4 py-lg-0">
+                <h4 class="d-lg-none m-0"><%= t('menu') %></h4>
+                <button type="button" class="navbar-toggler me-0" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                                <div class="collapse navbar-collapse" id="navbarCollapse">
+                    <div class="navbar-nav me-auto">
+                                                <a href="/?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/' ? 'active' : '') %>">
+                                                    <i class="fas fa-house me-1 <%= (currentPath === '/' ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                                                    <span class="text-capitalize"><%= t('home') %></span>
+                                                </a>
+                                                                        <% if (menu && menu.length > 0) { %>
+                                                                            <% const aboutItem = (menu.find(item => item.slug === 'about-us') || menu.find(item => item.slug === 'about')); %>
+                                                                            <% if (aboutItem) { %>
+                                                                                <a href="/page/<%= aboutItem.slug %>?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/page/' + aboutItem.slug ? 'active' : '') %>">
+                                                                                    <i class="fas fa-circle-info me-1 <%= (currentPath === '/page/' + aboutItem.slug ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                                                                                    <span class="text-capitalize"><%= aboutItem.label || t('about') %></span>
+                                                                                </a>
+                                                                            <% } %>
+                                                                        <% } %>
+                                                <a href="/themes?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/themes' ? 'active' : '') %>">
+                                                    <i class="fas fa-shapes me-1 <%= (currentPath === '/themes' ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                                                    <span class="text-capitalize"><%= t('themes') %></span>
+                                                </a>
+                                                <a href="/focus-areas?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/focus-areas' ? 'active' : '') %>">
+                                                    <i class="fas fa-bullseye me-1 <%= (currentPath === '/focus-areas' ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                                                    <span class="text-capitalize"><%= t('focusAreas') %></span>
+                                                </a>
+                        <a href="/events?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/events' || currentPath.startsWith('/events/') ? 'active' : '') %>">
+                            <i class="fas fa-calendar-alt me-1 <%= ((currentPath === '/events' || currentPath.startsWith('/events/')) ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                            <span class="text-capitalize"><%= t('events') %></span>
+                        </a>
+                        <a href="/team?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/team' || currentPath.startsWith('/team/') ? 'active' : '') %>">
+                            <i class="fas fa-users me-1 <%= ((currentPath === '/team' || currentPath.startsWith('/team/')) ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                            <span class="text-capitalize"><%= t('team') %></span>
+                        </a>
+                        <a href="/news?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/news' || currentPath.startsWith('/news/') ? 'active' : '') %>">
+                            <i class="fas fa-newspaper me-1 <%= ((currentPath === '/news' || currentPath.startsWith('/news/')) ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                            <span class="text-capitalize"><%= t('news') %></span>
+                        </a>
+                        <a href="/documents?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/documents' ? 'active' : '') %>">
+                            <i class="fas fa-file-lines me-1 <%= (currentPath === '/documents' ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                            <span class="text-capitalize"><%= t('documents') %></span>
+                        </a>
+                        <% if (menu && menu.length > 0) { %>
+                                                    <% const gdprItem = menu.find(item => item.slug === 'gdpr'); %>
+                                                    <% if (gdprItem) { %>
+                                                        <a href="/page/<%= gdprItem.slug %>?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/page/' + gdprItem.slug ? 'active' : '') %>">
+                                                            <i class="fas fa-shield-halved me-1 <%= (currentPath === '/page/' + gdprItem.slug ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                                                            <span class="text-capitalize"><%= gdprItem.label || t('gdpr') %></span>
+                                                        </a>
+                                                    <% } %>
+                                                    <% const contactItem = menu.find(item => item.slug === 'contact'); %>
+                                                    <% if (contactItem) { %>
+                                                        <a href="/page/<%= contactItem.slug %>?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/page/' + contactItem.slug ? 'active' : '') %>">
+                                                            <i class="fas fa-envelope me-1 <%= (currentPath === '/page/' + contactItem.slug ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                                                            <span class="text-capitalize"><%= contactItem.label || t('contact') %></span>
+                                                        </a>
+                                                    <% } %>
+                        <% } %>
+                    </div>
+                    <div class="d-none d-lg-flex ms-auto align-items-center ps-3">
+                        <% 
+                            const scTop = (typeof site !== 'undefined' && site.contact) ? site.contact : {}; 
+                            const hasFbTop = !!(scTop.facebook && (''+scTop.facebook).trim());
+                            const hasTwTop = !!(scTop.twitter && (''+scTop.twitter).trim());
+                            const hasIgTop = !!(scTop.instagram && (''+scTop.instagram).trim());
+                            const hasLiTop = !!(scTop.linkedin && (''+scTop.linkedin).trim());
+                            const hasYtTop = !!(scTop.youtube && (''+scTop.youtube).trim());
+                            const hasAnyTopSocial = hasFbTop || hasTwTop || hasIgTop || hasLiTop || hasYtTop;
+                        %>
+                        <% if (hasAnyTopSocial) { %>
+                        <div class="d-flex align-items-center me-3">
+                            <% if (hasFbTop) { %><a class="btn btn-sm btn-outline-light btn-social me-2" href="<%= scTop.facebook %>" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a><% } %>
+                            <% if (hasTwTop) { %><a class="btn btn-sm btn-outline-light btn-social me-2" href="<%= scTop.twitter %>" target="_blank" rel="noopener" aria-label="Twitter"><i class="fab fa-twitter"></i></a><% } %>
+                            <% if (hasIgTop) { %><a class="btn btn-sm btn-outline-light btn-social me-2" href="<%= scTop.instagram %>" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a><% } %>
+                            <% if (hasLiTop) { %><a class="btn btn-sm btn-outline-light btn-social me-2" href="<%= scTop.linkedin %>" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a><% } %>
+                            <% if (hasYtTop) { %><a class="btn btn-sm btn-outline-light btn-social" href="<%= scTop.youtube %>" target="_blank" rel="noopener" aria-label="YouTube"><i class="fab fa-youtube"></i></a><% } %>
+                        </div>
+                        <div class="vr bg-light opacity-50 mx-2" style="height:24px;"></div>
+                        <% } %>
+                        <a class="btn btn-sm btn-outline-light me-2 <%= lang==='en' ? 'active' : '' %>" href="?lang=en">EN</a>
+                        <a class="btn btn-sm btn-outline-light me-2 <%= lang==='sk' ? 'active' : '' %>" href="?lang=sk">SK</a>
+                        <a class="btn btn-sm btn-outline-light <%= lang==='hu' ? 'active' : '' %>" href="?lang=hu">HU</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </div>
+    <!-- Navbar End -->
+
+    <!-- Back-to-list will be shown alongside the section header below if provided -->
+
+    <!-- Hero/Slider Section (for homepage only) -->
+    <% if (typeof slider !== 'undefined' && Array.isArray(slider) && slider.length > 0) { %>
+    <% const __bgAttr = (typeof sliderBg !== 'undefined' && sliderBg) ? (' style="background-position:center;background-size:cover;background-repeat:no-repeat;background-image:url(\'' + sliderBg + '\');"') : '';%>
+        <% const __align = (typeof sliderTextAlign !== 'undefined' && sliderTextAlign) ? sliderTextAlign : 'center'; %>
+        <% const __titleColor = (typeof sliderTitleColor !== 'undefined' && sliderTitleColor) ? sliderTitleColor : '#ffffff'; %>
+        <% const __captionColor = (typeof sliderCaptionColor !== 'undefined' && sliderCaptionColor) ? sliderCaptionColor : '#ffffff'; %>
+        <% const __textAlignClass = (__align === 'left') ? 'text-start' : ((__align === 'right') ? 'text-end' : 'text-center'); %>
+        <% const __justifyClass = (__align === 'left') ? 'justify-content-start' : ((__align === 'right') ? 'justify-content-end' : 'justify-content-center'); %>
+        <% const __titleStyleAttr = ' style="color:' + __titleColor + ';"'; %>
+        <% const __captionStyleAttr = ' style="color:' + __captionColor + ';"'; %>
+        <div class="container-fluid p-0 wow fadeIn" data-wow-delay="0.1s">
+            <div class="owl-carousel header-carousel py-5"<%- __bgAttr %>>
+                <% slider.forEach((s, idx) => { const _title = (typeof s.title === 'string') ? s.title : ''; const _caption = (typeof s.caption === 'string') ? s.caption : ''; %>
+                    <div class="container py-5">
+                        <div class="row g-5 align-items-center">
+                            <div class="col-12">
+                                <div class="carousel-text <%= __textAlignClass %>">
+                                    <% if (_title) { %>
+                                        <h1 class="display-1 text-uppercase mb-3"<%- __titleStyleAttr %>><%= _title %></h1>
+                                    <% } %>
+                                    <% if (_caption) { %>
+                                        <p class="fs-5 mb-5"<%- __captionStyleAttr %>><%= _caption %></p>
+                                    <% } %>
+                                    <div class="d-flex <%= __justifyClass %>">
+                                        <% if (s.link) { %>
+                                            <a class="btn btn-primary py-3 px-4 me-3" href="<%= s.link %>"><%= t('learnMore') %></a>
+                                        <% } %>
+                                        <a class="btn btn-secondary py-3 px-4" href="/events?lang=<%= lang %>"><%= t('viewEvents') %></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+    <% } %>
+
+    <!-- Optional Page Hero injected by route (e.g., contact map) -->
+    <% if (typeof hero !== 'undefined' && hero) { %>
+        <%- hero %>
+    <% } %>
+
+    <!-- Main Content Start -->
+    <% if (typeof rawContent !== 'undefined' && rawContent) { %>
+        <%- page.content %>
+    <% } else { %>
+                <div class="container-fluid py-5">
+            <div class="container">
+                                <% if (typeof sectionHeader !== 'undefined' && sectionHeader) { %>
+                                    <div class="mb-4">
+                                        <div class="section-title-bar">
+                                            <div class="bar"></div>
+                                            <span class="section-title text-warning"><%= sectionHeader.kicker || '' %></span>
+                                            <div class="bar"></div>
+                                        </div>
+                                        <% if (sectionHeader.heading) { %>
+                                            <div class="position-relative">
+                                                <div class="text-center mx-auto wow fadeIn" data-wow-delay="0.1s" style="max-width: 800px;">
+                                                    <h1 class="display-6 mb-4" style="font-family:'Josefin Sans',sans-serif; font-weight:700;"><%= sectionHeader.heading %></h1>
+                                                    <% if (sectionHeader.subheading) { %>
+                                                        <p class="text-muted"><%= sectionHeader.subheading %></p>
+                                                    <% } %>
+                                                </div>
+                                                <% if (typeof backLink !== 'undefined' && backLink) { %>
+                                                    <a href="<%= backLink %>" class="btn btn-warning btn-sm position-absolute top-0 end-0" style="border-radius:20px;">
+                                                        <i class="fas fa-arrow-left me-1"></i><%= (typeof t === 'function' ? t('backToList') : 'Back to list') %>
+                                                    </a>
+                                                <% } %>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                <% } %>
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="bg-white rounded p-4">
+                                                    <% if (page.image_url) { %>
+                                                        <div class="mb-4">
+                                                            <img src="<%= page.image_url %>" alt="<%= page.title %>" class="img-fluid rounded w-100" style="max-height:420px; object-fit:cover;" />
+                                                        </div>
+                                                    <% } %>
+                                                    <% if (page.title && !(typeof sectionHeader !== 'undefined' && sectionHeader && sectionHeader.heading)) { %>
+                                                        <h1 class="mb-4"><%= page.title %></h1>
+                                                    <% } %>
+                            <div class="content"><%- page.content %></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <% } %>
+    <!-- Main Content End -->
+
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-light footer wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-3 col-md-6">
+                    <h4 class="text-primary mb-3">
+                        <img src="/img/logo.png" alt="SkillsUp Slovakia" class="img-fluid" style="max-height:72px; width:auto;" />
+                    </h4>
+                    <% const sc = (typeof site !== 'undefined' && site.contact) ? site.contact : {}; %>
+                    <% 
+                        const hasFb = !!(sc.facebook && (''+sc.facebook).trim());
+                        const hasTw = !!(sc.twitter && (''+sc.twitter).trim());
+                        const hasIg = !!(sc.instagram && (''+sc.instagram).trim());
+                        const hasLi = !!(sc.linkedin && (''+sc.linkedin).trim());
+                        const hasYt = !!(sc.youtube && (''+sc.youtube).trim());
+                        const hasAnySocial = hasFb || hasTw || hasIg || hasLi || hasYt;
+                    %>
+                    <% if (hasAnySocial) { %>
+                    <div class="d-flex pt-2 mb-3">
+                        <% if (hasTw) { %><a class="btn btn-outline-light btn-social me-2" href="<%= sc.twitter %>" target="_blank" rel="noopener" aria-label="Twitter"><i class="fab fa-twitter"></i></a><% } %>
+                        <% if (hasFb) { %><a class="btn btn-outline-light btn-social me-2" href="<%= sc.facebook %>" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a><% } %>
+                        <% if (hasIg) { %><a class="btn btn-outline-light btn-social me-2" href="<%= sc.instagram %>" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a><% } %>
+                        <% if (hasYt) { %><a class="btn btn-outline-light btn-social me-2" href="<%= sc.youtube %>" target="_blank" rel="noopener" aria-label="YouTube"><i class="fab fa-youtube"></i></a><% } %>
+                        <% if (hasLi) { %><a class="btn btn-outline-light btn-social" href="<%= sc.linkedin %>" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a><% } %>
+                    </div>
+                    <% } %>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i><%= (typeof site !== 'undefined' && site.contact && site.contact.address) ? site.contact.address : 'Bratislava, Slovakia' %></p>
+                    <p class="mb-2"><i class="fa fa-phone-alt me-3"></i><%= (typeof site !== 'undefined' && site.contact && site.contact.phone) ? site.contact.phone : '+421 123 456 789' %></p>
+                    <p class="mb-2"><i class="fa fa-envelope me-3"></i><%= (typeof site !== 'undefined' && site.contact && site.contact.email) ? site.contact.email : 'info@skillsupslovakia.sk' %></p>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <h4 class="text-primary mb-3"><%= t('quickLinks') %></h4>
+                    <a class="btn btn-link text-light" href="/?lang=<%= lang %>"><%= t('home') %></a>
+                                                            <% if (menu && menu.length > 0) { %>
+                                                                <% const aboutItem = (menu.find(item => item.slug === 'about-us') || menu.find(item => item.slug === 'about')); %>
+                                                                <% if (aboutItem) { %>
+                                                                    <a class="btn btn-link text-light" href="/page/<%= aboutItem.slug %>?lang=<%= lang %>"><%= t('about') %></a>
+                                                                <% } %>
+                                                            <% } %>
+                                        <a class="btn btn-link text-light" href="/focus-areas?lang=<%= lang %>"><%= t('focusAreas') %></a>
+                    <a class="btn btn-link text-light" href="/themes?lang=<%= lang %>"><%= t('themes') %></a>
+                    <a class="btn btn-link text-light" href="/events?lang=<%= lang %>"><%= t('events') %></a>
+                    <a class="btn btn-link text-light" href="/team?lang=<%= lang %>"><%= t('team') %></a>
+                    <a class="btn btn-link text-light" href="/news?lang=<%= lang %>"><%= t('news') %></a>
+                    <a class="btn btn-link text-light" href="/documents?lang=<%= lang %>"><%= t('documents') %></a>
+                    <% if (menu && menu.length > 0) { %>
+                      <% const gdprItem = menu.find(item => item.slug === 'gdpr'); %>
+                                                                    <% if (gdprItem) { %>
+                                                                        <a class="btn btn-link text-light" href="/page/<%= gdprItem.slug %>?lang=<%= lang %>"><%= t('gdpr') %></a>
+                                                                    <% } %>
+                      <% const contactItem = menu.find(item => item.slug === 'contact'); %>
+                                                                    <% if (contactItem) { %>
+                                                                        <a class="btn btn-link text-light" href="/page/<%= contactItem.slug %>?lang=<%= lang %>"><%= t('contact') %></a>
+                                                                    <% } %>
+                    <% } %>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <h4 class="text-primary mb-3"><%= t('languages') %></h4>
+                    <a class="btn btn-link text-light" href="?lang=en">English</a>
+                    <a class="btn btn-link text-light" href="?lang=sk">Slovenčina</a>
+                    <a class="btn btn-link text-light" href="?lang=hu">Magyar</a>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <% const __galTitleMap = { en: 'Gallery', sk: 'Galéria', hu: 'Galéria' }; %>
+                    <h4 class="text-primary mb-3"><%= __galTitleMap[(lang||'en').toLowerCase()] || 'Gallery' %></h4>
+                    <% const __gallery = (typeof footerGallery !== 'undefined' && Array.isArray(footerGallery)) ? footerGallery : []; %>
+                    <% if (__gallery.length > 0) { %>
+                    <div class="row g-2">
+                        <% __gallery.slice(0,9).forEach(function(u){ %>
+                        <div class="col-4">
+                            <a href="<%= u %>" class="lightbox d-block" aria-label="Open image">
+                                <img src="<%= u %>" alt="Gallery image" class="img-fluid rounded" style="height:70px; width:100%; object-fit:cover;" />
+                            </a>
+                        </div>
+                        <% }) %>
+                    </div>
+                    <% } else { %>
+                        <div class="text-muted small">No images yet.</div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+
+    <!-- Copyright Start -->
+    <div class="container-fluid bg-dark text-light py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                    &copy; <a class="border-bottom" href="#">SkillsUp Slovakia</a>, <%= t('allRightsReserved') %>
+                </div>
+                <div class="col-md-6 text-center text-md-end"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Copyright End -->
+
+    <!-- Back to Top -->
+    <a href="#" class="btn btn-lg btn-primary btn-lg-square rounded-0 back-to-top"><i class="bi bi-arrow-up"></i></a>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/lib/wow/wow.min.js"></script>
+    <script src="/lib/easing/easing.min.js"></script>
+    <script src="/lib/waypoints/waypoints.min.js"></script>
+    <script src="/lib/counterup/counterup.min.js"></script>
+    <script src="/lib/owlcarousel/owl.carousel.min.js"></script>
+
+    <!-- Template Javascript -->
+    <script src="/js/main.js"></script>
+        <script>
+            // Simple, dependency-free lightbox for elements with class="lightbox"
+            (function(){
+                function ensureLightbox(){
+                    if(document.getElementById('lightboxModal')) return;
+                    const modal = document.createElement('div');
+                    modal.id = 'lightboxModal';
+                    modal.style.position = 'fixed';
+                    modal.style.inset = '0';
+                    modal.style.background = 'rgba(0,0,0,.85)';
+                    modal.style.display = 'none';
+                    modal.style.alignItems = 'center';
+                    modal.style.justifyContent = 'center';
+                    modal.style.zIndex = '1055';
+                    modal.innerHTML = `
+                        <div id="lightboxInner" style="max-width:90vw; max-height:90vh; position:relative;">
+                            <button id="lightboxClose" aria-label="Close" style="position:absolute; top:-12px; right:-12px; background:#fff; border:none; border-radius:50%; width:36px; height:36px; box-shadow:0 2px 8px rgba(0,0,0,.3);">
+                                &times;
+                            </button>
+                            <img id="lightboxImage" src="" alt="Preview" style="max-width:90vw; max-height:90vh; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.4); object-fit:contain;" />
+                        </div>`;
+                    document.body.appendChild(modal);
+
+                    function hide(){ modal.style.display='none'; document.getElementById('lightboxImage').src=''; }
+                    modal.addEventListener('click', (e)=>{ if(e.target===modal) hide(); });
+                    document.getElementById('lightboxClose').addEventListener('click', hide);
+                    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') hide(); });
+                }
+                function openLightbox(src){
+                    ensureLightbox();
+                    const modal = document.getElementById('lightboxModal');
+                    const img = document.getElementById('lightboxImage');
+                    img.src = src;
+                    modal.style.display = 'flex';
+                }
+                document.addEventListener('click', function(e){
+                    const a = e.target.closest('a.lightbox');
+                    if(!a) return;
+                    const href = a.getAttribute('href');
+                    if(!href) return;
+                    e.preventDefault();
+                    openLightbox(href);
+                });
+            })();
+        </script>
+                <script>
+                    // Copy-to-clipboard for share buttons
+                    (function(){
+                        async function copy(text){
+                            try{
+                                await navigator.clipboard.writeText(text);
+                                return true;
+                            }catch{
+                                const ta = document.createElement('textarea');
+                                ta.value = text; document.body.appendChild(ta); ta.select();
+                                try{ document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+                                return true;
+                            }
+                        }
+                        document.addEventListener('click', async (e)=>{
+                            const a = e.target.closest('a.copy-link');
+                            if(!a) return;
+                            e.preventDefault();
+                            const val = a.getAttribute('data-copy') || '';
+                            if(!val) return;
+                            const ok = await copy(val);
+                            if(ok){
+                                const old = a.innerHTML;
+                                const label = (window.__T_COPIED__ || 'Copied');
+                                a.innerHTML = '<i class="fas fa-check me-1"></i>' + label;
+                                setTimeout(()=>{ a.innerHTML = old; }, 1500);
+                            }
+                        });
+                    })();
+                </script>
+        <script>
+            // expose translated 'Copied' to client
+            (function(){
+                try{
+                    var lang = (document.documentElement.getAttribute('lang')||'en').toLowerCase();
+                    var map = { en: 'Copied', sk: 'Skopírované', hu: 'Másolva' };
+                    window.__T_COPIED__ = map[lang] || 'Copied';
+                }catch(e){ window.__T_COPIED__ = 'Copied'; }
+            })();
+        </script>
+</body>
+
+</html>

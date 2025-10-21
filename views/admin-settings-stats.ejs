@@ -1,0 +1,193 @@
+<%- include('admin-layout-top', { title: 'Settings › Stats', lang, useDb, active: 'settings-stats' }) %>
+<div class="row g-3">
+  <div class="col-12">
+    <div class="card wow fadeIn" data-wow-delay="0.1s">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-chart-line fa-lg me-2"></i>
+          <h5 class="mb-0">Homepage Stats / Counters</h5>
+        </div>
+        <small class="badge bg-dark">Language: <%= lang.toUpperCase() %></small>
+      </div>
+      <div class="card-body">
+        <form id="stats-form" method="post" action="/admin/settings/stats?lang=<%= lang %>">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Define up to 6 counters. Numbers are shared globally; labels are per language. You can reorder with the arrows.
+          </div>
+          <% const stats = cfg && Array.isArray(cfg.stats) ? cfg.stats : []; %>
+          <input type="hidden" name="stats_count" id="stats_count" value="<%= stats.length %>">
+          <div id="stats-container" class="d-grid gap-3">
+            <% for(let i=0;i<stats.length;i++){ const s = stats[i] || {}; %>
+              <div class="card stat-item" data-index="<%= i %>">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary">#<span class="stat-number"><%= i+1 %></span></span>
+                    <strong>Stat</strong>
+                  </div>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-secondary btn-move-up" type="button" title="Move up"><i class="fas fa-arrow-up"></i></button>
+                    <button class="btn btn-sm btn-outline-secondary btn-move-down" type="button" title="Move down"><i class="fas fa-arrow-down"></i></button>
+                    <button class="btn btn-sm btn-outline-danger btn-remove" type="button" title="Remove"><i class="fas fa-trash"></i></button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="row g-3 align-items-end">
+                    <div class="col-sm-4 col-md-3">
+                      <label class="form-label" for="stat<%= i %>_value">Value</label>
+                      <input id="stat<%= i %>_value" class="form-control" type="number" name="stat<%= i %>_value" value="<%= Number.isFinite(+s.value) ? s.value : '' %>" />
+                    </div>
+                    <div class="col-sm-4 col-md-3">
+                      <label class="form-label" for="stat<%= i %>_icon">Icon (Font Awesome)</label>
+                      <input id="stat<%= i %>_icon" class="form-control" type="text" name="stat<%= i %>_icon" placeholder="e.g., fa-trophy" value="<%= s.icon || '' %>" />
+                    </div>
+                    <div class="col-sm-4 col-md-3">
+                      <label class="form-label" for="stat<%= i %>_suffix">Suffix</label>
+                      <input id="stat<%= i %>_suffix" class="form-control" type="text" name="stat<%= i %>_suffix" placeholder="e.g., +, %" value="<%= s.suffix || '' %>" />
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label" for="stat<%= i %>_active">Active</label>
+                      <select id="stat<%= i %>_active" class="form-select" name="stat<%= i %>_active">
+                        <% const active = (typeof s.active === 'boolean') ? s.active : true; %>
+                        <option value="true" <%= active ? 'selected' : '' %>>Yes</option>
+                        <option value="false" <%= !active ? 'selected' : '' %>>No</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="row g-3 mt-2">
+                    <div class="col-md-4">
+                      <label class="form-label" for="stat<%= i %>_label_en">Label (EN)</label>
+                      <input id="stat<%= i %>_label_en" class="form-control" type="text" name="stat<%= i %>_label_en" value="<%= (s.labels && s.labels.en) || '' %>" />
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label" for="stat<%= i %>_label_sk">Label (SK)</label>
+                      <input id="stat<%= i %>_label_sk" class="form-control" type="text" name="stat<%= i %>_label_sk" value="<%= (s.labels && s.labels.sk) || '' %>" />
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label" for="stat<%= i %>_label_hu">Label (HU)</label>
+                      <input id="stat<%= i %>_label_hu" class="form-control" type="text" name="stat<%= i %>_label_hu" value="<%= (s.labels && s.labels.hu) || '' %>" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% } %>
+          </div>
+          <div class="d-flex justify-content-between mt-3">
+            <button class="btn btn-outline-primary" type="button" id="btn-add-stat"><i class="fas fa-plus me-1"></i>Add Stat</button>
+            <button class="btn btn-success px-4" type="submit"><i class="fas fa-save me-1"></i>Save</button>
+          </div>
+        </form>
+        <template id="stat-template">
+          <div class="card stat-item" data-index="__IDX__">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-secondary">#<span class="stat-number">__NUM__</span></span>
+                <strong>Stat</strong>
+              </div>
+              <div class="d-flex gap-1">
+                <button class="btn btn-sm btn-outline-secondary btn-move-up" type="button" title="Move up"><i class="fas fa-arrow-up"></i></button>
+                <button class="btn btn-sm btn-outline-secondary btn-move-down" type="button" title="Move down"><i class="fas fa-arrow-down"></i></button>
+                <button class="btn btn-sm btn-outline-danger btn-remove" type="button" title="Remove"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row g-3 align-items-end">
+                <div class="col-sm-4 col-md-3">
+                  <label class="form-label" for="stat__IDX___value">Value</label>
+                  <input id="stat__IDX___value" class="form-control" type="number" name="stat__IDX___value" />
+                </div>
+                <div class="col-sm-4 col-md-3">
+                  <label class="form-label" for="stat__IDX___icon">Icon (Font Awesome)</label>
+                  <input id="stat__IDX___icon" class="form-control" type="text" name="stat__IDX___icon" placeholder="e.g., fa-trophy" />
+                </div>
+                <div class="col-sm-4 col-md-3">
+                  <label class="form-label" for="stat__IDX___suffix">Suffix</label>
+                  <input id="stat__IDX___suffix" class="form-control" type="text" name="stat__IDX___suffix" placeholder="e.g., +, %" />
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label" for="stat__IDX___active">Active</label>
+                  <select id="stat__IDX___active" class="form-select" name="stat__IDX___active">
+                    <option value="true" selected>Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row g-3 mt-2">
+                <div class="col-md-4">
+                  <label class="form-label" for="stat__IDX___label_en">Label (EN)</label>
+                  <input id="stat__IDX___label_en" class="form-control" type="text" name="stat__IDX___label_en" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="stat__IDX___label_sk">Label (SK)</label>
+                  <input id="stat__IDX___label_sk" class="form-control" type="text" name="stat__IDX___label_sk" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="stat__IDX___label_hu">Label (HU)</label>
+                  <input id="stat__IDX___label_hu" class="form-control" type="text" name="stat__IDX___label_hu" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+        <script>
+          (function(){
+            const container = document.getElementById('stats-container');
+            const addBtn = document.getElementById('btn-add-stat');
+            const countInput = document.getElementById('stats_count');
+            const form = document.getElementById('stats-form');
+            function reindex(){
+              const items = Array.from(container.querySelectorAll('.stat-item'));
+              items.forEach((el, idx) => {
+                el.dataset.index = idx;
+                const num = el.querySelector('.stat-number');
+                if (num) num.textContent = String(idx+1);
+                el.querySelectorAll('input, select, label').forEach(node => {
+                  if (node.name) node.name = node.name.replace(/stat\d+_/g, `stat${idx}_`).replace(/stat__IDX___/g, `stat${idx}_`).replace(/stat__IDX__/g, `stat${idx}`);
+                  if (node.id) node.id = node.id.replace(/stat\d+_/g, `stat${idx}_`).replace(/stat__IDX___/g, `stat${idx}_`).replace(/stat__IDX__/g, `stat${idx}`);
+                  if (node.htmlFor) node.htmlFor = node.htmlFor.replace(/stat\d+_/g, `stat${idx}_`).replace(/stat__IDX___/g, `stat${idx}_`).replace(/stat__IDX__/g, `stat${idx}`);
+                });
+              });
+              countInput.value = String(items.length);
+            }
+            function addItem(){
+              const tmpl = document.getElementById('stat-template');
+              const idx = container.querySelectorAll('.stat-item').length;
+              let html = tmpl.innerHTML.replaceAll('__IDX__', idx).replaceAll('__NUM__', idx+1);
+              const wrapper = document.createElement('div');
+              wrapper.innerHTML = html.trim();
+              container.appendChild(wrapper.firstElementChild);
+              reindex();
+            }
+            function onClick(e){
+              const rm = e.target.closest('.btn-remove');
+              if (rm){
+                if (!confirm('Remove this stat?')) return;
+                rm.closest('.stat-item').remove();
+                reindex();
+                return;
+              }
+              const up = e.target.closest('.btn-move-up');
+              if (up){
+                const item = up.closest('.stat-item');
+                const prev = item.previousElementSibling;
+                if (prev){ container.insertBefore(item, prev); reindex(); }
+                return;
+              }
+              const down = e.target.closest('.btn-move-down');
+              if (down){
+                const item = down.closest('.stat-item');
+                const next = item.nextElementSibling;
+                if (next){ container.insertBefore(next, item); reindex(); }
+                return;
+              }
+            }
+            addBtn.addEventListener('click', addItem);
+            container.addEventListener('click', onClick);
+            form.addEventListener('submit', reindex);
+          })();
+        </script>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('admin-layout-bottom') %>

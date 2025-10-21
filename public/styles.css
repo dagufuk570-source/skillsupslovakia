@@ -1,0 +1,23 @@
+body{font-family:Arial,Helvetica,sans-serif;color:#222}
+/* Navbar adjustments to keep long labels on one line */
+.navbar .navbar-nav{flex-wrap:nowrap}
+.navbar .nav-link{white-space:nowrap}
+/* Slightly tighter navbar for Slovak on large screens */
+@media (min-width: 992px){
+	html[lang="sk"] .navbar .nav-link{padding-left:.5rem;padding-right:.5rem;font-size:.95rem}
+	html[lang="sk"] .navbar-brand{font-size:1.15rem}
+}
+header nav ul{list-style:none;padding:0;display:flex;gap:12px}
+header nav a{text-decoration:none;color:#0366d6}
+main h1{margin-top:0}
+textarea{font-family:monospace}
+
+/* About Us middle row styling */
+.about-mid-card{background:#ffffff;border-radius:.5rem;padding:1rem;box-shadow:0 0.125rem 0.25rem rgba(0,0,0,.075);border:1px solid rgba(0,0,0,.06)}
+.about-mid-card-left{background:linear-gradient(180deg,#f0faf8,#ffffff)}
+.about-mid-card-right{background:linear-gradient(180deg,#f7f0fa,#ffffff)}
+.about-mid-icon{font-size:1.25rem;color:#1A685B;margin-bottom:.5rem}
+.about-mid-body p{margin-bottom:.5rem}
+@media (max-width: 767.98px){
+	.about-mid-card{padding:0.875rem}
+}

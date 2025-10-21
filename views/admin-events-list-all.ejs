@@ -1,0 +1,60 @@
+<%- include('admin-layout-top', { title: 'Events (All Languages)', lang, useDb: true, active: 'events' }) %>
+
+<div class="card">
+  <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-list me-2"></i>
+      <h5 class="mb-0">All Events (EN/SK/HU)</h5>
+    </div>
+    <a class="btn btn-light btn-sm" href="/admin/events?lang=<%= lang %>">
+      <i class="fas fa-arrow-left me-1"></i>Back
+    </a>
+  </div>
+  <div class="card-body">
+    <% if (success) { %>
+      <div class="alert alert-success"><%= success %></div>
+    <% } %>
+    <% if (!events || events.length === 0) { %>
+      <div class="alert alert-info">No events found.</div>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table table-striped align-middle">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Group</th>
+              <th>Lang</th>
+              <th>Title</th>
+              <th>Date</th>
+              <th>Location</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% events.forEach(function(e){ const langUpper = (e.lang || '').toUpperCase(); %>
+              <tr>
+                <td><code><%= e.id %></code></td>
+                <td><code><%= e.group_id || '—' %></code></td>
+                <td><span class="badge bg-dark"><%= (e.lang || '').toUpperCase() %></span></td>
+                <td><%= e.title %></td>
+                <td><%= e.event_date ? new Date(e.event_date).toLocaleDateString() : '' %></td>
+                <td><%= e.location || '' %></td>
+                <td class="text-end">
+                  <div class="btn-group" role="group">
+                    <a href="/events/<%= e.id %>?lang=<%= e.lang %>" class="btn btn-sm btn-outline-primary" target="_blank"><i class="fas fa-eye"></i></a>
+                    <a href="/admin/events/<%= e.id %>/edit?lang=<%= lang %>" class="btn btn-sm btn-outline-secondary"><i class="fas fa-edit"></i></a>
+                    <form method="post" action="/admin/events/<%= e.id %>/delete?lang=<%= lang %>" class="d-inline" onsubmit="return confirm('Delete event ID <%= e.id %> (<%= langUpper %>)?');">
+                      <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('admin-layout-bottom') %>

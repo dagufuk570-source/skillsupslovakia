@@ -1,0 +1,3659 @@
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import multer from 'multer';
+import sharp from 'sharp';
+import fsSync from 'fs';
+import crypto from 'crypto';
+import helmet from 'helmet';
+import nodemailer from 'nodemailer';
+import https from 'https';
+dotenv.config();
+
+let db = null;
+let useDb = true; // enforce DB-only
+
+// Ensure __filename and __dirname are available early (ESM)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Global safety nets to avoid process exit on transient DB terminations and unhandled rejections
+process.on('uncaughtException', (err) => {
+  try {
+    const code = err && (err.code || err.name);
+    const msg = err?.stack || err?.message || String(err);
+    console.error('[uncaughtException]', code ? `${code}: ${msg}` : msg);
+  } catch {}
+});
+process.on('unhandledRejection', (reason) => {
+  try {
+    const code = reason && (reason.code || reason.name);
+    const msg = (reason && (reason.stack || reason.message)) ? (reason.stack || reason.message) : String(reason);
+    console.error('[unhandledRejection]', code ? `${code}: ${msg}` : msg);
+  } catch {}
+});
+
+// Preferred navigation order by slug
+const NAV_ORDER = ['home','about-us','focus-areas','themes','events','team','gdpr','contact','news','documents'];
+
+function buildMenu(pages){
+  const bySlug = Object.create(null);
+  for(const p of pages || []) bySlug[p.slug] = p;
+  const ordered = [];
+  for(const slug of NAV_ORDER){
+    if(bySlug[slug]){
+      ordered.push(bySlug[slug]);
+      delete bySlug[slug];
+    }
+  }
+  const extras = Object.values(bySlug).sort((a,b)=>{
+    return String(a.title||'').localeCompare(String(b.title||''));
+  });
+  return ordered.concat(extras);
+}
+
+// Simple slugify for titles (supports accents removal)
+function slugify(input){
+  return String(input || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
+// Sanitize location: remove parentheses and quotes, collapse spaces
+function sanitizeLocation(input){
+  const s = String(input || '')
+    .replace(/[()'\"]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return s || null;
+}
+
+// Resolve canonical gallery owner record within a group for events/news/themes
+async function resolveEventGalleryOwnerId(base){
+  try{
+    const ids = [];
+    if(base.group_id){
+      const en = await db.getEventByGroupAndLang?.(base.group_id, 'en');
+      const sk = await db.getEventByGroupAndLang?.(base.group_id, 'sk');
+      const hu = await db.getEventByGroupAndLang?.(base.group_id, 'hu');
+      for(const r of [en, sk, hu, base]){ if(r && r.id && !ids.includes(r.id)) ids.push(r.id); }
+    } else if (base?.id){
+      ids.push(base.id);
+    }
+    // Prefer the first record that already has images; else fallback to EN/SK/HU/base order
+    for(const id of ids){
+      const imgs = await db.getAdditionalImages('event', id);
+      if(Array.isArray(imgs) && imgs.length > 0) return id;
+    }
+    return ids[0] || base.id;
+  }catch{
+    return base?.id;
+  }
+}
+
+// Resolve event variant for current language with fallback
+async function resolveEventVariant(event, lang){
+  if(!event || !event.group_id || !db.getEventByGroupAndLang) return event;
+  try{
+    const cur = await db.getEventByGroupAndLang(event.group_id, lang);
+    if(cur) return cur;
+    const en = await db.getEventByGroupAndLang(event.group_id, 'en');
+    const sk = await db.getEventByGroupAndLang(event.group_id, 'sk');
+    const hu = await db.getEventByGroupAndLang(event.group_id, 'hu');
+    return en || sk || hu || event;
+  }catch{ return event; }
+}
+
+async function resolveNewsGalleryOwnerId(base){
+  try{
+    const ids = [];
+    if(base.group_id){
+      const en = await db.getNewsByGroupAndLang?.(base.group_id, 'en');
+      const sk = await db.getNewsByGroupAndLang?.(base.group_id, 'sk');
+      const hu = await db.getNewsByGroupAndLang?.(base.group_id, 'hu');
+      for(const r of [en, sk, hu, base]){ if(r && r.id && !ids.includes(r.id)) ids.push(r.id); }
+    } else if (base?.id){
+      ids.push(base.id);
+    }
+    for(const id of ids){
+      const imgs = await db.getAdditionalImages('news', id);
+      if(Array.isArray(imgs) && imgs.length > 0) return id;
+    }
+    return ids[0] || base.id;
+  }catch{
+    return base?.id;
+  }
+}
+
+async function resolveThemeGalleryOwnerId(base){
+  try{
+    const ids = [];
+    if(base.group_id){
+      const en = await db.getThemeByGroupAndLang?.(base.group_id, 'en');
+      const sk = await db.getThemeByGroupAndLang?.(base.group_id, 'sk');
+      const hu = await db.getThemeByGroupAndLang?.(base.group_id, 'hu');
+      for(const r of [en, sk, hu, base]){ if(r && r.id && !ids.includes(r.id)) ids.push(r.id); }
+    } else if (base?.id){
+      ids.push(base.id);
+    }
+    for(const id of ids){
+      const imgs = await db.getAdditionalImages('theme', id);
+      if(Array.isArray(imgs) && imgs.length > 0) return id;
+    }
+    return ids[0] || base.id;
+  }catch{
+    return base?.id;
+  }
+}
+
+async function uniqueThemeSlug(lang, base){
+  let slug = base || 'item';
+  let attempt = 0;
+  while(true){
+    const s = attempt === 0 ? slug : `${slug}-${attempt+1}`;
+    const existing = await db.getThemeBySlug?.(lang, s);
+    if(!existing) return s;
+    attempt++;
+    if(attempt > 50) throw new Error('Could not generate unique slug');
+  }
+}
+
+async function uniqueNewsSlug(lang, base){
+  let slug = base || 'article';
+  let attempt = 0;
+  while(true){
+    const s = attempt === 0 ? slug : `${slug}-${attempt+1}`;
+    const existing = await db.getNewsBySlug?.(s, lang);
+    if(!existing) return s;
+    attempt++;
+    if(attempt > 50) throw new Error('Could not generate unique slug');
+  }
+}
+
+async function uniqueEventSlug(lang, base){
+  let slug = base || 'event';
+  let attempt = 0;
+  while(true){
+    const s = attempt === 0 ? slug : `${slug}-${attempt+1}`;
+    const existing = await db.getEventBySlug?.(lang, s);
+    if(!existing) return s;
+    attempt++;
+    if(attempt > 50) throw new Error('Could not generate unique slug');
+  }
+}
+
+async function connectDbWithRetry(){
+  const requireDb = true; // always require DB
+  const shouldTryDb = true;
+  const attempts = parseInt(process.env.DB_RETRY_ATTEMPTS || '20', 10);
+  const delayMs = parseInt(process.env.DB_RETRY_DELAY_MS || '1500', 10);
+  let lastErr = null;
+  for(let i=1;i<=attempts;i++){
+    try{
+      if(!db){
+        db = await import('./db/postgres.js');
+      }
+      await db.ping();
+    await db.ensurePagesTable?.();
+      await db.ensureEventsTable?.();
+      await db.ensureThemesTable?.();
+      await db.ensureTeamMembersTable?.();
+      await db.ensureSettingsTable?.();
+  await db.ensureFocusAreasTable?.();
+      await db.ensureAdditionalImagesTable?.();
+      await db.ensureNewsTable?.();
+  await db.ensureDocumentsTable?.();
+  await db.ensureContactMessagesTable?.();
+  // Backfill consistency: ensure events in the same group share the same lead image
+  await db.backfillEventLeadImages?.();
+  await db.backfillThemeLeadImages?.();
+  await db.backfillNewsLeadImages?.();
+      // Ensure key pages exist (About Us, Focus Areas, Contact, GDPR) if not present
+      try{
+        const langs = ['en','sk','hu'];
+        for(const l of langs){
+          const pages = await db.listPages?.(l) || [];
+          const bySlug = Object.fromEntries(pages.map(p=>[p.slug, p]));
+          const ensure = async (slug, title, content) => {
+            if(!bySlug[slug]){
+              await db.upsertPage?.({ lang: l, slug, title, content });
+            }
+          };
+          await ensure('about-us', l==='sk' ? 'O nás' : (l==='hu' ? 'Rólunk' : 'About Us'), '<p>About our organization.</p>');
+          await ensure('focus-areas', l==='sk' ? 'Zamerania' : (l==='hu' ? 'Fókuszterületek' : 'Focus Areas'), '<p>Our key focus areas.</p>');
+          await ensure('contact', l==='sk' ? 'Kontakt' : (l==='hu' ? 'Kapcsolat' : 'Contact'), '<p>Get in touch with us.</p>');
+          await ensure('gdpr', 'GDPR', '<p>Privacy and data protection information.</p>');
+          if(!bySlug['home']){
+            await db.upsertPage?.({ lang: l, slug: 'home', title: l==='sk' ? 'Domov' : (l==='hu' ? 'Főoldal' : 'Home'), content: '<p>Welcome to our site.</p>' });
+          }
+        }
+      }catch(e){
+        console.warn('Ensure key pages failed (non-fatal):', e.message);
+      }
+  useDb = true;
+      console.log('Backend: PostgreSQL (connected)');
+      return;
+    }catch(err){
+      lastErr = err;
+      console.warn(`DB not ready (attempt ${i}/${attempts}): ${err.message}`);
+      await new Promise(r=>setTimeout(r, delayMs));
+    }
+  }
+  console.error('Backend: PostgreSQL required but unavailable:', lastErr?.stack || lastErr?.message || 'unknown error');
+  process.exit(1);
+}
+
+await connectDbWithRetry();
+
+// One-time cleanup at startup: ensure About Us sections 2 and 3 have no images
+async function purgeAboutUsMidImages() {
+  try {
+    const langs = ['en', 'sk', 'hu'];
+    for (const l of langs) {
+      let page;
+      try { page = await db.getPage(l, 'about-us'); } catch {}
+      if (!page || !page.id) continue;
+      let items = [];
+      try { items = await db.getAdditionalImages('page', page.id); } catch {}
+      if (!Array.isArray(items) || items.length === 0) continue;
+      let changed = false;
+      const final = items.map((it, idx) => {
+        if (idx === 1 || idx === 2) {
+          // Unlink local file if any
+          try {
+            if (it && it.image_url && typeof it.image_url === 'string' && it.image_url.startsWith('/uploads/')) {
+              const p = path.join(__dirname, 'public', it.image_url.replace(/^\//, ''));
+              if (fsSync.existsSync(p)) fsSync.unlinkSync(p);
+            }
+          } catch {}
+          changed = true;
+          return { image_url: '', alt_text: (it && it.alt_text) || '', sort_order: idx };
+        }
+        return { image_url: (it && it.image_url) || '', alt_text: (it && it.alt_text) || '', sort_order: idx };
+      });
+      if (changed) {
+        if (typeof db.replaceAdditionalImageItems === 'function') {
+          await db.replaceAdditionalImageItems('page', page.id, final);
+        } else {
+          await db.deleteAdditionalImages('page', page.id);
+          if (final.length) await db.addAdditionalImages('page', page.id, final.map(f => f.image_url));
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Startup purge (About Us 2 & 3 images) failed:', e?.message || e);
+  }
+}
+
+await purgeAboutUsMidImages();
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Security headers (Helmet) + CSP
+// Note: We keep 'unsafe-eval' DISALLOWED. Inline scripts are temporarily allowed via 'unsafe-inline'.
+// If you want to harden further, move inline scripts to external files and replace 'unsafe-inline' with nonces.
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+}));
+
+// Content Security Policy: strict by default, relaxed for /admin to support TinyMCE if needed
+// Note: Some third-party libraries used on public pages (e.g., animation/carousel plugins) may rely on eval-like constructs.
+// To avoid persistent CSP console errors and broken behavior, we explicitly allow 'unsafe-eval' for public pages here.
+// If you want to harden this later, consider removing/replacing those libraries and then removing 'unsafe-eval'.
+const ALLOW_PUBLIC_EVAL = true; // force-enable eval on public to resolve reported CSP error
+const cspDefault = helmet.contentSecurityPolicy({
+  useDefaults: true,
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: [
+      "'self'",
+      "'unsafe-inline'", // inline snippets in templates; consider nonces later
+      'https://code.jquery.com',
+      'https://cdn.jsdelivr.net',
+      'https://cdn.tiny.cloud',
+      'https://www.google.com/recaptcha/',
+      'https://www.gstatic.com/recaptcha/',
+      "'unsafe-eval'" // allow eval on public pages to prevent library breakage
+    ],
+    // No 'unsafe-eval' here to keep public pages stricter
+    styleSrc: [
+      "'self'",
+      "'unsafe-inline'",
+      'https://fonts.googleapis.com',
+      'https://cdnjs.cloudflare.com',
+      'https://cdn.jsdelivr.net',
+      'https://cdn.tiny.cloud'
+    ],
+    fontSrc: [
+      "'self'",
+      'https://fonts.gstatic.com',
+      'https://cdnjs.cloudflare.com',
+      'https://cdn.jsdelivr.net',
+      'https://cdn.tiny.cloud',
+      'data:'
+    ],
+    imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+  connectSrc: ["'self'", 'https://cdn.tiny.cloud', 'https://cdn.jsdelivr.net'],
+    frameSrc: ["'self'", 'https://www.google.com', 'https://maps.google.com'],
+    workerSrc: ["'self'", 'blob:'],
+    objectSrc: ["'none'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"],
+    upgradeInsecureRequests: []
+  }
+});
+
+const cspAdmin = helmet.contentSecurityPolicy({
+  useDefaults: true,
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: [
+      "'self'",
+      "'unsafe-inline'",
+      "'unsafe-eval'", // allow eval for TinyMCE/editor-only context
+      'https://code.jquery.com',
+      'https://cdn.jsdelivr.net',
+      'https://cdn.tiny.cloud',
+      'https://assets.tiny.cloud',
+      'https://www.google.com/recaptcha/',
+      'https://www.gstatic.com/recaptcha/',
+      'blob:'
+    ],
+    styleSrc: [
+      "'self'",
+      "'unsafe-inline'",
+      'https://fonts.googleapis.com',
+      'https://cdnjs.cloudflare.com',
+      'https://cdn.jsdelivr.net',
+      'https://cdn.tiny.cloud',
+      'https://assets.tiny.cloud'
+    ],
+    fontSrc: [
+      "'self'",
+      'https://fonts.gstatic.com',
+      'https://cdnjs.cloudflare.com',
+      'https://cdn.jsdelivr.net',
+      'https://cdn.tiny.cloud',
+      'https://assets.tiny.cloud',
+      'data:'
+    ],
+    imgSrc: ["'self'", 'data:', 'blob:', 'https:', 'https://assets.tiny.cloud'],
+  connectSrc: ["'self'", 'https://cdn.tiny.cloud', 'https://assets.tiny.cloud', 'https://cdn.jsdelivr.net'],
+  frameSrc: ["'self'", 'blob:', 'data:', 'https://www.google.com', 'https://maps.google.com', 'https://www.google.com/recaptcha/'],
+    workerSrc: ["'self'", 'blob:'],
+    objectSrc: ["'none'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"],
+    upgradeInsecureRequests: []
+  }
+});
+
+app.use((req, res, next) => {
+  if (req.path && req.path.startsWith('/admin')) {
+    return cspAdmin(req, res, next);
+  }
+  return cspDefault(req, res, next);
+});
+
+// Handle public Documents page early to avoid any static path conflicts
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+// Legacy route alias: /focus -> /focus-areas
+app.get('/focus', (req, res) => {
+  return res.redirect(`/focus-areas?lang=${req.query.lang || 'en'}`);
+});
+
+// Friendly alias: /gdpr -> /page/gdpr
+app.get('/gdpr', (req, res) => {
+  return res.redirect(`/page/gdpr?lang=${req.query.lang || 'en'}`);
+});
+
+// (removed) Early fallback for /focus-areas when DB is not connected
+
+// File uploads (images)
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+if(!fsSync.existsSync(uploadsDir)){
+  fsSync.mkdirSync(uploadsDir, { recursive: true });
+}
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const base = path.basename(file.originalname, ext).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    const stamp = Date.now();
+    cb(null, `${base}-${stamp}${ext}`);
+  }
+});
+// Non-fatal image-only filter for galleries: skip non-image files silently
+const imageFilter = (req, file, cb) => {
+  if(/^image\//.test(file.mimetype)) return cb(null, true);
+  // Skip non-image files without throwing — prevents MulterError on unexpected fields
+  return cb(null, false);
+};
+// Permissive filter for documents feature (allow common office types and images)
+const docFileFilter = (req, file, cb) => {
+  const ok = /^image\//.test(file.mimetype)
+    || file.mimetype === 'application/pdf'
+    || file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    || file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    || file.mimetype === 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    || file.mimetype === 'text/plain';
+  if(ok) return cb(null, true);
+  return cb(new Error('Unsupported file type'));
+};
+const uploadImages = multer({ storage, fileFilter: imageFilter });
+
+// Optimize and resize uploaded raster images in-place to reduce size and standardize dimensions
+async function optimizeUploadedImage(absPath) {
+  try {
+    const ext = path.extname(absPath).toLowerCase();
+    if (!['.jpg', '.jpeg', '.png', '.webp', '.avif'].includes(ext)) return;
+    let pipeline = sharp(absPath)
+      .rotate() // honor EXIF orientation
+      .resize({ width: 1600, height: 1200, fit: 'inside', withoutEnlargement: true });
+    if (ext === '.jpg' || ext === '.jpeg') {
+      pipeline = pipeline.jpeg({ quality: 80, mozjpeg: true });
+    } else if (ext === '.png') {
+      pipeline = pipeline.png({ compressionLevel: 8, adaptiveFiltering: true });
+    } else if (ext === '.webp') {
+      pipeline = pipeline.webp({ quality: 80 });
+    } else if (ext === '.avif') {
+      pipeline = pipeline.avif({ quality: 50 });
+    }
+    const tmp = absPath + '.opt';
+    await pipeline.toFile(tmp);
+    try { if (fsSync.existsSync(absPath)) fsSync.unlinkSync(absPath); } catch {}
+    fsSync.renameSync(tmp, absPath);
+  } catch (e) {
+    console.warn('optimizeUploadedImage: error, skipping', e?.message || e);
+  }
+}
+
+// Team-specific upload handling: save under /public/uploads/team and process images with sharp (600x600 + thumbnail)
+const teamUploadsDir = path.join(uploadsDir, 'team');
+if(!fsSync.existsSync(teamUploadsDir)){
+  fsSync.mkdirSync(teamUploadsDir, { recursive: true });
+}
+function safeSlugFilename(title, ext){
+  const base = slugify(title || 'member') || 'member';
+  const stamp = Date.now();
+  return `${base}-${stamp}${ext}`;
+}
+const uploadTeam = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    // Only images
+    if(!/^image\//.test(file.mimetype)){
+      return cb(null, false);
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 2 * 1024 * 1024 } // 2 MB
+});
+async function processTeamImage(buffer, originalname){
+  const ext = '.jpg';
+  const baseName = safeSlugFilename(path.basename(originalname || 'member', path.extname(originalname || 'member')), ext);
+  const outPath = path.join(teamUploadsDir, baseName);
+  const thumbName = baseName.replace(ext, `-thumb${ext}`);
+  const outThumb = path.join(teamUploadsDir, thumbName);
+  // Ensure square crop center and reasonable quality
+  await sharp(buffer)
+    .resize(600, 600, { fit: 'cover', position: 'centre' })
+    .jpeg({ quality: 82 })
+    .toFile(outPath);
+  await sharp(buffer)
+    .resize(150, 150, { fit: 'cover', position: 'centre' })
+    .jpeg({ quality: 80 })
+    .toFile(outThumb);
+  return {
+    photo_url: `/uploads/team/${baseName}`,
+    thumb_url: `/uploads/team/${thumbName}`
+  };
+}
+
+// Multer error handler for team routes (e.g., file too large)
+app.use((err, req, res, next) => {
+  if(err && err.code === 'LIMIT_FILE_SIZE' && req.method === 'POST' && /^\/admin\/team(\/[0-9]+)?$/.test(req.path)){
+    const lang = (res && res.locals && res.locals.lang) ? res.locals.lang : (req.query.lang || 'en');
+    if(/\/admin\/team\/[0-9]+$/.test(req.path)){
+      const id = req.path.split('/').pop();
+      db.getTeamMember(id).then(member => {
+  res.status(400).render('admin-team-form', { lang, member, error: 'File size exceeds the 2 MB limit.' });
+      }).catch(() => {
+  res.status(400).render('admin-team-form', { lang, member: null, error: 'File size exceeds the 2 MB limit.' });
+      });
+    } else {
+  res.status(400).render('admin-team-form', { lang, member: null, error: 'File size exceeds the 2 MB limit.' });
+    }
+    return;
+  }
+  return next(err);
+});
+const uploadFiles = multer({ storage, fileFilter: docFileFilter });
+
+// Log whether admin auth is enabled
+const adminAuthEnabled = Boolean(process.env.ADMIN_USER && process.env.ADMIN_PASS);
+console.log(`Admin auth ${adminAuthEnabled ? 'ENABLED' : 'DISABLED'}`);
+
+// content.json fallback removed – DB is required
+
+// Middleware to determine language (query param or cookie could be used)
+app.use((req,res,next)=>{
+  const supported = ['en','sk','hu'];
+  let lang = req.query.lang;
+  if(!supported.includes(lang)) lang = 'en';
+  res.locals.lang = lang;
+  next();
+});
+
+// Expose current request path to templates for active menu highlighting
+app.use((req, res, next) => {
+  try { res.locals.currentPath = req.path || '/'; } catch {} 
+  next();
+});
+
+// Centralized i18n helper available in all views as t(key)
+const TRANSLATIONS = {
+  en: {
+    // Nav
+    home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', news: 'News', documents: 'Documents',
+    // Common UI
+    menu: 'Menu', callUs: 'Call Us', mailUs: 'Mail Us', address: 'Address', learnMore: 'Learn More', viewEvents: 'View Events',
+    quickLinks: 'Quick Links', languages: 'Languages', newsletter: 'Newsletter', stayUpdated: 'Stay updated with our latest events and programs.',
+    yourEmail: 'Your email', subscribe: 'Subscribe', copied: 'Copied', allRightsReserved: 'All Rights Reserved.',
+    // Documents
+    download: 'Download', noDocumentsYet: 'No documents yet.',
+    // Events
+    viewDetails: 'View Details', noEventsYet: 'No events yet.', eventsKicker: 'OUR EVENTS', eventsHeading: 'Explore Our Latest Events', eventsTitle: 'Events',
+    // Contact
+    ourAddress: 'Our Address', emailLabel: 'Email', getInTouch: 'Get in touch', nameLabel: 'Name', subjectLabel: 'Subject', messageLabel: 'Message', sendMessage: 'Send Message',
+    contactSuccess: 'Your message has been sent. Thank you!',
+  // Theme detail
+    aboutThisTheme: 'About This Theme', noDescriptionAvailable: 'No description available.', gallery: 'Gallery', themeInformation: 'Theme Information',
+    slug: 'Slug', created: 'Created', backToThemes: 'Back to Themes', relatedThemes: 'Related Themes', galleryImageLabel: 'Gallery Image', noAdditionalImages: 'No additional images available for this theme.',
+    // GDPR
+    privacyPolicy: 'Privacy Policy',
+    // News
+    readMore: 'Read More', noNewsYet: 'No news articles yet.', newsKicker: 'NEWS', newsHeading: 'Latest News and Updates', newsTitle: 'News',
+  // Themes listing/detail
+    noThemesYet: 'No themes yet.', themesKicker: 'OUR THEMES', themesHeading: 'Discover Our Focus Themes', themesTitle: 'Themes',
+  themeKicker: 'THEME',
+    // Focus Areas
+    focusAreasKicker: 'FOCUS AREAS', focusAreasHeading: 'Our Key Focus Areas', focusAreasTitle: 'Focus Areas',
+    fa_group: 'Group', fa_field: 'Field', fa_experts: 'Expert(s)', fa_description: 'Description', fa_activity_description: 'Activity - description', fa_type_of_activity: 'Type of activity',
+  // Share/copy
+  share: 'Share:', copy: 'Copy', backToList: 'Back to list',
+    // Not found
+    themeNotFound: 'Theme Not Found', eventNotFound: 'Event Not Found', newsNotFound: 'News Not Found', teamNotFound: 'Team Member Not Found',
+    // Team
+    teamKicker: 'OUR TEAM', teamHeading: 'Meet Our Dedicated Team Members', noTeamYet: 'No team members yet.'
+  },
+  sk: {
+    home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
+    menu: 'Menu', callUs: 'Zavolajte nám', mailUs: 'Napíšte nám', address: 'Adresa', learnMore: 'Zistiť viac', viewEvents: 'Zobraziť podujatia',
+    home: 'Domov', themes: 'Témy', focusAreas: 'Zamerania', events: 'Podujatia', team: 'Náš tím', news: 'Novinky', documents: 'Dokumenty', about: 'O nás', contact: 'Kontakt', gdpr: 'GDPR',
+    yourEmail: 'Váš email', subscribe: 'Prihlásiť sa', copied: 'Skopírované', allRightsReserved: 'Všetky práva vyhradené.',
+    home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', news: 'Hírek', documents: 'Dokumentumok', about: 'Rólunk', contact: 'Kapcsolat', gdpr: 'GDPR',
+    viewDetails: 'Zobraziť podrobnosti', noEventsYet: 'Zatiaľ žiadne podujatia.', eventsKicker: 'NAŠE PODUJATIA', eventsHeading: 'Preskúmajte naše najnovšie podujatia', eventsTitle: 'Podujatia',
+    ourAddress: 'Naša adresa', emailLabel: 'Email', getInTouch: 'Kontaktujte nás', nameLabel: 'Meno', subjectLabel: 'Predmet', messageLabel: 'Správa', sendMessage: 'Odoslať správu',
+    contactSuccess: 'Vaša správa bola odoslaná. Ďakujeme!',
+    aboutThisTheme: 'O tejto téme', noDescriptionAvailable: 'Popis nie je k dispozícii.', gallery: 'Galéria', themeInformation: 'Informácie o téme',
+    slug: 'Slug', created: 'Vytvorené', backToThemes: 'Späť na Témy', relatedThemes: 'Súvisiace témy', galleryImageLabel: 'Obrázok v galérii', noAdditionalImages: 'Pre túto tému nie sú k dispozícii žiadne ďalšie obrázky.',
+    privacyPolicy: 'Ochrana osobných údajov',
+    readMore: 'Čítať viac', noNewsYet: 'Zatiaľ žiadne novinky.', newsKicker: 'NOVINKY', newsHeading: 'Najnovšie správy a aktualizácie', newsTitle: 'Novinky',
+  noThemesYet: 'Zatiaľ žiadne témy.', themesKicker: 'NAŠE TÉMY', themesHeading: 'Objavte naše zamerania', themesTitle: 'Témy',
+  themeKicker: 'TÉMA',
+    focusAreasKicker: 'ZAMERANIA', focusAreasHeading: 'Naše kľúčové zamerania', focusAreasTitle: 'Zamerania',
+    fa_group: 'Skupina', fa_field: 'Oblasť', fa_experts: 'Odborník(ovia)', fa_description: 'Popis', fa_activity_description: 'Aktivita - popis', fa_type_of_activity: 'Typ aktivity',
+  share: 'Zdieľať:', copy: 'Kopírovať', backToList: 'Späť na zoznam',
+    themeNotFound: 'Téma sa nenašla', eventNotFound: 'Podujatie sa nenašlo', newsNotFound: 'Novinka sa nenašla', teamNotFound: 'Člen tímu sa nenašiel',
+    teamKicker: 'NÁŠ TÍM', teamHeading: 'Zoznámte sa s našimi členmi tímu', noTeamYet: 'Zatiaľ žiadni členovia tímu.'
+  },
+  hu: {
+    home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', news: 'Hírek', documents: 'Dokumentumok',
+    menu: 'Menü', callUs: 'Hívjon minket', mailUs: 'Írjon nekünk', address: 'Cím', learnMore: 'Tudjon meg többet', viewEvents: 'Események megtekintése',
+    quickLinks: 'Gyors linkek', languages: 'Nyelvek', newsletter: 'Hírlevél', stayUpdated: 'Értesüljön legújabb eseményeinkről és programjainkról.',
+    yourEmail: 'Az Ön e-mail címe', subscribe: 'Feliratkozás', copied: 'Másolva', allRightsReserved: 'Minden jog fenntartva.',
+    download: 'Letöltés', noDocumentsYet: 'Még nincsenek dokumentumok.',
+    viewDetails: 'Részletek megtekintése', noEventsYet: 'Még nincsenek események.', eventsKicker: 'ESEMÉNYEINK', eventsHeading: 'Fedezze fel legújabb eseményeinket', eventsTitle: 'Események',
+    ourAddress: 'Címünk', emailLabel: 'E-mail', getInTouch: 'Lépjen kapcsolatba velünk', nameLabel: 'Név', subjectLabel: 'Tárgy', messageLabel: 'Üzenet', sendMessage: 'Üzenet küldése',
+    contactSuccess: 'Üzenetét elküldtük. Köszönjük!',
+    aboutThisTheme: 'A témáról', noDescriptionAvailable: 'Leírás nem érhető el.', gallery: 'Galéria', themeInformation: 'Téma információk',
+    slug: 'Slug', created: 'Létrehozva', backToThemes: 'Vissza a Témákhoz', relatedThemes: 'Kapcsolódó témák', galleryImageLabel: 'Galéria kép', noAdditionalImages: 'Ehhez a témához nem állnak rendelkezésre további képek.',
+    privacyPolicy: 'Adatvédelmi tájékoztató',
+    readMore: 'Tovább', noNewsYet: 'Még nincsenek hírek.', newsKicker: 'HÍREK', newsHeading: 'Legfrissebb hírek és frissítések', newsTitle: 'Hírek',
+  noThemesYet: 'Még nincsenek témák.', themesKicker: 'TÉMÁINK', themesHeading: 'Fedezze fel fókuszterületeinket', themesTitle: 'Témák',
+  themeKicker: 'TÉMA',
+    focusAreasKicker: 'FÓKUSZTERÜLETEK', focusAreasHeading: 'Fő fókuszterületeink', focusAreasTitle: 'Fókuszterületek',
+    fa_group: 'Csoport', fa_field: 'Terület', fa_experts: 'Szakértő(k)', fa_description: 'Leírás', fa_activity_description: 'Tevékenység - leírás', fa_type_of_activity: 'Tevékenység típusa',
+  share: 'Megosztás:', copy: 'Másolás', backToList: 'Vissza a listához',
+    themeNotFound: 'Téma nem található', eventNotFound: 'Esemény nem található', newsNotFound: 'Hír nem található', teamNotFound: 'Csapattag nem található',
+    teamKicker: 'CSAPATUNK', teamHeading: 'Ismerje meg elkötelezett csapatunkat', noTeamYet: 'Még nincsenek csapattagok.'
+  }
+};
+app.use((req, res, next) => {
+  res.locals.t = function t(key){
+    try{
+      const lang = (res.locals.lang || 'en').toLowerCase();
+      const L = TRANSLATIONS[lang] || TRANSLATIONS.en;
+      return L[key] || TRANSLATIONS.en[key] || key;
+    }catch{
+      return key;
+    }
+  };
+  next();
+});
+
+// Load site settings (e.g., contact info) into locals per request
+app.use(async (req, res, next) => {
+  res.locals.site = res.locals.site || {};
+  if(useDb){
+    try{
+      const cfg = await db.getSettings?.(res.locals.lang);
+      let contact = cfg?.contact || {};
+      if((!contact || Object.keys(contact).length === 0)){
+        const cfgEn = await db.getSettings?.('en');
+        contact = cfgEn?.contact || {};
+      }
+      res.locals.site.contact = contact;
+      // Footer gallery: get a few random images for display
+      try{
+        const imgs = await db.listRandomImages?.(12).catch(()=>[]);
+        res.locals.footerGallery = (imgs || []).slice(0, 12);
+      }catch{ res.locals.footerGallery = []; }
+    }catch(e){
+      res.locals.site.contact = {};
+      res.locals.footerGallery = [];
+    }
+  }
+  next();
+});
+
+// Basic auth middleware for admin routes (optional)
+function basicAuth(req, res, next){
+  const adminUser = process.env.ADMIN_USER;
+  const adminPass = process.env.ADMIN_PASS;
+  // if not configured, allow access (dev convenience)
+  if(!adminUser || !adminPass) return next();
+
+  const auth = req.headers['authorization'];
+  if(!auth){
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
+    return res.status(401).send('Authentication required');
+  }
+  const parts = auth.split(' ');
+  if(parts.length !== 2 || parts[0] !== 'Basic') return res.status(400).send('Bad authorization header');
+  const creds = Buffer.from(parts[1], 'base64').toString('utf8');
+  const [user, pass] = creds.split(':');
+  if(user === adminUser && pass === adminPass) return next();
+  res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
+  return res.status(403).send('Forbidden');
+}
+
+app.get('/', async (req,res) =>{
+  // get home page from DB
+  const pages = await db.listPages(res.locals.lang);
+  const menu = buildMenu(pages);
+  const home = pages.find(p=>p.slug === 'home');
+  const settings = await db.getSettings?.(res.locals.lang).catch(()=>({})) || {};
+  const slider = Array.isArray(settings.slider) ? settings.slider : [];
+    // Fetch EN images + current language content blocks for homepage
+  let blocksHtml = '';
+  let midRowHtml = '';
+  let b4RowHtml = '';
+  try {
+    const enHome = await db.getPage('en', 'home');
+    const curHome = await db.getPage(res.locals.lang, 'home');
+    if (enHome && enHome.id) {
+      const itemsEn = await db.getAdditionalImages('page', enHome.id);
+      let itemsCur = [];
+      if (curHome && curHome.id) {
+        itemsCur = await db.getAdditionalImages('page', curHome.id);
+      }
+      const getTxt = (idx) => {
+        const enIt = (itemsEn || [])[idx];
+        const curIt = (itemsCur || [])[idx];
+        return (curIt && curIt.alt_text && curIt.alt_text.trim()) ? curIt.alt_text : ((enIt && enIt.alt_text) || '');
+      };
+      const getImg = (idx) => {
+        const enIt = (itemsEn || [])[idx];
+        return enIt && enIt.image_url ? enIt.image_url : '';
+      };
+      const b1 = { img: getImg(0), txt: getTxt(0) };
+      const b2 = { img: getImg(1), txt: getTxt(1) };
+      const b3 = { img: getImg(2), txt: getTxt(2) };
+      const b4 = { img: getImg(3), txt: getTxt(3) };
+      const hasAny = (b1.img || b1.txt || b2.txt || b3.txt || b4.txt);
+      if (hasAny) {
+        const imageCol = b1.img ? `
+          <div class="col-lg-6 wow fadeIn" data-wow-delay="0.2s">
+            <div class="rounded overflow-hidden shadow-sm">
+              <img class="img-fluid w-100" src="${b1.img}" alt="Home section image">
+            </div>
+          </div>` : '';
+        const rightCol = `
+          <div class="col-lg-6">
+            ${b1.txt ? `<div class="mb-4 wow fadeIn" data-wow-delay="0.2s">${b1.txt}</div>` : ''}
+          </div>`;
+        // Prepare mid-row (sections 2 & 3) to be rendered later below stats
+        midRowHtml = (b2.txt || b3.txt) ? `
+          <div class="container py-4">
+            <div class="row g-3 align-items-stretch about-row wow fadeInUp" data-wow-delay="0.05s">
+              <div class="col-12 col-md-6">
+                ${b2.txt ? `
+                <div class="about-mid-card about-mid-card-left h-100">
+                  <div class="about-mid-icon"><i class="fas fa-hands-helping"></i></div>
+                  <div class="about-mid-body">${b2.txt}</div>
+                </div>` : ''}
+              </div>
+              <div class="col-12 col-md-6">
+                ${b3.txt ? `
+                <div class="about-mid-card about-mid-card-right h-100">
+                  <div class="about-mid-icon"><i class="fas fa-people-group"></i></div>
+                  <div class="about-mid-body">${b3.txt}</div>
+                </div>` : ''}
+              </div>
+            </div>
+          </div>` : '';
+        // Prepare bottom row (section 4): text left, image right under the two cards
+        b4RowHtml = (b4.txt || b4.img) ? `
+          <div class="container py-4">
+            <div class="row align-items-stretch about-row wow fadeInUp" data-wow-delay="0.1s">
+              <div class="col-md-6 mb-3 mb-md-0">
+                <div class="bg-white p-3 rounded shadow-sm h-100">${b4.txt || ''}</div>
+              </div>
+              <div class="col-md-6">
+                ${b4.img ? `<div class="about-img-fill rounded shadow-sm"><img src="${b4.img}" class="w-100" alt="Section"></div>` : `<div class="h-100"></div>`}
+              </div>
+            </div>
+          </div>` : '';
+
+        blocksHtml = `
+          <div class="container-fluid py-5">
+            <div class="container">
+              <div class="row g-5 align-items-center">
+                ${imageCol}${rightCol}
+              </div>
+            </div>
+          </div>`;
+      }
+    }
+  } catch {}
+  // Stats counters from settings (light style, with localized header)
+  let statsHtml = '';
+  try {
+    const cfg = await db.getSettings?.(res.locals.lang).catch(()=>({})) || {};
+    const stats = Array.isArray(cfg.stats) ? cfg.stats : [];
+    const actives = stats.filter(s => (typeof s.active === 'boolean' ? s.active : true));
+    if (actives.length) {
+      const lang = (res.locals.lang || 'en').toLowerCase();
+      const hdrMap = {
+        en: { kicker: 'OUR IMPACT', heading: 'Key Numbers' },
+        sk: { kicker: 'NÁŠ DOPAD', heading: 'Kľúčové čísla' },
+        hu: { kicker: 'HATÁSUNK', heading: 'Kulcsszámok' }
+      };
+      const H = hdrMap[lang] || hdrMap.en;
+      const cards = actives.map((s, i) => {
+        const val = Number.isFinite(+s.value) ? Number(s.value) : 0;
+        const label = (s.labels && (s.labels[res.locals.lang] || s.labels.en || s.labels.sk || s.labels.hu)) || '';
+        const icon = (s.icon || '').trim();
+        const suffix = (s.suffix || '').trim();
+        const iconHtml = icon ? `<i class="fas ${icon} fa-2x text-primary mb-2"></i>` : '';
+        return `
+          <div class="col-6 col-md-3">
+            <div class="stats-card text-center p-4 shadow-sm rounded wow fadeIn" data-wow-delay="${0.1 + i*0.1}s">
+              ${iconHtml}
+              <h2 class="mb-0" style="font-family:'Josefin Sans',sans-serif; font-weight:700; color:#1A685B;">
+                <span data-toggle="counter-up">${val}</span>${suffix ? `<span class="ms-1">${suffix}</span>` : ''}
+              </h2>
+              ${label ? `<div class="text-muted small mt-1">${label}</div>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+      statsHtml = `
+        <div class="container py-5 stats-section">
+          <div class="text-center mx-auto mb-4" style="max-width:820px;">
+            <div class="section-title-bar mb-2"><div class="bar"></div><span class="section-title text-warning">${H.kicker}</span><div class="bar"></div></div>
+            <h2 class="display-6" style="font-family:'Josefin Sans',sans-serif; font-weight:700;">${H.heading}</h2>
+          </div>
+          <div class="row g-3 align-items-stretch">
+            ${cards}
+          </div>
+        </div>`;
+    }
+  } catch {}
+
+  const pageObj = home || { title: 'Home', content: '' };
+  // Keep title empty in the card but show a localized section header, similar to other pages
+  const merged = { ...pageObj, title: '', content: blocksHtml + statsHtml + midRowHtml + b4RowHtml };
+  let sliderBg = settings.slider_bg_image_url || '';
+  // Add cache-busting based on file mtime for local uploads
+  try {
+    if (sliderBg && sliderBg.startsWith('/uploads/')){
+      const rel = sliderBg.replace(/^\//, '');
+      const p = path.join(__dirname, 'public', rel.split('?')[0]);
+      const st = fsSync.statSync(p);
+      if (st && st.mtimeMs){
+        const sep = sliderBg.includes('?') ? '&' : '?';
+        sliderBg = `${sliderBg}${sep}v=${Math.floor(st.mtimeMs)}`;
+      }
+    }
+  } catch {}
+  const sliderTextAlign = settings.slider_text_align || 'center';
+  const sliderTitleColor = settings.slider_title_color || '#ffffff';
+  const sliderCaptionColor = settings.slider_caption_color || '#ffffff';
+  // Home section header (like other pages): localized small kicker + big heading
+  const shLang = (res.locals.lang || 'en').toLowerCase();
+  const shMap = {
+    en: { kicker: 'WELCOME', heading: 'Welcome to our site' },
+    sk: { kicker: 'VITAJTE', heading: 'Vitajte na našej stránke' },
+    hu: { kicker: 'ÜDVÖZÖLJÜK', heading: 'Üdvözöljük oldalunkon' }
+  };
+  const sectionHeader = shMap[shLang] || shMap.en;
+  return res.render('page', { menu, page: merged, lang: res.locals.lang, slider, sliderBg, sliderTextAlign, sliderTitleColor, sliderCaptionColor, sectionHeader, t: res.locals.t });
+});
+
+app.get('/page/:slug', async (req,res)=>{
+  const page = await db.getPage(res.locals.lang, req.params.slug);
+  const pages = await db.listPages(res.locals.lang);
+  const menu = buildMenu(pages);
+  if(!page) return res.status(404).send('Not found');
+  let contentHtml = page.content;
+  // Special rendering for GDPR: use section header like other pages and hide the page title text
+  if (req.params.slug === 'gdpr') {
+    const lang = res.locals.lang;
+    const shI18n = {
+      en: { kicker: 'GDPR', subheading: 'We respect your privacy and process data responsibly.' },
+      sk: { kicker: 'GDPR', subheading: 'Rešpektujeme vaše súkromie a zodpovedne spracúvame údaje.' },
+      hu: { kicker: 'GDPR', subheading: 'Tiszteletben tartjuk az adatvédelmet és felelősen kezeljük az adatokat.' }
+    };
+    const cur = shI18n[lang] || shI18n.en;
+    const shGDPR = { kicker: cur.kicker, heading: '', subheading: cur.subheading };
+    // Localized table header label and render GDPR content inside the table; no image/illustration
+    const headerLabel = res.locals.t('privacyPolicy');
+    const combined = `
+      <div class="table-responsive">
+        <table class="table table-striped align-middle focus-areas-table">
+          <thead>
+            <tr><th class="text-uppercase small">${headerLabel}</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><div class="gdpr-content">${contentHtml}</div></td></tr>
+          </tbody>
+        </table>
+      </div>`;
+    return res.render('page', { 
+      menu, 
+      page: { title: '', content: combined, image_url: null }, 
+      lang: res.locals.lang, 
+      slider: null,
+      sectionHeader: shGDPR,
+      t: res.locals.t
+    });
+  }
+  if(req.params.slug === 'contact'){
+    const c = res.locals.site?.contact || {};
+    const siteKey = process.env.RECAPTCHA_SITE_KEY || '';
+    const addr = (c.address || '').trim() || 'Bratislava, Slovakia';
+    const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(addr)}&output=embed`;
+    const success = req.query.success === '1';
+    const failure = req.query.success === '0';
+    const alert = success
+      ? `<div class="alert alert-success mb-4"><i class='fas fa-check-circle me-2'></i>Your message has been sent. Thank you!</div>`
+      : (failure ? `<div class="alert alert-danger mb-4"><i class='fas fa-triangle-exclamation me-2'></i>We couldn't send your message right now. Please try again later.</div>` : '');
+    const infoList = `
+      <ul class="list-unstyled mb-0">
+        ${c.address ? `<li class='mb-2'><i class='fas fa-map-marker-alt me-2 text-primary'></i>${c.address}</li>` : ''}
+        ${c.phone ? `<li class='mb-2'><i class='fas fa-phone me-2 text-primary'></i><a href='tel:${c.phone}'>${c.phone}</a></li>` : ''}
+        ${c.email ? `<li class='mb-2'><i class='fas fa-envelope me-2 text-primary'></i><a href='mailto:${c.email}'>${c.email}</a></li>` : ''}
+      </ul>`;
+    const socials = `
+      <div class='d-flex gap-2 mt-2'>
+        ${c.facebook ? `<a class='btn btn-sm btn-outline-primary' href='${c.facebook}' target='_blank' rel='noopener'><i class="fab fa-facebook-f"></i></a>` : ''}
+        ${c.instagram ? `<a class='btn btn-sm btn-outline-primary' href='${c.instagram}' target='_blank' rel='noopener'><i class="fab fa-instagram"></i></a>` : ''}
+        ${c.twitter ? `<a class='btn btn-sm btn-outline-primary' href='${c.twitter}' target='_blank' rel='noopener'><i class="fab fa-x-twitter"></i></a>` : ''}
+        ${c.linkedin ? `<a class='btn btn-sm btn-outline-primary' href='${c.linkedin}' target='_blank' rel='noopener'><i class="fab fa-linkedin-in"></i></a>` : ''}
+        ${c.youtube ? `<a class='btn btn-sm btn-outline-primary' href='${c.youtube}' target='_blank' rel='noopener'><i class="fab fa-youtube"></i></a>` : ''}
+      </div>`;
+    const hero = `
+      <section class="contact-map-hero">
+        <iframe class="contact-map-iframe" src="${mapSrc}" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </section>`;
+    const contentSection = `
+      <section class="contact-content">
+        <div class="container py-5">
+          ${alert}
+          <div class="row g-4 align-items-start">
+            <div class="col-lg-6">
+              <div class="bg-white p-4 rounded shadow-sm h-100">
+                <h4 class="mb-3"><i class="fas fa-location-dot me-2 text-primary"></i>${res.locals.t('ourAddress')}</h4>
+                ${c.address ? `<p class='mb-3'>${c.address}</p>` : ''}
+                <h4 class="mt-3 mb-2"><i class="fas fa-envelope me-2 text-primary"></i>${res.locals.t('emailLabel')}</h4>
+                ${c.email ? `<p class='mb-1'><a href='mailto:${c.email}'>${c.email}</a></p>` : ''}
+                ${c.phone ? `<p class='mb-1'><a href='tel:${c.phone}'>${c.phone}</a></p>` : ''}
+                ${socials}
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="bg-white p-4 rounded shadow-sm h-100">
+                <h3 class="mb-3">${res.locals.t('getInTouch')}</h3>
+                <form method="post" action="/contact?lang=${res.locals.lang}">
+                  <div class="row g-3">
+                    <!-- Honeypot field: should remain empty -->
+                    <div class="col-12" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;">
+                      <label class="form-label" for="contact_website">Website</label>
+                      <input id="contact_website" type="text" name="website" class="form-control" tabindex="-1" autocomplete="off" />
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label" for="contact_name">${res.locals.t('nameLabel')}</label>
+                      <input id="contact_name" type="text" name="name" class="form-control" required />
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label" for="contact_email">${res.locals.t('emailLabel')}</label>
+                      <input id="contact_email" type="email" name="email" class="form-control" required />
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="contact_subject">${res.locals.t('subjectLabel')}</label>
+                      <input id="contact_subject" type="text" name="subject" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="contact_message">${res.locals.t('messageLabel')}</label>
+                      <textarea id="contact_message" name="message" class="form-control" rows="5" required></textarea>
+                    </div>
+                    ${siteKey ? `
+                    <div class="col-12">
+                      <div class="g-recaptcha" data-sitekey="${siteKey}"></div>
+                    </div>` : ''}
+                    <div class="col-12 d-grid">
+                      <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane me-2"></i>${res.locals.t('sendMessage')}</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>${siteKey ? `
+      <script src="https://www.google.com/recaptcha/api.js" async defer></script>` : ''}`;
+    // Render hero above, and the content section below without default card wrapper; remove contact title
+    return res.render('page', { 
+      menu, 
+      page: { title: '', content: contentSection, image_url: null }, 
+      lang: res.locals.lang, 
+      slider: null,
+      hero,
+      rawContent: true,
+      t: res.locals.t
+    });
+  }
+  // Special: About Us — render with a custom layout (alternate image/text rows), no default page title/card
+  if (req.params.slug === 'about-us') {
+    try {
+      const curPage = await db.getPage(res.locals.lang, 'about-us');
+      const enPage = await db.getPage('en', 'about-us');
+      const curItems = (curPage && curPage.id) ? (await db.getAdditionalImages('page', curPage.id)) : [];
+      const enItems = (enPage && enPage.id) ? (await db.getAdditionalImages('page', enPage.id)) : [];
+      // Localized static header texts for About page
+      const aboutTextsByLang = {
+        en: { kicker: 'ABOUT', heading: 'Who We Are', subheading: 'Get to know our mission, values, and the people behind our work.', empty: 'No sections yet.' },
+        sk: { kicker: 'O NÁS', heading: 'Kto sme', subheading: 'Spoznajte naše poslanie, hodnoty a ľudí, ktorí stoja za našou prácou.', empty: 'Zatiaľ žiadne sekcie.' },
+        hu: { kicker: 'RÓLUNK', heading: 'Kik vagyunk', subheading: 'Ismerje meg küldetésünket, értékeinket és a munkánk mögött álló embereket.', empty: 'Még nincsenek szekciók.' }
+      };
+      const aboutL = aboutTextsByLang[(res.locals.lang || 'en').toLowerCase()] || aboutTextsByLang.en;
+      // Prepare section data (EN image + current-language text fallback)
+      const sec = Array.from({length:4}).map((_,i)=>{
+        const enA = enItems[i] || null;
+        const curA = curItems[i] || null;
+        const img = enA ? (enA.image_url || '') : '';
+        const txt = ((curA && curA.alt_text) || (enA && enA.alt_text) || '').trim();
+        return { img, txt };
+      });
+      const rows = [];
+      // Row 1: image left, text right — equal heights
+      if (sec[0] && (sec[0].img || sec[0].txt)){
+        const imageCol = sec[0].img ? `<div class=\"col-md-6 mb-3 mb-md-0\"><div class=\"about-img-fill rounded shadow-sm\"><img src=\"${sec[0].img}\" class=\"w-100\" alt=\"${aboutL.heading}\"></div></div>` : `<div class=\"col-md-6 mb-3 mb-md-0\"></div>`;
+        const textCol = `<div class=\"col-md-6\"><div class=\"bg-white p-3 rounded shadow-sm h-100\">${sec[0].txt}</div></div>`;
+        rows.push(`<div class=\"row align-items-stretch mb-4 about-row wow fadeInUp\" data-wow-delay=\"0.05s\">${imageCol}${textCol}</div>`);
+      }
+      // Row 2: texts for sections 2 and 3 side-by-side (no images) with headers/icons and background variants
+      const t2 = (sec[1] && sec[1].txt) || '';
+      const t3 = (sec[2] && sec[2].txt) || '';
+      if (t2 || t3){
+        const col2 = t2 ? `
+          <div class=\"about-mid-card about-mid-card-left h-100\">
+            <div class=\"about-mid-icon\"><i class=\"fas fa-hands-helping\"></i></div>
+            <div class=\"about-mid-body\">${t2}</div>
+          </div>` : '';
+        const col3 = t3 ? `
+          <div class=\"about-mid-card about-mid-card-right h-100\">
+            <div class=\"about-mid-icon\"><i class=\"fas fa-people-group\"></i></div>
+            <div class=\"about-mid-body\">${t3}</div>
+          </div>` : '';
+        rows.push(`
+          <div class=\"row g-3 align-items-stretch mb-4 about-row wow fadeInUp\" data-wow-delay=\"0.1s\">
+            <div class=\"col-12 col-md-6\">${col2}</div>
+            <div class=\"col-12 col-md-6\">${col3}</div>
+          </div>`);
+      }
+      // Row 3: section 4, text left, image right (reverse of row 1) — equal heights
+      if (sec[3] && (sec[3].img || sec[3].txt)){
+        const textCol = `<div class=\"col-md-6 mb-3 mb-md-0\"><div class=\"bg-white p-3 rounded shadow-sm h-100\">${sec[3].txt}</div></div>`;
+        const imageCol = sec[3].img ? `<div class=\"col-md-6\"><div class=\"about-img-fill rounded shadow-sm\"><img src=\"${sec[3].img}\" class=\"w-100\" alt=\"${aboutL.heading}\"></div></div>` : `<div class=\"col-md-6\"></div>`;
+        rows.push(`<div class=\"row align-items-stretch mb-4 about-row wow fadeInUp\" data-wow-delay=\"0.15s\">${textCol}${imageCol}</div>`);
+      }
+      // Optional decorative header for the About page section
+      const hdr = `
+        <div class=\"container pt-5\">
+          <div class=\"text-center mx-auto mb-4\" style=\"max-width:820px;\">
+            <div class=\"section-title-bar mb-2\"><div class=\"bar\"></div><span class=\"section-title text-warning\">${aboutL.kicker}</span><div class=\"bar\"></div></div>
+            <h2 class=\"display-6\" style=\"font-family:'Josefin Sans',sans-serif; font-weight:700;\">${aboutL.heading}</h2>
+            <p class=\"text-muted\">${aboutL.subheading}</p>
+          </div>
+        </div>`;
+  const blocks = rows.length ? `${hdr}<div class=\"container pb-5 about-page\">${rows.join('')}</div>` : `<div class=\"container py-5 about-page\"><div class=\"text-muted\">${aboutL.empty}</div></div>`;
+      // Render only our custom layout (no default title/card)
+      return res.render('page', { 
+        menu, 
+        page: { title: '', content: blocks, image_url: null }, 
+        lang: res.locals.lang, 
+        slider: null,
+        rawContent: true,
+        t: res.locals.t 
+      });
+    } catch {}
+  }
+  return res.render('page', { menu, page: { title: page.title, content: contentHtml, image_url: page.image_url }, lang: res.locals.lang, slider: null, t: res.locals.t });
+});
+
+// Contact form handler (stores nothing for now; extend to email/DB later)
+app.post('/contact', async (req, res) => {
+  const { name, email, subject, message, website } = req.body || {};
+  const lang = res.locals.lang || req.query.lang || 'en';
+  // Honeypot field should be empty
+  if (website && String(website).trim() !== ''){
+    return res.redirect(`/page/contact?lang=${lang}&success=1`);
+  }
+  // Basic validation
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(!name || !email || !emailRe.test(String(email)) || !message){
+    return res.redirect(`/page/contact?lang=${lang}&success=0`);
+  }
+  // reCAPTCHA verification (if configured)
+  try {
+    const secret = process.env.RECAPTCHA_SECRET || '';
+    const siteKey = process.env.RECAPTCHA_SITE_KEY || '';
+    if (secret && siteKey) {
+      const token = (req.body['g-recaptcha-response'] || '').toString().trim();
+      if (!token) {
+        try { await db.createContactMessage?.({ name, email, subject, message, lang, status: 'failed', error: 'recaptcha_missing' }); } catch {}
+        return res.redirect(`/page/contact?lang=${lang}&success=0`);
+      }
+      const form = new URLSearchParams();
+      form.append('secret', secret);
+      form.append('response', token);
+      const remoteip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '').toString();
+      if (remoteip) form.append('remoteip', remoteip);
+      let ok = false;
+      let errCodes = [];
+      try {
+        if (typeof fetch === 'function') {
+          const resp = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: form.toString()
+          });
+          const data = await resp.json().catch(()=>({}));
+          ok = !!data.success;
+          errCodes = Array.isArray(data['error-codes']) ? data['error-codes'] : [];
+        } else {
+          const payload = form.toString();
+          const data = await new Promise((resolve, reject) => {
+            const reqOpts = {
+              method: 'POST',
+              hostname: 'www.google.com',
+              path: '/recaptcha/api/siteverify',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Length': Buffer.byteLength(payload)
+              }
+            };
+            const r = https.request(reqOpts, (resp) => {
+              let buf = '';
+              resp.on('data', (chunk) => { buf += chunk; });
+              resp.on('end', () => {
+                try { resolve(JSON.parse(buf)); } catch { resolve({ success: false, 'error-codes': ['bad_json'] }); }
+              });
+            });
+            r.on('error', reject);
+            r.write(payload);
+            r.end();
+          });
+          ok = !!data.success;
+          errCodes = Array.isArray(data['error-codes']) ? data['error-codes'] : [];
+        }
+      } catch (e) {
+        ok = false;
+        errCodes = ['verify_error'];
+      }
+      if (!ok) {
+        try { await db.createContactMessage?.({ name, email, subject, message, lang, status: 'failed', error: `recaptcha_failed:${errCodes.join(',')}` }); } catch {}
+        return res.redirect(`/page/contact?lang=${lang}&success=0`);
+      }
+    }
+  } catch {}
+  // SMTP env
+  const host = process.env.SMTP_HOST;
+  const portEnv = parseInt(process.env.SMTP_PORT || '587', 10);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const to = process.env.CONTACT_TO || process.env.SMTP_TO || process.env.SMTP_USER;
+  const fromEmail = process.env.SMTP_FROM_EMAIL || user;
+  const fromName  = process.env.SMTP_FROM_NAME || 'Website Contact';
+  const ignoreTLS = process.env.SMTP_IGNORE_TLS === '1';
+  const allowInvalid = process.env.SMTP_ALLOW_INVALID_CERT === '1';
+  if(!host || !user || !pass || !to){
+    try{ console.warn('[contact] SMTP not configured; skipping send.'); }catch{}
+    try { await db.createContactMessage?.({ name, email, subject, message, lang, status: 'skipped', error: 'smtp_not_configured' }); } catch {}
+    return res.redirect(`/page/contact?lang=${lang}&success=1`);
+  }
+  try{
+    // Try STARTTLS (587) then SMTPS (465)
+    const attempts = ignoreTLS
+      ? [{ port: portEnv || 587, secure: false }]
+      : [
+          { port: portEnv || 587, secure: (process.env.SMTP_SECURE === '1') || (portEnv === 465) },
+          { port: 465, secure: true }
+        ];
+    const html = `
+      <h3>New contact message</h3>
+      <p><strong>Name:</strong> ${String(name).replace(/[<>]/g,'')}</p>
+      <p><strong>Email:</strong> <a href="mailto:${String(email).replace(/[<>]/g,'')}">${String(email).replace(/[<>]/g,'')}</a></p>
+      ${subject ? `<p><strong>Subject:</strong> ${String(subject).replace(/[<>]/g,'')}</p>` : ''}
+      <p><strong>Message:</strong></p>
+      <p style="white-space:pre-wrap">${String(message).slice(0,5000).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
+    `;
+    let sent = false;
+    let lastErr = null;
+    for(const cfg of attempts){
+      try{
+        const transporter = nodemailer.createTransport({
+          host,
+          port: cfg.port,
+          secure: cfg.secure,
+          auth: { user, pass },
+          ignoreTLS,
+          tls: allowInvalid ? { rejectUnauthorized: false } : undefined
+        });
+        await transporter.sendMail({
+          from: { name: fromName, address: fromEmail || user },
+          replyTo: { name, address: String(email) },
+          to,
+          subject: subject ? `[Contact] ${subject}` : 'New contact message',
+          html
+        });
+        sent = true;
+        break;
+      }catch(e){ lastErr = e; }
+    }
+    if(sent){
+      try { await db.createContactMessage?.({ name, email, subject, message, lang, status: 'sent', error: null }); } catch {}
+      return res.redirect(`/page/contact?lang=${lang}&success=1`);
+    }
+    throw lastErr || new Error('send_failed');
+  }catch(e){
+    try{ console.error('[contact] send failed:', e?.message || e); }catch{}
+    try {
+      const errMsg = (e && (e.message || String(e))) || 'unknown';
+      const extra = (e && (e.response || e.code || e.responseCode)) ? ` code=${e.code||''} resp=${e.responseCode||''}:${e.response||''}` : '';
+      await db.createContactMessage?.({ name, email, subject, message, lang, status: 'failed', error: `${errMsg}${extra}` });
+    } catch {}
+    return res.redirect(`/page/contact?lang=${lang}&success=0`);
+  }
+});
+
+// Public events listing
+app.get('/events', async (req, res) => {
+    const pages = await db.listPages(res.locals.lang);
+    const menu = buildMenu(pages);
+    // Aggregate across languages and deduplicate by group
+    let all = [];
+    try{
+      const [en, sk, hu] = await Promise.all([
+        db.listEvents('en').catch(()=>[]),
+        db.listEvents('sk').catch(()=>[]),
+        db.listEvents('hu').catch(()=>[])
+      ]);
+      all = [...en, ...sk, ...hu];
+    } catch {
+      all = await db.listEvents(res.locals.lang).catch(()=>[]) || [];
+    }
+    const byGroup = new Map();
+    for(const ev of all){
+      const key = ev.group_id || `single_${ev.id}`;
+      if(!byGroup.has(key)) byGroup.set(key, ev);
+    }
+    const bases = Array.from(byGroup.values());
+    const resolved = await Promise.all(bases.map(b => resolveEventVariant(b, res.locals.lang)));
+    const cards = resolved.map(e => {
+      const listImage = e.image_url && String(e.image_url).trim() ? e.image_url : '/img/placeholder-event.svg';
+      return `
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card bg-light shadow-sm h-100 d-flex flex-column">
+          <a href="/events/${e.slug || e.id}?lang=${res.locals.lang}${e.group_id ? (`&gid=${encodeURIComponent(e.group_id)}`) : ''}">
+            <img src="${listImage}" class="card-img-top" alt="${e.title}" style="height:200px; object-fit:cover;">
+          </a>
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title text-primary mb-2">${e.title}</h5>
+            <p class="card-text text-muted">
+              <i class="fas fa-calendar me-1"></i>${e.event_date ? new Date(e.event_date).toLocaleDateString() : ''}
+            </p>
+            <p class="card-text">
+              <i class="fas fa-map-marker-alt me-1"></i>${e.location || ''}
+            </p>
+            <div class="mt-auto pt-2">
+              <a href="/events/${e.slug || e.id}?lang=${res.locals.lang}${e.group_id ? (`&gid=${encodeURIComponent(e.group_id)}`) : ''}" class="btn btn-primary btn-sm w-100 text-center">
+                <i class="fas fa-eye me-1"></i>${res.locals.t('viewDetails')}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    `}).join('');
+    const html = `<div class=\"row\">${cards || `<div class=\"text-muted\">${res.locals.t('noEventsYet')}</div>`}</div>`;
+  const shEvents = { kicker: res.locals.t('eventsKicker'), heading: res.locals.t('eventsHeading'), subheading: '' };
+  return res.render('page', { menu, page: { title: res.locals.t('eventsTitle'), content: html }, lang: res.locals.lang, slider: null, sectionHeader: shEvents, t: res.locals.t });
+});
+
+// Simple admin UI to edit content for a language
+app.get('/admin', basicAuth, async (req,res)=>{
+  // Admin dashboard (DB only)
+  res.render('admin', { lang: res.locals.lang, useDb: true });
+});
+
+// SMTP test endpoint (admin only): attempts to connect and optionally send a test email
+app.get('/admin/test-smtp', basicAuth, async (req, res) => {
+  try {
+    const host = process.env.SMTP_HOST;
+    const portEnv = parseInt(process.env.SMTP_PORT || '587', 10);
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    const to = process.env.CONTACT_TO || user;
+    const fromEmail = process.env.SMTP_FROM_EMAIL || user;
+    const fromName  = process.env.SMTP_FROM_NAME || 'SMTP Test';
+    const ignoreTLS = process.env.SMTP_IGNORE_TLS === '1';
+    const allowInvalid = process.env.SMTP_ALLOW_INVALID_CERT === '1';
+    if(!host || !user || !pass) return res.status(400).send('SMTP not configured');
+    const attempts = ignoreTLS
+      ? [{ port: portEnv || 587, secure: false }]
+      : [
+          { port: portEnv || 587, secure: (process.env.SMTP_SECURE === '1') || (portEnv === 465) },
+          { port: 465, secure: true }
+        ];
+    let connected = false;
+    let lastErr = null;
+    for(const cfg of attempts){
+      try{
+        const transporter = nodemailer.createTransport({
+          host,
+          port: cfg.port,
+          secure: cfg.secure,
+          auth: { user, pass },
+          ignoreTLS,
+          tls: allowInvalid ? { rejectUnauthorized: false } : undefined
+        });
+        await transporter.verify();
+        // optional: send a test mail when query param ?send=1
+        if (req.query.send === '1'){
+          await transporter.sendMail({ from: { name: fromName, address: fromEmail }, to, subject: 'SMTP Test', text: 'This is a test email from SkillsUp Slovakia.' });
+        }
+        connected = true;
+        return res.status(200).send(`OK via port ${cfg.port} (secure=${cfg.secure})`);
+      }catch(e){ lastErr = e; }
+    }
+    if(!connected){
+      return res.status(500).send(`SMTP verify failed: ${(lastErr && (lastErr.message || String(lastErr))) || 'unknown'}`);
+    }
+  } catch (e) {
+    return res.status(500).send(`SMTP test error: ${e?.message || e}`);
+  }
+});
+
+// Admin: recent contact messages
+app.get('/admin/messages', basicAuth, async (req, res) => {
+  try{
+    const items = await db.listRecentContactMessages?.(100).catch(()=>[]);
+    return res.render('admin-messages-list', { lang: res.locals.lang, items });
+  } catch (e) {
+    return res.status(500).send(`Unable to load messages: ${e?.message || e}`);
+  }
+});
+
+app.post('/admin/save', basicAuth, async (req,res)=>{
+  // Accept either a JSON body (full content object) or a form field named 'content' containing JSON
+  let payload = req.body;
+  if(typeof payload === 'object' && payload.content && typeof payload.content === 'string'){
+    try{
+      payload = JSON.parse(payload.content);
+    }catch(e){
+      return res.status(400).send('Invalid JSON');
+    }
+  }
+  {
+    // payload should be full content object; update all pages
+    const full = payload;
+    for(const [lang, blob] of Object.entries(full)){
+      const pages = blob.pages || {};
+      for(const [slug, page] of Object.entries(pages)){
+        // upsert into db
+        const contentValue = page.content;
+        await db.upsertPage({ lang, slug, title: page.title, content: contentValue });
+      }
+    }
+    return res.redirect('/admin');
+  }
+  });
+
+// Documents management (DB only)
+app.get('/admin/documents', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Documents require DB backend');
+  const docs = await db.listDocuments(res.locals.lang);
+  const success = req.query.success;
+  res.render('admin-docs-list', { docs, lang: res.locals.lang, success });
+});
+
+app.get('/admin/documents/new', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Documents require DB backend');
+  res.render('admin-docs-form', { lang: res.locals.lang, doc: null, docsByLang: null });
+});
+
+app.post('/admin/documents', basicAuth, uploadFiles.single('file'), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Documents require DB backend');
+  const langs = ['en','sk','hu'];
+  // Require at least one title
+  const titles = Object.fromEntries(langs.map(l => [l, (req.body[`title_${l}`] || '').trim()]));
+  const descriptions = Object.fromEntries(langs.map(l => [l, (req.body[`description_${l}`] || '').trim()]));
+  const hasAnyTitle = langs.some(l => titles[l]);
+  if(!hasAnyTitle){
+    return res.status(400).render('admin-docs-form', { lang: res.locals.lang, doc: null, docsByLang: null, error: 'Please enter a title in at least one language.' });
+  }
+  const sort_order = parseInt(req.body.sort_order || '0', 10) || 0;
+  const published = (req.body.published === 'on' || req.body.published === 'true');
+  const file = req.file;
+  const file_url = file ? `/uploads/${file.filename}` : '';
+  const groupId = crypto.randomUUID();
+  // Create one base record to attach group, then update titles by language
+  const sourceLang = langs.find(l => titles[l]) || 'en';
+  // Normalize: copy missing titles/descriptions from source
+  for(const l of langs){
+    if(!titles[l]) titles[l] = titles[sourceLang];
+    if(!descriptions[l]) descriptions[l] = descriptions[sourceLang] || '';
+  }
+  // For each language, create a row
+  const created = [];
+  for(const l of langs){
+    const rec = await db.createDocument({ lang: l, title: titles[l] || 'Document', file_url, description: descriptions[l] || '', sort_order, published });
+    created.push(rec);
+  }
+  // Assign group_id to all
+  for(const rec of created){
+    await db.setDocumentGroup?.(rec.id, groupId);
+  }
+  res.redirect(`/admin/documents?lang=${res.locals.lang}&success=created`);
+});
+
+app.get('/admin/documents/:id/edit', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Documents require DB backend');
+  const doc = await db.getDocument(req.params.id);
+  if(!doc) return res.status(404).send('Document not found');
+  const langs = ['en','sk','hu'];
+  const docsByLang = { en: null, sk: null, hu: null };
+  if(doc.group_id){
+    for(const l of langs){
+      docsByLang[l] = await db.getDocumentByGroupAndLang?.(doc.group_id, l) || null;
+    }
+  } else {
+    docsByLang[doc.lang] = doc;
+  }
+  res.render('admin-docs-form', { lang: res.locals.lang, doc, docsByLang });
+});
+
+app.post('/admin/documents/:id', basicAuth, uploadFiles.single('file'), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Documents require DB backend');
+  const existing = await db.getDocument(req.params.id);
+  if(!existing) return res.status(404).send('Document not found');
+  // Ensure grouping
+  let groupId = existing.group_id;
+  if(!groupId){
+    groupId = crypto.randomUUID();
+    await db.setDocumentGroup?.(existing.id, groupId);
+  }
+  const langs = ['en','sk','hu'];
+  const titles = Object.fromEntries(langs.map(l => [l, (req.body[`title_${l}`] || '').trim()]));
+  const descriptions = Object.fromEntries(langs.map(l => [l, (req.body[`description_${l}`] || '').trim()]));
+  const sort_order = parseInt(req.body.sort_order || String(existing.sort_order || 0), 10) || (existing.sort_order || 0);
+  const published = (req.body.published === 'on' || req.body.published === 'true');
+  const file = req.file;
+  const newFileUrl = file ? `/uploads/${file.filename}` : existing.file_url;
+  // If file uploaded, propagate to all in group
+  if(file && typeof db.updateDocumentFileForGroup === 'function'){
+    await db.updateDocumentFileForGroup(groupId, newFileUrl);
+  }
+  // Determine source language for autofill
+  const sourceLang = langs.find(l => titles[l] || descriptions[l]) || null;
+  for(const l of langs){
+    const dv = await db.getDocumentByGroupAndLang?.(groupId, l);
+    let newTitle = titles[l];
+    let newDesc  = descriptions[l];
+    const titleEmpty = !dv || !dv.title || !dv.title.trim();
+    const descEmpty  = !dv || !dv.description || !dv.description.trim();
+    if(sourceLang){
+      if(!newTitle && titleEmpty) newTitle = titles[sourceLang] || null;
+      if(!newDesc  && descEmpty)  newDesc  = descriptions[sourceLang] || null;
+    }
+    if(dv){
+      await db.updateDocument(dv.id, {
+        title: newTitle || dv.title,
+        description: (newDesc!==undefined && newDesc!==null && newDesc!=='') ? newDesc : (dv.description || null),
+        sort_order,
+        published,
+        file_url: newFileUrl
+      });
+    } else if (newTitle || newDesc) {
+      const rec = await db.createDocument({ lang: l, title: newTitle || titles[sourceLang] || existing.title, file_url: newFileUrl, description: newDesc || descriptions[sourceLang] || existing.description || '', sort_order, published });
+      await db.setDocumentGroup?.(rec.id, groupId);
+    }
+  }
+  res.redirect(`/admin/documents?lang=${res.locals.lang}&success=updated`);
+});
+
+app.post('/admin/documents/:id/delete', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Documents require DB backend');
+  try {
+    const base = await db.getDocument(req.params.id).catch(() => null);
+    if(base?.group_id && typeof db.deleteDocumentGroup === 'function'){
+      await db.deleteDocumentGroup(base.group_id);
+    } else {
+      await db.deleteDocument(req.params.id);
+    }
+    res.redirect(`/admin/documents?lang=${res.locals.lang}&success=deleted`);
+  } catch (e) {
+    res.redirect(`/admin/documents?lang=${res.locals.lang}&error=delete_failed`);
+  }
+});
+
+// Public documents listing
+app.get('/documents', async (req,res)=>{
+  const pages = await db.listPages(res.locals.lang);
+  const menu = buildMenu(pages);
+  // List only current language documents
+  const docs = await db.listDocuments(res.locals.lang).catch(()=>[]) || [];
+  const items = docs.filter(d=>d.published).map(d=>{
+    const fileUrl = d.file_url || '#';
+    const listImage = '/img/placeholder-doc.svg';
+    const extMatch = (d.file_url || '').match(/\.([a-z0-9]+)(?:\?|#|$)/i);
+    const fileExt = extMatch ? extMatch[1].toUpperCase() : 'FILE';
+    return `
+    <div class="col-md-6 col-lg-4 mb-4">
+      <div class="card bg-light shadow-sm h-100 d-flex flex-column">
+        <a href="${fileUrl}" target="_blank" rel="noopener">
+          <img src="${listImage}" class="card-img-top" alt="${d.title}" style="height:200px; object-fit:cover;">
+        </a>
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h5 class="card-title text-primary mb-0">${d.title}</h5>
+            <span class="badge" style="background:#1A685B; color:#fff;">${fileExt}</span>
+          </div>
+          ${d.description ? `<p class=\"card-text\">${d.description}</p>` : ''}
+          <div class="mt-auto pt-2">
+            <a href="${fileUrl}" class="btn btn-secondary btn-sm w-100 text-center" target="_blank" rel="noopener">
+              <i class="fas fa-download me-1"></i>${res.locals.t('download')}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  const html = `<div class=\"row\">${items || `<div class=\"text-muted\">${res.locals.t('noDocumentsYet')}</div>`}</div>`;
+  // Localized labels for Documents page
+  const lang = (res.locals.lang || 'en').toLowerCase();
+  const labels = {
+    en: { title: 'Documents', kicker: 'DOCUMENTS', heading: 'Resources and Downloads' },
+    sk: { title: 'Dokumenty', kicker: 'DOKUMENTY', heading: 'Zdroje a súbory na stiahnutie' },
+    hu: { title: 'Dokumentumok', kicker: 'DOKUMENTUMOK', heading: 'Források és letöltések' }
+  };
+  const L = labels[lang] || labels.en;
+  const shDocs = { kicker: L.kicker, heading: L.heading, subheading: '' };
+  return res.render('page', { menu, page: { title: L.title, content: html }, lang: res.locals.lang, slider: null, sectionHeader: shDocs, t: res.locals.t });
+});
+
+// Events management (DB only)
+app.get('/admin/events', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Events require DB backend');
+  const events = await db.listEvents(res.locals.lang);
+  const success = req.query.success;
+  res.render('admin-events-list', { events, lang: res.locals.lang, success });
+});
+
+// Admin: Events grouped view (all languages) for cleanup
+
+app.get('/admin/events/new', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Events require DB backend');
+  res.render('admin-events-form', { lang: res.locals.lang, event: null, additionalImages: [] });
+});
+
+app.post('/admin/events', basicAuth, uploadImages.any(), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Events require DB backend');
+  const hasAnyTitle = (req.body.title_en||'').trim() || (req.body.title_sk||'').trim() || (req.body.title_hu||'').trim();
+  const event_date = (req.body.event_date||'').trim();
+  const location = sanitizeLocation(req.body.location);
+  if(!hasAnyTitle || !event_date || !location){
+  return res.status(400).render('admin-events-form', { lang: res.locals.lang, event: null, error: 'Please enter a title in at least one language and provide the shared Date and Location.', additionalImages: [] });
+  }
+
+  const langs = ['en','sk','hu'];
+  const groupId = crypto.randomUUID();
+  let createdByLang = { en: null, sk: null, hu: null };
+  // Collect provided titles/descriptions
+  const titles = { en: (req.body.title_en||'').trim(), sk: (req.body.title_sk||'').trim(), hu: (req.body.title_hu||'').trim() };
+  const descs  = { en: (req.body.description_en||'').trim(), sk: (req.body.description_sk||'').trim(), hu: (req.body.description_hu||'').trim() };
+  // Determine source language (first one with a title)
+  const sourceLang = langs.find(l => titles[l]);
+  // Fill missing titles/descriptions from source language so all variants are created
+  if(sourceLang){
+    for(const l of langs){
+      if(!titles[l]) titles[l] = titles[sourceLang];
+      if(!descs[l])  descs[l]  = descs[sourceLang];
+    }
+  }
+  // Create variants for all languages using filled values
+  for(const l of langs){
+    const title = titles[l] || titles[sourceLang];
+    const description = descs[l] || '';
+    const baseSlug = slugify(title || 'event');
+    const slug = await uniqueEventSlug(l, baseSlug);
+    const ev = await db.createEvent({ lang: l, group_id: groupId, slug, title: title || 'Event', event_date, location, description, image_url: null });
+    createdByLang[l] = ev.id;
+  }
+  
+  // Handle additional images for the last created event (representing the group)
+  const filesArr = Array.isArray(req.files) ? req.files : [];
+  const additionalFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+  // Optimize uploaded additional images
+  try { await Promise.all(additionalFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
+  const ownerId = createdByLang.en || createdByLang.sk || createdByLang.hu || Object.values(createdByLang).find(Boolean);
+  if(additionalFiles.length > 0 && ownerId) {
+    const imageUrls = additionalFiles.map(file => `/uploads/${file.filename}`);
+    await db.addAdditionalImages('event', ownerId, imageUrls);
+    const lead = imageUrls[0];
+    if(db.updateEventImageForGroup){
+      await db.updateEventImageForGroup(ownerId, lead);
+    } else {
+      const existing = await db.getEvent(ownerId);
+      await db.updateEvent(ownerId, { title: existing.title, event_date: existing.event_date, location: existing.location, description: existing.description, image_url: lead });
+    }
+  }
+  
+  return res.redirect(`/admin/events?lang=${res.locals.lang}&success=created`);
+});
+
+
+app.post('/admin/events/:id/delete', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Events require DB backend');
+  try {
+    const base = await db.getEvent(req.params.id).catch(() => null);
+    if(base?.group_id && typeof db.deleteEventGroup === 'function'){
+      await db.deleteEventGroup(base.group_id);
+    } else {
+      await db.deleteEvent(req.params.id);
+    }
+    res.redirect(`/admin/events?lang=${res.locals.lang}&success=deleted`);
+  } catch (e) {
+    res.redirect(`/admin/events?lang=${res.locals.lang}&error=delete_failed`);
+  }
+});
+
+// Admin: one-off cleanup — delete events by title across languages
+
+// Edit Event form
+app.get('/admin/events/:id/edit', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Events require DB backend');
+  const event = await db.getEvent(req.params.id);
+  if(!event) return res.status(404).send('Event not found');
+  const langs = ['en','sk','hu'];
+  const eventsByLang = { en: null, sk: null, hu: null };
+  let additionalImages = [];
+  try{
+    if(event.group_id){
+      for(const l of langs){
+        const ev = await db.getEventByGroupAndLang?.(event.group_id, l);
+        eventsByLang[l] = ev || null;
+      }
+    } else {
+      eventsByLang[event.lang] = event;
+    }
+    const ownerId = await resolveEventGalleryOwnerId(event);
+    additionalImages = await db.getAdditionalImages('event', ownerId);
+  }catch{}
+  res.render('admin-events-form', { lang: res.locals.lang, event, eventsByLang, additionalImages });
+});
+
+// Update Event (multi-language + gallery)
+app.post('/admin/events/:id', basicAuth, uploadImages.any(), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Events require DB backend');
+  const base = await db.getEvent(req.params.id);
+  if(!base) return res.status(404).send('Event not found');
+
+  // Ensure grouped editing
+  let groupId = base.group_id;
+  if(!groupId){
+    groupId = crypto.randomUUID();
+    if(typeof db.setEventGroup === 'function'){
+      await db.setEventGroup(base.id, groupId);
+    }
+  }
+
+  // Gallery management: remove selected, add new uploads, update/set lead image
+  try {
+    const ownerId = await resolveEventGalleryOwnerId(base);
+    const existing = await db.getAdditionalImages('event', ownerId);
+    const removeIdsRaw = req.body.remove_image_ids;
+    const removeIds = Array.isArray(removeIdsRaw) ? removeIdsRaw : (removeIdsRaw ? [removeIdsRaw] : []);
+    const removeSet = new Set(removeIds.map(id => Number(id)));
+    const kept = existing.filter(img => !removeSet.has(Number(img.id)));
+
+    const filesArr = Array.isArray(req.files) ? req.files : [];
+  const newFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+  // Optimize newly uploaded images
+  try { await Promise.all(newFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
+    const newItems = newFiles.map((f, idx) => ({ image_url: `/uploads/${f.filename}`, alt_text: '', sort_order: kept.length + idx }));
+
+    const finalItems = [
+      ...kept.map((img, idx) => ({ image_url: img.image_url, alt_text: img.alt_text || '', sort_order: idx })),
+      ...newItems
+    ];
+
+    if(typeof db.replaceAdditionalImageItems === 'function'){
+      await db.replaceAdditionalImageItems('event', ownerId, finalItems);
+    } else {
+      await db.deleteAdditionalImages('event', ownerId);
+      if(finalItems.length){
+        await db.addAdditionalImages('event', ownerId, finalItems.map(i => i.image_url));
+      }
+    }
+
+    const selectedLead = (req.body.lead_image_url || '').trim();
+    let newLead = selectedLead;
+    const leadRemoved = base.image_url && !finalItems.find(i => i.image_url === base.image_url);
+    if(!newLead && (leadRemoved || !base.image_url)){
+      newLead = finalItems[0]?.image_url || null;
+    }
+    if(typeof db.updateEventImageForGroup === 'function'){
+      await db.updateEventImageForGroup(ownerId, newLead || null);
+    } else if(newLead !== undefined){
+      await db.updateEvent(ownerId, { title: base.title, event_date: base.event_date, location: base.location, description: base.description, image_url: newLead || null });
+    }
+  } catch (e) {
+    console.error('Event gallery update failed', e);
+  }
+
+  // Shared fields: event_date and location (apply to existing group records)
+  try{
+    const event_date = (req.body.event_date || '').trim() || base.event_date;
+    const location = (req.body.location || '').trim() || base.location;
+    const langs = ['en','sk','hu'];
+    for(const l of langs){
+      const ev = await db.getEventByGroupAndLang?.(groupId, l);
+      if(ev){
+        await db.updateEvent(ev.id, { title: ev.title, event_date, location, description: ev.description, image_url: ev.image_url });
+      }
+    }
+  }catch{}
+
+  // Multi-language update for title/description with auto-fill to missing languages
+  try{
+    const langs = ['en','sk','hu'];
+    // Collect posted per-language fields
+    const postedTitles = Object.fromEntries(langs.map(l => [l, (req.body[`title_${l}`] || '').trim()]));
+    const postedDescs  = Object.fromEntries(langs.map(l => [l, (req.body[`description_${l}`] || '').trim()]));
+    // Determine a source language where user provided content
+    const sourceLang = langs.find(l => postedTitles[l] || postedDescs[l]) || null;
+    for(const l of langs){
+      const existing = await db.getEventByGroupAndLang?.(groupId, l);
+      // Compute new values: prefer posted; if missing AND existing is empty, replicate from source
+      let newTitle = postedTitles[l];
+      let newDesc  = postedDescs[l];
+      const existingTitleEmpty = !existing || !existing.title || !existing.title.trim();
+      const existingDescEmpty  = !existing || !existing.description || !existing.description.trim();
+      if(!newTitle && sourceLang && existingTitleEmpty){ newTitle = postedTitles[sourceLang] || null; }
+      if(!newDesc  && sourceLang && existingDescEmpty){  newDesc  = postedDescs[sourceLang]  || null; }
+
+      if(existing){
+        // If nothing to change for this language, skip
+        if(!newTitle && !newDesc) continue;
+        await db.updateEvent(existing.id, {
+          title: newTitle || existing.title,
+          event_date: existing.event_date,
+          location: existing.location,
+          description: (newDesc !== null && newDesc !== undefined && newDesc !== '') ? newDesc : (existing.description || null),
+          image_url: existing.image_url
+        });
+      } else {
+        // Create missing variant only if we have any content either posted or replicated from source
+        const titleToUse = newTitle || (sourceLang ? postedTitles[sourceLang] : '') || base.title || 'Event';
+        const descToUse  = (newDesc !== null && newDesc !== undefined && newDesc !== '') ? newDesc : ((sourceLang ? postedDescs[sourceLang] : '') || base.description || '');
+        if(titleToUse){
+          const baseSlug = base.slug || slugify(titleToUse || 'event');
+          const slug = await uniqueEventSlug(l, baseSlug);
+          await db.createEvent({
+            lang: l,
+            group_id: groupId,
+            slug,
+            title: titleToUse,
+            event_date: base.event_date,
+            location: base.location,
+            description: descToUse,
+            image_url: base.image_url
+          });
+        }
+      }
+    }
+  }catch(e){ console.error('Event multi-lang update failed', e); }
+
+  res.redirect(`/admin/events?lang=${res.locals.lang}&success=updated`);
+});
+
+app.get('/admin/themes', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Themes require DB backend');
+  const themes = await db.listThemes(res.locals.lang);
+  const success = req.query.success;
+  return res.render('admin-themes-list', { themes, lang: res.locals.lang, success });
+});
+
+// New Theme form
+app.get('/admin/themes/new', basicAuth, async (req, res) => {
+  if(!useDb) return res.status(501).send('Themes require DB backend');
+  res.render('admin-themes-form', { lang: res.locals.lang, theme: null });
+});
+
+// Create Theme (multi-language + gallery + optional cover)
+app.post('/admin/themes', basicAuth, uploadImages.any(), async (req, res) => {
+  if(!useDb) return res.status(501).send('Themes require DB backend');
+  try {
+    const hasAnyTitle = (req.body.title_en||'').trim() || (req.body.title_sk||'').trim() || (req.body.title_hu||'').trim();
+    if(!hasAnyTitle){
+      return res.status(400).render('admin-themes-form', { lang: res.locals.lang, theme: null, error: 'Please enter a title in at least one language.' });
+    }
+
+    const langs = ['en','sk','hu'];
+    const groupId = crypto.randomUUID();
+    let lastThemeId = null;
+    // Collect and replicate missing from first provided language
+    const titles = { en: (req.body.title_en||'').trim(), sk: (req.body.title_sk||'').trim(), hu: (req.body.title_hu||'').trim() };
+    const descs  = { en: (req.body.description_en||'').trim(), sk: (req.body.description_sk||'').trim(), hu: (req.body.description_hu||'').trim() };
+    const slugsProvided = { en: (req.body.slug_en||'').trim(), sk: (req.body.slug_sk||'').trim(), hu: (req.body.slug_hu||'').trim() };
+    const sourceLang = langs.find(l => titles[l]);
+    if(sourceLang){
+      for(const l of langs){
+        if(!titles[l]) titles[l] = titles[sourceLang];
+        if(!descs[l])  descs[l]  = descs[sourceLang];
+      }
+    }
+    for(const l of langs){
+      const title = titles[l] || 'Theme';
+      const description = descs[l] || '';
+      const providedSlug = slugsProvided[l] || '';
+      const base = providedSlug ? slugify(providedSlug) : slugify(title);
+      const slug = await uniqueThemeSlug(l, base);
+      const theme = await db.createTheme({ lang: l, group_id: groupId, slug, title, description, image_url: null });
+      lastThemeId = theme.id;
+    }
+
+    // Handle cover and additional images for the last created theme (representing the group)
+    const filesArr = Array.isArray(req.files) ? req.files : [];
+    const coverFile = filesArr.find(f => f.fieldname === 'cover_image');
+    const additionalFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+    if((coverFile || additionalFiles.length > 0) && lastThemeId) {
+  // Optimize uploaded additional & cover images
+  try { await Promise.all(additionalFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
+  if (coverFile) { try { await optimizeUploadedImage(path.join(uploadsDir, coverFile.filename)); } catch {} }
+  let imageUrls = additionalFiles.map(file => `/uploads/${file.filename}`);
+      if(coverFile){
+        const coverUrl = `/uploads/${coverFile.filename}`;
+        imageUrls = [coverUrl, ...imageUrls];
+      }
+      if(imageUrls.length){
+        await db.addAdditionalImages('theme', lastThemeId, imageUrls);
+        const lead = imageUrls[0];
+        if(db.updateThemeImageForGroup){
+          await db.updateThemeImageForGroup(lastThemeId, lead);
+        } else {
+          const existing = await db.getTheme(lastThemeId);
+          await db.updateTheme(lastThemeId, { title: existing.title, description: existing.description, image_url: lead });
+        }
+      }
+    }
+
+  return res.redirect(`/admin/themes?lang=${res.locals.lang}&success=created`);
+  } catch (e) {
+    return res.status(500).render('admin-themes-form', { lang: res.locals.lang, theme: null, error: e?.message || 'Unexpected error while creating theme.' });
+  }
+});
+
+// Edit Theme form
+app.get('/admin/themes/:id/edit', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Themes require DB backend');
+  const theme = await db.getTheme(req.params.id);
+  if(!theme) return res.status(404).send('Theme not found');
+  const langs = ['en','sk','hu'];
+  const themesByLang = { en: null, sk: null, hu: null };
+  let additionalImages = [];
+  try{
+    if(theme.group_id){
+      for(const l of langs){
+        const tv = await db.getThemeByGroupAndLang?.(theme.group_id, l);
+        themesByLang[l] = tv || null;
+      }
+    } else {
+      themesByLang[theme.lang] = theme;
+    }
+    const ownerId = await resolveThemeGalleryOwnerId(theme);
+    additionalImages = await db.getAdditionalImages('theme', ownerId);
+  }catch{}
+  res.render('admin-themes-form', { lang: res.locals.lang, theme, themesByLang, additionalImages });
+});
+
+// Update Theme (multi-language + gallery)
+app.post('/admin/themes/:id', basicAuth, uploadImages.any(), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Themes require DB backend');
+  const base = await db.getTheme(req.params.id);
+  if(!base) return res.status(404).send('Theme not found');
+
+  // Ensure grouped editing
+  let groupId = base.group_id;
+  if(!groupId){
+    groupId = crypto.randomUUID();
+    await db.setThemeGroup?.(base.id, groupId);
+  }
+
+  // Gallery management: remove selected, add new uploads, update/set cover image
+  try {
+    const ownerId = await resolveThemeGalleryOwnerId(base);
+    const existing = await db.getAdditionalImages('theme', ownerId);
+    const removeIdsRaw = req.body.remove_image_ids;
+    const removeIds = Array.isArray(removeIdsRaw) ? removeIdsRaw : (removeIdsRaw ? [removeIdsRaw] : []);
+    const removeSet = new Set(removeIds.map(id => Number(id)));
+    const kept = existing.filter(img => !removeSet.has(Number(img.id)));
+
+    const filesArr = Array.isArray(req.files) ? req.files : [];
+    const newFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+    const coverFile = filesArr.find(f => f.fieldname === 'cover_image');
+  // Optimize newly uploaded additional & cover images
+  try { await Promise.all(newFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
+  if (coverFile) { try { await optimizeUploadedImage(path.join(uploadsDir, coverFile.filename)); } catch {} }
+  const newItemsRaw = newFiles.map((f, idx) => ({ image_url: `/uploads/${f.filename}`, alt_text: '', sort_order: kept.length + idx }));
+    let finalItems = [
+      ...kept.map((img, idx) => ({ image_url: img.image_url, alt_text: img.alt_text || '', sort_order: idx })),
+      ...newItemsRaw
+    ];
+    // If a new cover uploaded, put it first
+    let coverUrl = null;
+    if(coverFile){
+      coverUrl = `/uploads/${coverFile.filename}`;
+      finalItems = [{ image_url: coverUrl, alt_text: '', sort_order: 0 }, ...finalItems.map((it, i) => ({ ...it, sort_order: i+1 }))];
+    }
+
+    if(typeof db.replaceAdditionalImageItems === 'function'){
+      await db.replaceAdditionalImageItems('theme', ownerId, finalItems);
+    } else {
+      await db.deleteAdditionalImages('theme', ownerId);
+      if(finalItems.length){
+        await db.addAdditionalImages('theme', ownerId, finalItems.map(i => i.image_url));
+      }
+    }
+
+    const selectedLead = (req.body.lead_image_url || '').trim();
+    let newLead = coverUrl || selectedLead;
+    const leadRemoved = base.image_url && !finalItems.find(i => i.image_url === base.image_url);
+    if(!newLead && (leadRemoved || !base.image_url)){
+      newLead = finalItems[0]?.image_url || null;
+    }
+    if(typeof db.updateThemeImageForGroup === 'function'){
+      await db.updateThemeImageForGroup(ownerId, newLead || null);
+    } else if(newLead !== undefined){
+      await db.updateTheme(ownerId, { title: base.title, description: base.description, image_url: newLead || null });
+    }
+  } catch (e) {
+    console.error('Theme gallery update failed', e);
+  }
+
+  // Multi-language update for title/description/slug
+  const langs = ['en','sk','hu'];
+  const posted = Object.fromEntries(langs.map(l => [l, {
+    title: (req.body[`title_${l}`] || '').trim(),
+    description: (req.body[`description_${l}`] || '').trim(),
+    slug: (req.body[`slug_${l}`] || '').trim()
+  }]));
+  const sourceLang = langs.find(l => posted[l].title || posted[l].description) || null;
+  for(const l of langs){
+    const tv = await db.getThemeByGroupAndLang(groupId, l);
+    let newTitle = posted[l].title;
+    let newDesc  = posted[l].description;
+    const titleEmpty = !tv || !tv.title || !tv.title.trim();
+    const descEmpty  = !tv || !tv.description || !tv.description.trim();
+    if(sourceLang){
+      if(!newTitle && titleEmpty) newTitle = posted[sourceLang].title || null;
+      if(!newDesc  && descEmpty)  newDesc  = posted[sourceLang].description || null;
+    }
+    const providedSlug = posted[l].slug;
+    if(tv){
+      if(!newTitle && !newDesc && !providedSlug) continue;
+      const newSlug = providedSlug || tv.slug;
+      if(typeof db.updateThemeWithSlug === 'function'){
+        await db.updateThemeWithSlug(tv.id, { title: newTitle || tv.title, description: (newDesc!==''&&newDesc!=null)?newDesc:tv.description, image_url: tv.image_url, slug: newSlug });
+      } else {
+        await db.updateTheme(tv.id, { title: newTitle || tv.title, description: (newDesc!==''&&newDesc!=null)?newDesc:tv.description, image_url: tv.image_url });
+      }
+    } else {
+      const titleToUse = newTitle || (sourceLang ? posted[sourceLang].title : '') || base.title || 'Theme';
+      const descToUse  = (newDesc!==''&&newDesc!=null)?newDesc:((sourceLang ? posted[sourceLang].description : '') || base.description || '');
+      if(titleToUse){
+        const baseSlug = providedSlug ? slugify(providedSlug) : (base.slug || slugify(titleToUse));
+        const slug = await uniqueThemeSlug(l, baseSlug);
+        await db.createTheme({ lang: l, group_id: groupId, slug, title: titleToUse, description: descToUse, image_url: base.image_url });
+      }
+    }
+  }
+
+  // Backward-compatibility: single-language fields
+  const { title, description, slug } = req.body;
+  if(title || description || slug){
+    const newSlug = slug || base.slug;
+    if(typeof db.updateThemeWithSlug === 'function'){
+      await db.updateThemeWithSlug(base.id, { title: title || base.title, description: description || base.description, image_url: base.image_url, slug: newSlug });
+    } else {
+      await db.updateTheme(base.id, { title: title || base.title, description: description || base.description, image_url: base.image_url });
+    }
+  }
+
+  res.redirect(`/admin/themes?lang=${res.locals.lang}&success=updated`);
+});
+
+app.post('/admin/themes/:id/delete', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Themes require DB backend');
+  try {
+    const base = await db.getTheme(req.params.id).catch(() => null);
+    if(base?.group_id && typeof db.deleteThemeGroup === 'function'){
+      await db.deleteThemeGroup(base.group_id);
+    } else {
+      await db.deleteTheme(req.params.id);
+    }
+    res.redirect(`/admin/themes?lang=${res.locals.lang}&success=deleted`);
+  } catch (e) {
+    res.redirect(`/admin/themes?lang=${res.locals.lang}&error=delete_failed`);
+  }
+});
+
+// Team management (DB only)
+app.get('/admin/team', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Team requires DB backend');
+  const members = await db.listTeam(res.locals.lang);
+  const success = req.query.success;
+  res.render('admin-team-list', { members, lang: res.locals.lang, success });
+});
+
+app.get('/admin/team/new', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Team requires DB backend');
+  res.render('admin-team-form', { lang: res.locals.lang, member: null, membersByLang: null });
+});
+
+app.post('/admin/team', basicAuth, uploadTeam.single('photo'), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Team requires DB backend');
+  try {
+    const body = req.body || {};
+    if (!req.body || typeof req.body !== 'object') {
+      try { console.warn('Team create: req.body is undefined or not an object. content-type:', req.headers['content-type']); } catch {}
+    }
+    const name = (body.name || '').trim();
+    const { linkedin, facebook, twitter } = body;
+    const sort_order = Number.isInteger(parseInt(body.sort_order, 10)) ? parseInt(body.sort_order, 10) : 0;
+    if(!name){
+      return res.status(400).render('admin-team-form', { lang: res.locals.lang, member: null, membersByLang: null, error: 'Please enter a name.' });
+    }
+    // Per-language role/bio (tabs)
+    const langs = ['en','sk','hu'];
+    const roles = { en: (body.role_en||'').trim(), sk: (body.role_sk||'').trim(), hu: (body.role_hu||'').trim() };
+    const bios  = { en: (body.bio_en||'').trim(),  sk: (body.bio_sk||'').trim(),  hu: (body.bio_hu||'').trim() };
+    const anyProvided = langs.some(l => (roles[l]||'').trim() || (bios[l]||'').trim());
+    if(!anyProvided){
+      // fallback: accept single-language fields if tabs unused
+      roles[res.locals.lang] = (body.role || '').trim();
+      bios[res.locals.lang]  = (body.bio  || '').trim();
+    }
+    // Replicate missing languages from first language that has data
+    const sourceLang = langs.find(l => roles[l] || bios[l]);
+    if(sourceLang){
+      for(const l of langs){
+        if(!roles[l]) roles[l] = roles[sourceLang] || '';
+        if(!bios[l])  bios[l]  = bios[sourceLang]  || '';
+      }
+    }
+    let photo_url = null;
+    if(req.file){
+      try{
+        const processed = await processTeamImage(req.file.buffer, req.file.originalname || name);
+        photo_url = processed.photo_url; // thumb_url currently unused in DB
+      }catch(e){
+        return res.status(400).render('admin-team-form', { lang: res.locals.lang, member: null, membersByLang: null, error: 'Image could not be processed. Please upload a valid image up to 2 MB.' });
+      }
+    }
+    const groupId = crypto.randomUUID();
+    let created = 0;
+    for(const l of langs){
+      const role = (roles[l]||'').trim();
+      const bio  = (bios[l] ||'').trim();
+      // create all languages; skip only if totally empty
+      if(!role && !bio) continue;
+      await db.createTeamMember({ lang: l, group_id: groupId, slug: null, name, role, photo_url, bio, linkedin, facebook, twitter, sort_order });
+      created++;
+    }
+    // Ensure at least current language variant exists even if role/bio are empty
+    if(created === 0){
+      const atLeastLang = res.locals.lang || 'en';
+      await db.createTeamMember({ lang: atLeastLang, group_id: groupId, slug: null, name, role: '', photo_url, bio: '', linkedin, facebook, twitter, sort_order });
+      created = 1;
+    }
+    if(!created){
+      // Create current language minimally
+      await db.createTeamMember({ lang: res.locals.lang, group_id: groupId, slug: null, name, role: '', photo_url, bio: '', linkedin, facebook, twitter, sort_order });
+    }
+    res.redirect(`/admin/team?lang=${res.locals.lang}&success=created`);
+  } catch (e) {
+    return res.status(500).render('admin-team-form', { lang: res.locals.lang, member: null, membersByLang: null, error: e?.message || 'Beklenmeyen bir hata oluştu.' });
+  }
+});
+
+app.get('/admin/team/:id/edit', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Team requires DB backend');
+  const member = await db.getTeamMember(req.params.id);
+  if(!member) return res.status(404).send('Member not found');
+  const membersByLang = { en: null, sk: null, hu: null };
+  if(member.group_id){
+    for(const l of ['en','sk','hu']){
+      const mv = await db.getTeamMemberByGroupAndLang?.(member.group_id, l);
+      if(mv) membersByLang[l] = mv;
+    }
+  } else {
+    membersByLang[member.lang] = member;
+  }
+  res.render('admin-team-form', { lang: res.locals.lang, member, membersByLang });
+});
+
+app.post('/admin/team/:id', basicAuth, uploadTeam.single('photo'), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Team requires DB backend');
+  try {
+    const body = req.body || {};
+    if (!req.body || typeof req.body !== 'object') {
+      try { console.warn('Team update: req.body is undefined or not an object. content-type:', req.headers['content-type']); } catch {}
+    }
+    const existing = await db.getTeamMember(req.params.id);
+    if(!existing){
+      return res.status(404).send('Member not found');
+    }
+    const name = (body.name || '').trim();
+    if(!name){
+      const member = existing;
+      return res.status(400).render('admin-team-form', { lang: res.locals.lang, member, membersByLang: null, error: 'Please enter a name.' });
+    }
+    const { linkedin, facebook, twitter } = body;
+    const sort_order = Number.isInteger(parseInt(body.sort_order, 10)) ? parseInt(body.sort_order, 10) : 0;
+    let photo_url = existing?.photo_url || null;
+    if(body.remove_photo === '1'){
+      photo_url = null;
+    }
+    if(req.file){
+      try{
+        const processed = await processTeamImage(req.file.buffer, req.file.originalname || name);
+        photo_url = processed.photo_url;
+      }catch(e){
+        const member = existing;
+        return res.status(400).render('admin-team-form', { lang: res.locals.lang, member, membersByLang: null, error: 'Image could not be processed. Please upload a valid image up to 2 MB.' });
+      }
+    }
+    // Ensure group id for multi-language
+    let groupId = existing.group_id;
+    if(!groupId){
+      groupId = crypto.randomUUID();
+      await db.setTeamGroup(existing.id, groupId);
+    }
+    // Per-language role/bio updates
+    const langs = ['en','sk','hu'];
+    const rolesPosted = Object.fromEntries(langs.map(l => [l, (body[`role_${l}`] ?? '').toString().trim()]));
+    const biosPosted  = Object.fromEntries(langs.map(l => [l, (body[`bio_${l}`]  ?? '').toString().trim()]));
+    const sourceLang = langs.find(l => rolesPosted[l] || biosPosted[l]) || null;
+    for(const l of langs){
+      let mv = await db.getTeamMemberByGroupAndLang?.(groupId, l);
+      const existingRoleEmpty = !mv || !mv.role || !mv.role.trim();
+      const existingBioEmpty  = !mv || !mv.bio  || !mv.bio.trim();
+      let newRole = rolesPosted[l];
+      let newBio  = biosPosted[l];
+      // If not posted, and existing is empty, replicate from source
+      if(!newRole && sourceLang && existingRoleEmpty){ newRole = rolesPosted[sourceLang] || ''; }
+      if(!newBio  && sourceLang && existingBioEmpty){  newBio  = biosPosted[sourceLang]  || ''; }
+
+      if(mv){
+        // If nothing to change, keep existing values
+        await db.updateTeamMember(mv.id, {
+          name,
+          role: newRole || mv.role || '',
+          photo_url,
+          bio: newBio || mv.bio || '',
+          linkedin, facebook, twitter, sort_order
+        });
+      } else {
+        // Create missing variant if we have any content (posted or replicated)
+        if(newRole || newBio){
+          await db.createTeamMember({ lang: l, group_id: groupId, slug: null, name, role: newRole || '', photo_url, bio: newBio || '', linkedin, facebook, twitter, sort_order });
+        }
+      }
+    }
+    // Propagate shared fields and photo to group
+    await db.updateTeamPhotoForGroup(groupId, photo_url);
+    await db.updateTeamSharedForGroup(groupId, { name, linkedin, facebook, twitter, sort_order });
+    res.redirect(`/admin/team?lang=${res.locals.lang}&success=updated`);
+  } catch (e) {
+    const member = await db.getTeamMember(req.params.id).catch(() => null);
+    return res.status(500).render('admin-team-form', { lang: res.locals.lang, member, membersByLang: null, error: e?.message || 'Beklenmeyen bir hata oluştu.' });
+  }
+});
+
+app.post('/admin/team/:id/delete', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Team requires DB backend');
+  try {
+    const base = await db.getTeamMember(req.params.id).catch(() => null);
+    if(base?.group_id && typeof db.deleteTeamGroup === 'function'){
+      await db.deleteTeamGroup(base.group_id);
+    } else {
+      await db.deleteTeamMember(req.params.id);
+    }
+    res.redirect(`/admin/team?lang=${res.locals.lang}&success=deleted`);
+  } catch (e) {
+    res.redirect(`/admin/team?lang=${res.locals.lang}&error=delete_failed`);
+  }
+});
+
+// News management (DB only)
+app.get('/admin/news', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('News requires DB backend');
+  const news = await db.listNews(res.locals.lang);
+  const success = req.query.success;
+  res.render('admin-news-list', { news, lang: res.locals.lang, useDb: true, active: 'news', success });
+});
+
+app.get('/admin/news/new', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('News requires DB backend');
+  res.render('admin-news-form', { lang: res.locals.lang, useDb: true, active: 'news', news: null });
+});
+
+app.post('/admin/news', basicAuth, uploadImages.any(), async (req,res)=>{
+  if(!useDb) return res.status(501).send('News requires DB backend');
+  const hasMulti = (req.body.title_en||'').trim() || (req.body.title_sk||'').trim() || (req.body.title_hu||'').trim();
+  if(!hasMulti){
+  return res.status(400).render('admin-news-form', { lang: res.locals.lang, useDb: true, active: 'news', news: null, error: 'Please provide a title for at least one language.' });
+  }
+  const langs = ['en','sk','hu'];
+  const groupId = crypto.randomUUID();
+  const { published_at, is_published } = req.body;
+  let lastNewsId = null;
+  // Collect and replicate missing fields from first provided language
+  const titles = { en: (req.body.title_en||'').trim(), sk: (req.body.title_sk||'').trim(), hu: (req.body.title_hu||'').trim() };
+  const summaries = { en: (req.body.summary_en||'').trim(), sk: (req.body.summary_sk||'').trim(), hu: (req.body.summary_hu||'').trim() };
+  const contents = { en: (req.body.content_en||'').trim(), sk: (req.body.content_sk||'').trim(), hu: (req.body.content_hu||'').trim() };
+  const slugsProvided = { en: (req.body.slug_en||'').trim(), sk: (req.body.slug_sk||'').trim(), hu: (req.body.slug_hu||'').trim() };
+  const sourceLang = langs.find(l => titles[l]);
+  if(sourceLang){
+    for(const l of langs){
+      if(!titles[l]) titles[l] = titles[sourceLang];
+      if(!summaries[l]) summaries[l] = summaries[sourceLang];
+      if(!contents[l]) contents[l] = contents[sourceLang];
+    }
+  }
+  for(const l of langs){
+    const title = titles[l];
+    const summary = summaries[l] || '';
+    const content = contents[l] || '';
+    const providedSlug = slugsProvided[l] || '';
+    const base = providedSlug ? slugify(providedSlug) : slugify(title || 'news');
+    const slug = await uniqueNewsSlug(l, base);
+    const news = await db.createNews({ lang: l, group_id: groupId, slug, title: title || 'News', summary, content, image_url: null, published_at, is_published });
+    lastNewsId = news.id;
+  }
+    
+    // Handle additional images for the last created news (representing the group)
+  const filesArr = Array.isArray(req.files) ? req.files : [];
+  const additionalFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+    if(additionalFiles.length > 0 && lastNewsId) {
+  // Optimize uploaded images
+  try { await Promise.all(additionalFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
+  const imageUrls = additionalFiles.map(file => `/uploads/${file.filename}`);
+      await db.addAdditionalImages('news', lastNewsId, imageUrls);
+      const lead = imageUrls[0];
+      if(db.updateNewsImageForGroup){
+        await db.updateNewsImageForGroup(lastNewsId, lead);
+      } else {
+        const existing = await db.getNews(lastNewsId);
+        await db.updateNews(lastNewsId, { title: existing.title, summary: existing.summary, content: existing.content, slug: existing.slug, published_at: existing.published_at, is_published: existing.is_published, image_url: lead });
+      }
+    }
+    
+  return res.redirect(`/admin/news?lang=${res.locals.lang}&success=created`);
+});
+
+app.get('/admin/news/:id/edit', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('News requires DB backend');
+  const news = await db.getNews(req.params.id);
+  if(!news) return res.status(404).send('News not found');
+  const langs = ['en','sk','hu'];
+  const newsByLang = { en: null, sk: null, hu: null };
+  let additionalImages = [];
+  try{
+    if(news.group_id){
+      for(const l of langs){
+        const nv = await db.getNewsByGroupAndLang?.(news.group_id, l);
+        newsByLang[l] = nv || null;
+      }
+    } else {
+      newsByLang[news.lang] = news;
+    }
+    const ownerId = await resolveNewsGalleryOwnerId(news);
+    additionalImages = await db.getAdditionalImages('news', ownerId);
+  }catch{}
+  res.render('admin-news-form', { lang: res.locals.lang, useDb: true, active: 'news', news, newsByLang, additionalImages });
+});
+
+app.post('/admin/news/:id', basicAuth, uploadImages.any(), async (req,res)=>{
+  if(!useDb) return res.status(501).send('News requires DB backend');
+  const base = await db.getNews(req.params.id);
+  if(!base) return res.status(404).send('News not found');
+
+  // Ensure grouped editing
+  let groupId = base.group_id;
+  if(!groupId){
+    groupId = crypto.randomUUID();
+    await db.setNewsGroup(base.id, groupId);
+  }
+
+  // Gallery management: remove selected, add new uploads, update lead image
+  try {
+    const ownerId = await resolveNewsGalleryOwnerId(base);
+    const existing = await db.getAdditionalImages('news', ownerId);
+    const removeIdsRaw = req.body.remove_image_ids;
+    const removeIds = Array.isArray(removeIdsRaw) ? removeIdsRaw : (removeIdsRaw ? [removeIdsRaw] : []);
+    const removeSet = new Set(removeIds.map(id => Number(id)));
+    const kept = existing.filter(img => !removeSet.has(Number(img.id)));
+
+  const filesArr = Array.isArray(req.files) ? req.files : [];
+  const newFiles = filesArr.filter(f => typeof f.fieldname === 'string' && f.fieldname.startsWith('additional_images'));
+  // Optimize uploaded images
+  try { await Promise.all(newFiles.map(f => optimizeUploadedImage(path.join(uploadsDir, f.filename)))); } catch {}
+  const newItems = newFiles.map((f, idx) => ({ image_url: `/uploads/${f.filename}`, alt_text: '', sort_order: kept.length + idx }));
+
+    const finalItems = [
+      ...kept.map((img, idx) => ({ image_url: img.image_url, alt_text: img.alt_text || '', sort_order: idx })),
+      ...newItems
+    ];
+
+    if(db.replaceAdditionalImageItems){
+      await db.replaceAdditionalImageItems('news', ownerId, finalItems);
+    } else {
+      await db.deleteAdditionalImages('news', ownerId);
+      if(finalItems.length){
+        await db.addAdditionalImages('news', ownerId, finalItems.map(i => i.image_url));
+      }
+    }
+
+    const selectedLead = (req.body.lead_image_url || '').trim();
+    let newLead = selectedLead;
+    const leadRemoved = base.image_url && !finalItems.find(i => i.image_url === base.image_url);
+    if(!newLead && (leadRemoved || !base.image_url)){
+      newLead = finalItems[0]?.image_url || null;
+    }
+    if(typeof db.updateNewsImageForGroup === 'function'){
+      await db.updateNewsImageForGroup(ownerId, newLead || null);
+    } else if(newLead !== undefined){
+      await db.updateNews(ownerId, { title: base.title, content: base.content, summary: base.summary, slug: base.slug, is_published: base.is_published, published_at: base.published_at, image_url: newLead || null });
+    }
+  } catch (e) {
+    console.error('News gallery update failed', e);
+  }
+
+  const langs = ['en','sk','hu'];
+  // Collect posted fields per lang
+  const posted = Object.fromEntries(langs.map(l => [l, {
+    title: (req.body[`title_${l}`] || '').trim(),
+    summary: (req.body[`summary_${l}`] || '').trim(),
+    content: (req.body[`content_${l}`] || '').trim(),
+    slug: (req.body[`slug_${l}`] || '').trim(),
+    published_at: (req.body[`published_at_${l}`] || '').trim(),
+    is_published_posted: typeof req.body[`is_published_${l}`] !== 'undefined',
+    is_published_val: (req.body[`is_published_${l}`] === 'true' || req.body[`is_published_${l}`] === 'on')
+  }]));
+  const sourceLang = langs.find(l => posted[l].title || posted[l].summary || posted[l].content) || null;
+  for(const l of langs){
+    const nv = await db.getNewsByGroupAndLang(groupId, l);
+    // Compute new values: prefer posted; if missing and existing empty, copy from source
+    let newTitle = posted[l].title;
+    let newSummary = posted[l].summary;
+    let newContent = posted[l].content;
+    const existingTitleEmpty = !nv || !nv.title || !nv.title.trim();
+    const existingSummaryEmpty = !nv || !nv.summary || !nv.summary.trim();
+    const existingContentEmpty = !nv || !nv.content || !nv.content.trim();
+    if(sourceLang){
+      if(!newTitle && existingTitleEmpty) newTitle = posted[sourceLang].title || null;
+      if(!newSummary && existingSummaryEmpty) newSummary = posted[sourceLang].summary || null;
+      if(!newContent && existingContentEmpty) newContent = posted[sourceLang].content || null;
+    }
+    const providedSlug = posted[l].slug;
+    if(nv){
+      const hasAny = newTitle || newSummary || newContent || providedSlug || posted[l].published_at || posted[l].is_published_posted;
+      if(!hasAny) continue;
+      await db.updateNews(nv.id, {
+        title: newTitle || nv.title,
+        summary: (newSummary !== undefined && newSummary !== null && newSummary !== '') ? newSummary : nv.summary,
+        content: (newContent !== undefined && newContent !== null && newContent !== '') ? newContent : nv.content,
+        slug: providedSlug || nv.slug,
+        published_at: posted[l].published_at || nv.published_at,
+        is_published: posted[l].is_published_posted ? posted[l].is_published_val : nv.is_published,
+        image_url: nv.image_url
+      });
+    } else {
+      const titleToUse = newTitle || (sourceLang ? posted[sourceLang].title : '') || base.title;
+      const summaryToUse = (newSummary !== undefined && newSummary !== null && newSummary !== '') ? newSummary : ((sourceLang ? posted[sourceLang].summary : '') || base.summary || '');
+      const contentToUse = (newContent !== undefined && newContent !== null && newContent !== '') ? newContent : ((sourceLang ? posted[sourceLang].content : '') || base.content || '');
+      if(titleToUse){
+        const baseSlug = providedSlug ? slugify(providedSlug) : (base.slug || slugify(titleToUse));
+        const slug = await uniqueNewsSlug(l, baseSlug);
+        await db.createNews({
+          lang: l,
+          group_id: groupId,
+          slug,
+          title: titleToUse,
+          summary: summaryToUse,
+          content: contentToUse,
+          image_url: base.image_url,
+          published_at: posted[l].published_at || base.published_at,
+          is_published: posted[l].is_published_posted ? posted[l].is_published_val : (base.is_published !== false)
+        });
+      }
+    }
+  }
+
+  // Also support single-language fields for backward compatibility
+  const { title, summary, content, slug, published_at, is_published } = req.body;
+  if(title || summary || content || slug || published_at || typeof is_published !== 'undefined'){
+    await db.updateNews(base.id, { 
+      title: title || base.title,
+      summary: summary || base.summary,
+      content: content || base.content,
+      slug: slug || base.slug,
+      published_at: published_at || base.published_at,
+      is_published: typeof is_published !== 'undefined' ? (is_published === 'true' || is_published === 'on') : base.is_published
+    });
+  }
+
+  res.redirect(`/admin/news?lang=${res.locals.lang}&success=updated`);
+});
+
+app.post('/admin/news/:id/delete', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('News requires DB backend');
+  try {
+    const base = await db.getNews(req.params.id).catch(() => null);
+    if(base?.group_id && typeof db.deleteNewsGroup === 'function'){
+      await db.deleteNewsGroup(base.group_id);
+    } else {
+      await db.deleteNews(req.params.id);
+    }
+    res.redirect(`/admin/news?lang=${res.locals.lang}&success=deleted`);
+  } catch (e) {
+    res.redirect(`/admin/news?lang=${res.locals.lang}&error=delete_failed`);
+  }
+});
+
+// Settings (homepage slider etc.) (DB only)
+// Settings landing redirects to slider
+app.get('/admin/settings', basicAuth, async (req, res) => {
+  return res.redirect(`/admin/settings/slider?lang=${res.locals.lang}`);
+});
+
+// Settings: Slider
+app.get('/admin/settings/slider', basicAuth, async (req, res) => {
+  if(!useDb) return res.status(501).send('Settings require DB backend');
+  const cfg_en = await db.getSettings('en');
+  const cfg_sk = await db.getSettings('sk');
+  const cfg_hu = await db.getSettings('hu');
+  const cfgs = {
+    en: {
+      slider: Array.isArray(cfg_en?.slider) ? cfg_en.slider : [],
+      slider_bg_image_url: cfg_en?.slider_bg_image_url || '',
+      slider_bg_gallery: Array.isArray(cfg_en?.slider_bg_gallery) ? cfg_en.slider_bg_gallery : [],
+      slider_text_align: cfg_en?.slider_text_align || 'center',
+      slider_title_color: cfg_en?.slider_title_color || '#ffffff',
+      slider_caption_color: cfg_en?.slider_caption_color || '#ffffff'
+    },
+    sk: {
+      slider: Array.isArray(cfg_sk?.slider) ? cfg_sk.slider : [],
+      slider_bg_image_url: cfg_sk?.slider_bg_image_url || '',
+      slider_bg_gallery: Array.isArray(cfg_sk?.slider_bg_gallery) ? cfg_sk.slider_bg_gallery : (Array.isArray(cfg_en?.slider_bg_gallery) ? cfg_en.slider_bg_gallery : []),
+      slider_text_align: cfg_sk?.slider_text_align || (cfg_en?.slider_text_align || 'center'),
+      slider_title_color: cfg_sk?.slider_title_color || (cfg_en?.slider_title_color || '#ffffff'),
+      slider_caption_color: cfg_sk?.slider_caption_color || (cfg_en?.slider_caption_color || '#ffffff')
+    },
+    hu: {
+      slider: Array.isArray(cfg_hu?.slider) ? cfg_hu.slider : [],
+      slider_bg_image_url: cfg_hu?.slider_bg_image_url || '',
+      slider_bg_gallery: Array.isArray(cfg_hu?.slider_bg_gallery) ? cfg_hu.slider_bg_gallery : (Array.isArray(cfg_en?.slider_bg_gallery) ? cfg_en.slider_bg_gallery : []),
+      slider_text_align: cfg_hu?.slider_text_align || (cfg_en?.slider_text_align || 'center'),
+      slider_title_color: cfg_hu?.slider_title_color || (cfg_en?.slider_title_color || '#ffffff'),
+      slider_caption_color: cfg_hu?.slider_caption_color || (cfg_en?.slider_caption_color || '#ffffff')
+    },
+  };
+  // If gallery is empty but a selected URL exists, show it in the gallery for convenience
+  for (const l of ['en','sk','hu']){
+    const c = cfgs[l];
+    if (c && (!Array.isArray(c.slider_bg_gallery) || c.slider_bg_gallery.length === 0) && c.slider_bg_image_url){
+      c.slider_bg_gallery = [c.slider_bg_image_url];
+    }
+  }
+  return res.render('admin-settings-slider', { cfgs, lang: res.locals.lang, useDb, active: 'settings-slider' });
+});
+
+// Settings: Slider save
+app.post('/admin/settings/slider', basicAuth, uploadImages.any(), async (req, res) => {
+  if(!useDb) return res.status(501).send('Settings require DB backend');
+  const langs = ['en','sk','hu'];
+  const sliders = { en: [], sk: [], hu: [] };
+  // If no slide fields at all are posted (e.g., user removed all slides), clear sliders immediately
+  const bodyKeys = Object.keys(req.body || {});
+  const hasAnySlideField = bodyKeys.some(k => /^slide\d+_/.test(k));
+  const hasAnySlideFile = Array.isArray(req.files) && req.files.some(f => /^slide\d+_/.test(f.fieldname || ''));
+  const hasAnyBgField = ('slider_bg_selected' in req.body) || ('slider_bg_existing' in req.body);
+  const hasAnyBgFile = Array.isArray(req.files) && req.files.some(f => /^(slider_bg_image|slider_bg_images(\[\])?)$/.test(f.fieldname || ''));
+  const hasAnyTextSetting = ('slider_text_align' in req.body) || ('slider_title_color' in req.body) || ('slider_caption_color' in req.body);
+  if(!hasAnySlideField && !hasAnySlideFile && !hasAnyBgField && !hasAnyBgFile && !hasAnyTextSetting){
+    const [cur_en, cur_sk, cur_hu] = await Promise.all([
+      db.getSettings('en').catch(()=>({})) || {},
+      db.getSettings('sk').catch(()=>({})) || {},
+      db.getSettings('hu').catch(()=>({})) || {}
+    ]);
+    await Promise.all([
+      db.updateSettings('en', { ...cur_en, slider: [] }),
+      db.updateSettings('sk', { ...cur_sk, slider: [] }),
+      db.updateSettings('hu', { ...cur_hu, slider: [] })
+    ]);
+    return res.redirect(`/admin/settings/slider?lang=${res.locals.lang}`);
+  }
+  // Derive indices from posted field names to be resilient to client-side mismatches
+  const idxSet = new Set();
+  for (const key of Object.keys(req.body || {})){
+    const m = key.match(/^slide(\d+)_/);
+    if(m) idxSet.add(parseInt(m[1],10));
+  }
+  let indices = Array.from(idxSet).filter(n => Number.isInteger(n) && n >= 0).sort((a,b)=>a-b);
+  // Fallback to slides_count only if we couldn't detect indices
+  if(indices.length === 0){
+    const count = Math.max(parseInt(req.body.slides_count || '0', 10) || 0, 0);
+    indices = Array.from({length: count}, (_,i)=>i);
+  }
+  // map files by fieldname for quick lookup
+  const filesByField = Object.create(null);
+  for (const f of (req.files || [])) {
+    // Keep last wins for same field name
+    filesByField[f.fieldname] = f;
+  }
+  // Background gallery management
+  const cur_en = await db.getSettings('en').catch(()=>({})) || {};
+  const cur_sk = await db.getSettings('sk').catch(()=>({})) || {};
+  const cur_hu = await db.getSettings('hu').catch(()=>({})) || {};
+  let gallery = Array.isArray(cur_en.slider_bg_gallery) ? [...cur_en.slider_bg_gallery] : [];
+  // Collect newly uploaded background images (support single and multiple)
+  const uploaded = [];
+  for (const f of (req.files || [])){
+    const fname = f.fieldname || '';
+    if (fname === 'slider_bg_image' || fname === 'slider_bg_images' || fname === 'slider_bg_images[]'){
+      try { await optimizeUploadedImage(path.join(uploadsDir, f.filename)); } catch {}
+      uploaded.push(`/uploads/${f.filename}`);
+    }
+  }
+  if (uploaded.length){
+    gallery = gallery.concat(uploaded);
+  }
+  // Deduplicate gallery while preserving order
+  const seen = new Set();
+  gallery = gallery.filter(u => { if(!u) return false; if(seen.has(u)) return false; seen.add(u); return true; });
+  // Determine selected background
+  const postedSelected = (req.body['slider_bg_selected'] || '').trim();
+  const postedRadio = (req.body['bg_choice'] || '').trim();
+  const globalExistingBg = (req.body['slider_bg_existing'] || '').trim();
+  let sliderBgUrl = '';
+  const chosen = postedSelected || postedRadio;
+  if (chosen && (gallery.includes(chosen) || uploaded.includes(chosen) || /^https?:\/\//i.test(chosen))){
+    sliderBgUrl = chosen;
+  } else if (uploaded.length){
+    sliderBgUrl = uploaded[uploaded.length - 1];
+  } else if (globalExistingBg){
+    sliderBgUrl = globalExistingBg;
+  } else if (cur_en.slider_bg_image_url && gallery.includes(cur_en.slider_bg_image_url)){
+    sliderBgUrl = cur_en.slider_bg_image_url;
+  } else if (gallery.length){
+    sliderBgUrl = gallery[0];
+  }
+  // Ensure selected is present in gallery for visibility next time
+  if (sliderBgUrl && !gallery.includes(sliderBgUrl)){
+    gallery.unshift(sliderBgUrl);
+  }
+  for(const i of indices){
+    const link = (req.body[`slide${i}_link`] || '').trim();
+    // Gather titles/captions to compute fallbacks across languages
+    const titles = {
+      en: (req.body[`slide${i}_title_en`] || '').trim(),
+      sk: (req.body[`slide${i}_title_sk`] || '').trim(),
+      hu: (req.body[`slide${i}_title_hu`] || '').trim(),
+    };
+    const captions = {
+      en: (req.body[`slide${i}_caption_en`] || '').trim(),
+      sk: (req.body[`slide${i}_caption_sk`] || '').trim(),
+      hu: (req.body[`slide${i}_caption_hu`] || '').trim(),
+    };
+    // if every field is empty across all langs and no link, skip this slide entirely
+    const hasAny = link || titles.en || titles.sk || titles.hu || captions.en || captions.sk || captions.hu;
+    if(!hasAny) continue;
+    for(const l of langs){
+      // Preserve intentionally blank strings from the form (do not override with fallback)
+      const title = (typeof titles[l] === 'string') ? titles[l] : '';
+      const caption = (typeof captions[l] === 'string') ? captions[l] : '';
+      sliders[l].push({ title, caption, link });
+    }
+  }
+  const alignRaw = (req.body.slider_text_align || '').toLowerCase();
+  const slider_text_align = ['left','center','right'].includes(alignRaw) ? alignRaw : (cur_en.slider_text_align || 'center');
+  const slider_title_color = (req.body.slider_title_color || cur_en.slider_title_color || '#ffffff');
+  const slider_caption_color = (req.body.slider_caption_color || cur_en.slider_caption_color || '#ffffff');
+  await db.updateSettings('en', { ...cur_en, slider: sliders.en, slider_bg_image_url: sliderBgUrl || cur_en.slider_bg_image_url || '', slider_bg_gallery: gallery, slider_text_align, slider_title_color, slider_caption_color });
+  await db.updateSettings('sk', { ...cur_sk, slider: sliders.sk, slider_bg_image_url: sliderBgUrl || cur_sk.slider_bg_image_url || '', slider_bg_gallery: gallery, slider_text_align, slider_title_color, slider_caption_color });
+  await db.updateSettings('hu', { ...cur_hu, slider: sliders.hu, slider_bg_image_url: sliderBgUrl || cur_hu.slider_bg_image_url || '', slider_bg_gallery: gallery, slider_text_align, slider_title_color, slider_caption_color });
+  res.redirect(`/admin/settings/slider?lang=${res.locals.lang}`);
+});
+
+// Delete a background image from the gallery
+app.post('/admin/settings/slider/bg/delete', basicAuth, express.json(), async (req, res) => {
+  if(!useDb) return res.status(501).send('Settings require DB backend');
+  try {
+    const { url } = req.body || {};
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'url required' });
+    const cur_en = await db.getSettings('en').catch(()=>({})) || {};
+    let gallery = Array.isArray(cur_en.slider_bg_gallery) ? cur_en.slider_bg_gallery : [];
+    const idx = gallery.indexOf(url);
+    const langs = ['en','sk','hu'];
+    const cfgs = await Promise.all(langs.map(l => db.getSettings(l).catch(()=>({}))));
+    if (idx === -1) {
+      // Not in gallery; allow deletion if it's currently selected in any language
+      let isSelectedSomewhere = false;
+      for (let i=0;i<langs.length;i++){
+        const cur = cfgs[i] || {};
+        if ((cur.slider_bg_image_url || '') === url) { isSelectedSomewhere = true; break; }
+      }
+      if (!isSelectedSomewhere) {
+        return res.status(404).json({ error: 'not-in-gallery' });
+      }
+      // Clear selection for all languages where it matches
+      for (let i=0;i<langs.length;i++){
+        const l = langs[i];
+        const cur = cfgs[i] || {};
+        const sel = (cur.slider_bg_image_url === url) ? '' : (cur.slider_bg_image_url || '');
+        await db.updateSettings(l, { ...cur, slider_bg_image_url: sel });
+      }
+      // Unlink local file if under uploads
+      if (url.startsWith('/uploads/')){
+        const p = path.join(__dirname, 'public', url.replace(/^\//, ''));
+        try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+      }
+      return res.json({ ok: true, clearedSelected: true });
+    }
+    // Remove from gallery and fix selection
+    gallery.splice(idx, 1);
+    for (let i=0;i<langs.length;i++){
+      const l = langs[i];
+      const cur = cfgs[i] || {};
+      let sel = cur.slider_bg_image_url || '';
+      if (sel === url){ sel = gallery[0] || ''; }
+      await db.updateSettings(l, { ...cur, slider_bg_gallery: gallery, slider_bg_image_url: sel });
+    }
+    // Try to unlink only local uploads
+    if (url.startsWith('/uploads/')){
+      const p = path.join(__dirname, 'public', url.replace(/^\//, ''));
+      try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+    }
+    return res.json({ ok: true, removedFromGallery: true });
+  } catch (e) {
+    return res.status(500).json({ error: 'failed' });
+  }
+});
+ 
+
+// Settings: Contact
+app.get('/admin/settings/contact', basicAuth, async (req, res) => {
+  if(!useDb) return res.status(501).send('Settings require DB backend');
+  const cfg_en = await db.getSettings('en');
+  const contact = cfg_en.contact || {};
+  res.render('admin-settings-contact', { title: 'Settings › Contact', active: 'settings-contact', lang: res.locals.lang, useDb, contact });
+});
+
+app.post('/admin/settings/contact', basicAuth, async (req, res) => {
+  if(!useDb) return res.status(501).send('Settings require DB backend');
+  const socials = ['facebook','instagram','twitter','linkedin','youtube'];
+  const contact = {
+    address: (req.body['contact_address'] || '').trim(),
+    phone: (req.body['contact_phone'] || '').trim(),
+    email: (req.body['contact_email'] || '').trim(),
+  };
+  for(const s of socials){
+    let v = (req.body[`contact_${s}`] || '').trim();
+    if(v){
+      // Prefix https:// if user omitted scheme
+      if(!/^https?:\/\//i.test(v)){
+        v = `https://${v}`;
+      }
+      contact[s] = v;
+    }
+  }
+  // Save the same global contact to all languages for compatibility
+  const cur_en = await db.getSettings('en').catch(()=>({})) || {};
+  const cur_sk = await db.getSettings('sk').catch(()=>({})) || {};
+  const cur_hu = await db.getSettings('hu').catch(()=>({})) || {};
+  await db.updateSettings('en', { ...cur_en, contact });
+  await db.updateSettings('sk', { ...cur_sk, contact });
+  await db.updateSettings('hu', { ...cur_hu, contact });
+  res.redirect(`/admin/settings/contact?lang=${res.locals.lang}`);
+});
+
+// Settings: GDPR (single record per language, stored as page with slug 'gdpr')
+app.get('/admin/settings/gdpr', basicAuth, async (req, res) => {
+  if(!useDb) return res.status(501).send('Settings require DB backend');
+  const langs = ['en','sk','hu'];
+  const pagesByLang = {};
+  for(const l of langs){
+    pagesByLang[l] = await db.getPage(l, 'gdpr').catch(()=>null) || { title: 'GDPR', content: '' };
+  }
+  res.render('admin-settings-gdpr', { title: 'Settings › GDPR', active: 'settings-gdpr', lang: res.locals.lang, useDb, pagesByLang });
+});
+
+// Settings: Stats / Counters
+app.get('/admin/settings/stats', basicAuth, async (req, res) => {
+  if(!useDb) return res.status(501).send('Settings require DB backend');
+  const cfg = await db.getSettings(res.locals.lang);
+  res.render('admin-settings-stats', { cfg, lang: res.locals.lang, useDb, active: 'settings-stats' });
+});
+
+app.post('/admin/settings/stats', basicAuth, async (req, res) => {
+  if(!useDb) return res.status(501).send('Settings require DB backend');
+  const cur_en = await db.getSettings('en').catch(()=>({})) || {};
+  const cur_sk = await db.getSettings('sk').catch(()=>({})) || {};
+  const cur_hu = await db.getSettings('hu').catch(()=>({})) || {};
+  // Parse posted stats: prefer contiguous indices based on stats_count to drop deleted rows reliably
+  const count = Math.max(parseInt(req.body.stats_count || '0', 10) || 0, 0);
+  const indices = Array.from({ length: count }, (_, i) => i);
+  const stats = [];
+  for(const i of indices){
+    const valueRaw = req.body[`stat${i}_value`];
+    const hasValueField = Object.prototype.hasOwnProperty.call(req.body, `stat${i}_value`);
+    const valueStr = typeof valueRaw === 'string' ? valueRaw.trim() : '';
+    const hasExplicitValue = hasValueField && valueStr !== '';
+    const value = hasExplicitValue ? Number(valueStr) : 0;
+    const icon = (req.body[`stat${i}_icon`] || '').trim();
+    const suffix = (req.body[`stat${i}_suffix`] || '').trim();
+    const active = (req.body[`stat${i}_active`] || 'true') === 'true';
+    const labels = {
+      en: (req.body[`stat${i}_label_en`] || '').trim(),
+      sk: (req.body[`stat${i}_label_sk`] || '').trim(),
+      hu: (req.body[`stat${i}_label_hu`] || '').trim(),
+    };
+    const hasAnyLabel = labels.en || labels.sk || labels.hu;
+    // Only keep if user explicitly provided any meaningful field for this index
+    const keep = hasAnyLabel || icon || suffix || hasExplicitValue;
+    if(!keep) continue;
+    stats.push({ value: Number.isFinite(value) ? value : 0, icon, suffix, active, labels });
+  }
+  // Limit to 12 for safety
+  const finalStats = stats.slice(0, 12);
+  await db.updateSettings('en', { ...cur_en, stats: finalStats });
+  await db.updateSettings('sk', { ...cur_sk, stats: finalStats });
+  await db.updateSettings('hu', { ...cur_hu, stats: finalStats });
+  res.redirect(`/admin/settings/stats?lang=${res.locals.lang}`);
+});
+
+app.post('/admin/settings/gdpr', basicAuth, async (req, res) => {
+  if(!useDb) return res.status(501).send('Settings require DB backend');
+  const langs = ['en','sk','hu'];
+  for(const l of langs){
+    const contentField = req.body[`content_${l}`];
+    const content = (typeof contentField === 'string') ? contentField.trim() : '';
+    // Keep title as 'GDPR' in all languages for simplicity
+    await db.upsertPage({ lang: l, slug: 'gdpr', title: 'GDPR', content });
+  }
+  res.redirect(`/admin/settings/gdpr?lang=${res.locals.lang}`);
+});
+
+// (removed) Settings: Focus Areas Columns — columns are fixed now
+
+// Admin: Edit core pages (DB only)
+const ALLOWED_PAGES = {
+  'home': { title: { en: 'Home', sk: 'Domov', hu: 'Főoldal' }, returnPath: '' },
+  'about-us': { title: { en: 'About Us', sk: 'O nás', hu: 'Rólunk' }, returnPath: 'page/about-us' },
+  'focus-areas': { title: { en: 'Focus Areas', sk: 'Zamerania', hu: 'Fókuszterületek' }, returnPath: 'focus-areas' }
+};
+
+app.get('/admin/pages/:slug', basicAuth, async (req, res) => {
+  if(!useDb) return res.status(501).send('Pages require DB backend');
+  const slug = req.params.slug;
+  if (slug === 'focus-areas') {
+    return res.redirect(`/admin/focus-areas?lang=${res.locals.lang}`);
+  }
+  const def = ALLOWED_PAGES[slug];
+  if(!def) return res.status(404).send('Page not allowed');
+  // Always use multi-language editor
+  return res.redirect(`/admin/pages/${slug}/multi?lang=${res.locals.lang}`);
+});
+
+// Accept optional image upload for page banner/lead image
+app.post('/admin/pages/:slug', basicAuth, uploadImages.any(), async (req, res) => {
+  if(!useDb) return res.status(501).send('Pages require DB backend');
+  const slug = req.params.slug;
+  const def = ALLOWED_PAGES[slug];
+  if(!def) return res.status(404).send('Page not allowed');
+  const title = (req.body.title || '').trim();
+  const content = (req.body.content || '').trim();
+  let image_url;
+  // Load existing to be able to unlink old file if replaced/removed
+  let existingPage = null;
+  try { existingPage = await db.getPage(res.locals.lang, slug); } catch {}
+  const filesArr = Array.isArray(req.files) ? req.files : [];
+  const imageFile = filesArr.find(f => f.fieldname === 'image' && /^image\//.test(f.mimetype));
+  if(imageFile){
+    image_url = `/uploads/${imageFile.filename}`;
+    // Optimize newly uploaded image
+    try { await optimizeUploadedImage(path.join(uploadsDir, imageFile.filename)); } catch {}
+    // If a new file uploaded, remove old local image
+    const oldUrl = existingPage?.image_url;
+    if (oldUrl && typeof oldUrl === 'string' && oldUrl.startsWith('/uploads/')){
+      const p = path.join(__dirname, 'public', oldUrl.replace(/^\//, ''));
+      try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+    }
+  } else if(req.body.remove_image === '1') {
+    image_url = null;
+    // If explicitly removed, delete old local file
+    const oldUrl = existingPage?.image_url;
+    if (oldUrl && typeof oldUrl === 'string' && oldUrl.startsWith('/uploads/')){
+      const p = path.join(__dirname, 'public', oldUrl.replace(/^\//, ''));
+      try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+    }
+  } // else undefined -> keep existing
+  await db.upsertPage({ lang: res.locals.lang, slug, title, content, image_url });
+  res.redirect(`/admin/pages/${slug}?lang=${res.locals.lang}`);
+});
+
+// Multi-language page editor (tabbed) for core pages
+app.get('/admin/pages/:slug/multi', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Pages require DB backend');
+  // Redirect legacy focus-areas page editor to new data-based Focus Areas management
+  if (req.params.slug === 'focus-areas') {
+    return res.redirect(`/admin/focus-areas?lang=${res.locals.lang}`);
+  }
+  const slug = req.params.slug;
+  const def = ALLOWED_PAGES[slug];
+  if(!def) return res.status(404).send('Page not allowed');
+  const langs = ['en','sk','hu'];
+  const pagesByLang = {};
+  for(const l of langs){
+    pagesByLang[l] = await db.getPage(l, slug).catch(()=>null) || { title: def.title[l] || def.title.en, content: '', image_url: null };
+  }
+  // Load items for all languages
+  const itemsByLang = { en: [], sk: [], hu: [] };
+  try {
+    for(const l of langs){
+      const p = pagesByLang[l];
+      if(p && p.id){
+        itemsByLang[l] = await db.getAdditionalImages('page', p.id);
+      }
+    }
+  } catch {}
+  const imagesEn = itemsByLang.en || [];
+  // Load About Us gallery (EN owner) if applicable
+  let galleryItemsEn = [];
+  try {
+    if (slug === 'about-us' && pagesByLang.en && pagesByLang.en.id) {
+      galleryItemsEn = await db.getAdditionalImages('page_gallery', pagesByLang.en.id);
+    }
+  } catch {}
+  res.render('admin-page-form-multi', { slug, pageTitle: def.title[res.locals.lang] || def.title.en, pagesByLang, langs, lang: res.locals.lang, useDb, imagesEn, itemsByLang, galleryItemsEn });
+});
+
+app.post('/admin/pages/:slug/multi', basicAuth, uploadImages.any(), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Pages require DB backend');
+  const slug = req.params.slug;
+  const def = ALLOWED_PAGES[slug];
+  if(!def) return res.status(404).send('Page not allowed');
+  const langs = ['en','sk','hu'];
+  for(const l of langs){
+    const title = (req.body[`title_${l}`] || '').trim();
+    // Preserve existing content if not supplied in the form
+    let existingPage = null;
+    try { existingPage = await db.getPage(l, slug); } catch {}
+    const contentField = req.body[`content_${l}`];
+    // About Us & Home: editor hidden, don't wipe content; keep existing
+    const content = (slug === 'about-us' || slug === 'home')
+      ? (existingPage?.content || '')
+      : ((typeof contentField === 'string') ? contentField.trim() : (existingPage?.content || ''));
+    let image_url; // undefined -> keep
+    await db.upsertPage({ lang: l, slug, title: title || def.title[l] || def.title.en, content, image_url });
+  }
+  // About Us & Home: exactly 4 sections per language (image + text). Others: keep legacy 4 content-only blocks for SK/HU.
+  try {
+    if (slug === 'about-us' || slug === 'home'){
+      for (const l of langs){
+        const pageLang = await db.getPage(l, slug);
+        if(!(pageLang && pageLang.id)) continue;
+        const existingItems = await db.getAdditionalImages('page', pageLang.id).catch(()=>[]);
+        const items = [];
+        for (let i = 1; i <= 4; i++){
+          const alt_text = (req.body[`about_block_text_${i}_${l}`] || '').trim();
+          // Only EN may alter images; SK/HU inherit images from EN in public
+          let image_url = undefined; // undefined => keep
+          if (l === 'en'){
+            if ((slug === 'about-us' || slug === 'home') && (i === 2 || i === 3)){
+              // About Us: For sections 2 and 3, force remove image if exists
+              image_url = '';
+            } else {
+              const filesArr = Array.isArray(req.files) ? req.files : [];
+              const file = filesArr.find(f => f.fieldname === `about_block_image_${i}_${l}` && /^image\//.test(f.mimetype));
+              if (file){
+                image_url = `/uploads/${file.filename}`;
+                try { await optimizeUploadedImage(path.join(uploadsDir, file.filename)); } catch {}
+              } else if (req.body[`about_block_remove_image_${i}_${l}`] === '1'){
+                image_url = '';
+              }
+            }
+          }
+          items.push({ image_url, alt_text, sort_order: i-1 });
+        }
+        const finalItems = items.map((it, idx)=>{
+          const ex = existingItems[idx];
+          const url = (typeof it.image_url === 'undefined') ? (ex ? ex.image_url : '') : it.image_url;
+          return { image_url: url || '', alt_text: it.alt_text || '', sort_order: idx };
+        });
+        // Unlink replaced/removed old files (EN only)
+        if (l === 'en'){
+          try {
+            for (let i=0;i<4;i++){
+              const ex = existingItems[i];
+              const cur = items[i];
+              if(!ex || !ex.image_url) continue;
+              const replaced = (typeof cur.image_url !== 'undefined' && cur.image_url && cur.image_url !== ex.image_url);
+              const removed = (cur.image_url === '');
+              if ((replaced || removed) && ex.image_url.startsWith('/uploads/')){
+                const p = path.join(__dirname, 'public', ex.image_url.replace(/^\//, ''));
+                try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+              }
+            }
+          } catch {}
+        }
+        if (typeof db.replaceAdditionalImageItems === 'function'){
+          await db.replaceAdditionalImageItems('page', pageLang.id, finalItems);
+        } else {
+          await db.deleteAdditionalImages('page', pageLang.id);
+          await db.addAdditionalImages('page', pageLang.id, finalItems.map(fi=>fi.image_url));
+        }
+      }
+    } else {
+      for (const l of ['sk','hu']){
+        const pageLang = await db.getPage(l, slug);
+        if(!(pageLang && pageLang.id)) continue;
+        const items = [];
+        for(let i=1;i<=4;i++){
+          const alt_text = (req.body[`block_content_${i}_${l}`] || '').trim();
+          items.push({ image_url: '', alt_text, sort_order: i-1 });
+        }
+        const hasAny = items.some(it => it.alt_text);
+        if (db.replaceAdditionalImageItems){
+          await db.replaceAdditionalImageItems('page', pageLang.id, hasAny ? items : []);
+        } else {
+          await db.deleteAdditionalImages('page', pageLang.id);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to update About Us sections:', e.message);
+  }
+  res.redirect(`/admin/pages/${slug}/multi?lang=${res.locals.lang}`);
+});
+
+// Public themes & team pages
+app.get('/themes', async (req, res) => {
+  if(useDb){
+    const pages = await db.listPages(res.locals.lang);
+    const menu = buildMenu(pages);
+    const themes = await db.listThemes(res.locals.lang);
+    const cards = themes.map(t => {
+      const listImage = t.image_url && String(t.image_url).trim() ? t.image_url : '/img/placeholder-theme.svg';
+      return `
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card bg-light shadow-sm h-100 d-flex flex-column">
+          <a href="/themes/${t.slug || t.id}?lang=${res.locals.lang}${t.group_id ? (`&gid=${encodeURIComponent(t.group_id)}`) : ''}">
+            <img src="${listImage}" class="card-img-top" alt="${t.title}" style="height:200px; object-fit:cover;">
+          </a>
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title text-primary mb-2">${t.title}</h5>
+            <p class="card-text">${t.description ? t.description.substring(0, 100) + (t.description.length > 100 ? '...' : '') : ''}</p>
+            <div class="mt-auto pt-2">
+              <a href="/themes/${t.slug || t.id}?lang=${res.locals.lang}${t.group_id ? (`&gid=${encodeURIComponent(t.group_id)}`) : ''}" class="btn btn-primary btn-sm w-100 text-center">
+                <i class="fas fa-eye me-1"></i>${res.locals.t('viewDetails')}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>`
+    }).join('');
+    const html = `<div class="row">${cards || `<div class=\"text-muted\">${res.locals.t('noThemesYet')}</div>`}</div>`;
+  const shThemes = { kicker: res.locals.t('themesKicker'), heading: res.locals.t('themesHeading'), subheading: '' };
+  return res.render('page', { menu, page: { title: res.locals.t('themesTitle'), content: html }, lang: res.locals.lang, slider: null, sectionHeader: shThemes, t: res.locals.t });
+  }
+});
+
+// Focus Areas columns are fixed (no settings UI)
+function getFocusAreaColumns(){
+  return ['group','field','experts','description','activity_description','type_of_activity'];
+}
+
+function focusAreaLabelFactory(t){
+  return function(key){
+    const map = {
+      group: t('fa_group'),
+      field: t('fa_field'),
+      experts: t('fa_experts'),
+      description: t('fa_description'),
+      activity_description: t('fa_activity_description'),
+      type_of_activity: t('fa_type_of_activity'),
+    };
+    if(map[key]) return map[key];
+    return String(key || '').replace(/_/g, ' ');
+  };
+}
+
+// Resolve Focus Area variant for current language with fallback
+async function resolveFocusAreaVariant(row, lang){
+  if(!row || !row.group_id || !db.getFocusAreaByGroupAndLang) return row;
+  try{
+    const cur = await db.getFocusAreaByGroupAndLang(row.group_id, lang);
+    if(cur) return cur;
+    const en = await db.getFocusAreaByGroupAndLang(row.group_id, 'en');
+    const sk = await db.getFocusAreaByGroupAndLang(row.group_id, 'sk');
+    const hu = await db.getFocusAreaByGroupAndLang(row.group_id, 'hu');
+    return en || sk || hu || row;
+  }catch{ return row; }
+}
+
+// Focus Areas public page (table)
+app.get('/focus-areas', async (req, res) => {
+  const pages = await db.listPages(res.locals.lang);
+  const menu = buildMenu(pages);
+  const cols = getFocusAreaColumns();
+  const labels = cols.map(focusAreaLabelFactory(res.locals.t));
+  // Aggregate across languages and deduplicate by group; prefer current language variant
+  let all = [];
+  try {
+    const [en, sk, hu] = await Promise.all([
+      db.listFocusAreas('en').catch(()=>[]),
+      db.listFocusAreas('sk').catch(()=>[]),
+      db.listFocusAreas('hu').catch(()=>[])
+    ]);
+    all = [...en, ...sk, ...hu];
+  } catch {
+    all = await db.listFocusAreas(res.locals.lang).catch(()=>[]) || [];
+  }
+  const byGroup = new Map();
+  for(const r of all){
+    const key = r.group_id || `single_${r.id}`;
+    if(!byGroup.has(key)) byGroup.set(key, r);
+  }
+  const bases = Array.from(byGroup.values());
+  const rows = await Promise.all(bases.map(b => resolveFocusAreaVariant(b, res.locals.lang)));
+  const thead = `<thead><tr>${labels.map(lb=>`<th class="text-uppercase small">${lb}</th>`).join('')}</tr></thead>`;
+  const tbody = `<tbody>${rows.map(r=>{
+    const f = r.fields || {};
+    return `<tr>${cols.map(c=>`<td>${(f[c] ?? '').toString()}</td>`).join('')}</tr>`;
+  }).join('')}</tbody>`;
+  const tableHtml = `<div class="table-responsive"><table class="table table-striped align-middle focus-areas-table">${thead}${tbody}</table></div>`;
+  const shFocus = { kicker: res.locals.t('focusAreasKicker'), heading: res.locals.t('focusAreasHeading'), subheading: '' };
+  return res.render('page', { menu, page: { title: res.locals.t('focusAreasTitle'), content: tableHtml }, lang: res.locals.lang, slider: null, sectionHeader: shFocus, t: res.locals.t });
+});
+
+// Admin: Focus Areas list
+app.get('/admin/focus-areas', basicAuth, async (req, res) => {
+  const cols = getFocusAreaColumns();
+  const labels = cols.map(focusAreaLabelFactory(res.locals.t));
+  // Aggregate across languages for admin view and dedupe by group; resolve to current language variant if available
+  let all = [];
+  try {
+    const [en, sk, hu] = await Promise.all([
+      db.listFocusAreas('en', true).catch(()=>[]),
+      db.listFocusAreas('sk', true).catch(()=>[]),
+      db.listFocusAreas('hu', true).catch(()=>[])
+    ]);
+    all = [...en, ...sk, ...hu];
+  } catch {
+    all = await db.listFocusAreas(res.locals.lang, true).catch(()=>[]) || [];
+  }
+  const byGroup = new Map();
+  for(const r of all){
+    const key = r.group_id || `single_${r.id}`;
+    if(!byGroup.has(key)) byGroup.set(key, r);
+  }
+  const bases = Array.from(byGroup.values());
+  const rows = await Promise.all(bases.map(b => resolveFocusAreaVariant(b, res.locals.lang)));
+  res.render('admin-focus-areas-list', { title: res.locals.t('focusAreasTitle'), active: 'focus-areas', lang: res.locals.lang, useDb, cols, labels, rows, success: req.query.success || '' });
+});
+
+// Admin: New Focus Area form
+app.get('/admin/focus-areas/new', basicAuth, async (req, res) => {
+  const cols = getFocusAreaColumns();
+  const labels = cols.map(focusAreaLabelFactory(res.locals.t));
+  const langs = ['en','sk','hu'];
+  const rowsByLang = { en: null, sk: null, hu: null };
+  res.render('admin-focus-areas-form', { title: 'New Focus Area', active: 'focus-areas', lang: res.locals.lang, useDb, cols, labels, rowsByLang, formAction: `/admin/focus-areas?lang=${res.locals.lang}`, error: '' });
+});
+
+app.post('/admin/focus-areas', basicAuth, async (req, res) => {
+  const cols = getFocusAreaColumns();
+  const langs = ['en','sk','hu'];
+  const sort_order = parseInt(req.body.sort_order || '0', 10) || 0;
+  const published = (req.body.published === 'on' || req.body.published === 'true');
+  const groupId = crypto.randomUUID();
+  // Collect posted fields per language
+  const fieldsByLang = {};
+  const filledLangs = [];
+  for(const l of langs){
+    const f = {};
+    let hasAny = false;
+    for(const c of cols){
+      const val = (req.body[`${c}_${l}`] || '').trim();
+      f[c] = val;
+      if(!hasAny && val) hasAny = true;
+    }
+    fieldsByLang[l] = f;
+    if(hasAny) filledLangs.push(l);
+  }
+  if(filledLangs.length === 0){
+    return res.status(400).render('admin-focus-areas-form', { title: 'New Focus Area', active: 'focus-areas', lang: res.locals.lang, useDb, cols, labels: cols.map(focusAreaLabelFactory(res.locals.t)), rowsByLang: { en: null, sk: null, hu: null }, error: 'Please fill at least one language.' });
+  }
+  const sourceLang = filledLangs[0];
+  for(const l of langs){
+    const fields = (filledLangs.includes(l)) ? fieldsByLang[l] : fieldsByLang[sourceLang];
+    await db.createFocusArea({ lang: l, group_id: groupId, fields, sort_order, published });
+  }
+  res.redirect(`/admin/focus-areas?lang=${res.locals.lang}&success=created`);
+});
+
+// Admin: Edit Focus Area
+app.get('/admin/focus-areas/:id/edit', basicAuth, async (req, res) => {
+  const cols = getFocusAreaColumns();
+  const base = await db.getFocusArea(req.params.id);
+  if(!base) return res.status(404).send('Focus area not found');
+  const labels = cols.map(focusAreaLabelFactory(res.locals.t));
+  const langs = ['en','sk','hu'];
+  const rowsByLang = { en: null, sk: null, hu: null };
+  if(base.group_id){
+    for(const l of langs){
+      rowsByLang[l] = await db.getFocusAreaByGroupAndLang?.(base.group_id, l) || null;
+    }
+  } else {
+    rowsByLang[base.lang] = base;
+  }
+  res.render('admin-focus-areas-form', { title: 'Edit Focus Area', active: 'focus-areas', lang: res.locals.lang, useDb, cols, labels, rowsByLang, baseId: base.id, formAction: `/admin/focus-areas/${base.id}?lang=${res.locals.lang}`, error: '' });
+});
+
+app.post('/admin/focus-areas/:id', basicAuth, async (req, res) => {
+  const cols = getFocusAreaColumns();
+  const base = await db.getFocusArea(req.params.id);
+  if(!base) return res.status(404).send('Focus area not found');
+  let groupId = base.group_id;
+  if(!groupId){
+    groupId = crypto.randomUUID();
+    await db.setFocusAreaGroup?.(base.id, groupId);
+  }
+  const langs = ['en','sk','hu'];
+  const sort_order = parseInt(req.body.sort_order || String(base.sort_order || 0), 10) || (base.sort_order || 0);
+  const published = (req.body.published === 'on' || req.body.published === 'true');
+  // Gather posted fields per language and detect a single filled language
+  const fieldsByLang = {};
+  const filledLangs = [];
+  for(const l of langs){
+    const existing = await db.getFocusAreaByGroupAndLang?.(groupId, l);
+    const f = {};
+    let hasAny = false;
+    for(const c of cols){
+      const val = (req.body[`${c}_${l}`] || '').trim();
+      if(val){
+        f[c] = val;
+        hasAny = true;
+      }
+    }
+    fieldsByLang[l] = { existing, posted: f, hasAny };
+    if(hasAny) filledLangs.push(l);
+  }
+  const sourceLang = filledLangs[0] || null;
+  for(const l of langs){
+    const { existing, posted, hasAny } = fieldsByLang[l];
+    if(existing){
+      // Merge with auto-fill: prefer posted; if missing and existing empty, fill from sourceLang posted
+      const merged = { ...(existing.fields || {}) };
+      for(const c of cols){
+        if(Object.prototype.hasOwnProperty.call(posted, c)){
+          merged[c] = posted[c];
+        } else if (sourceLang && (!merged[c] || String(merged[c]).trim() === '') && Object.prototype.hasOwnProperty.call(fieldsByLang[sourceLang].posted, c)){
+          merged[c] = fieldsByLang[sourceLang].posted[c];
+        }
+      }
+      await db.updateFocusArea(existing.id, { fields: merged, sort_order, published });
+    } else {
+      if(hasAny){
+        await db.createFocusArea({ lang: l, group_id: groupId, fields: posted, sort_order, published });
+      } else if (sourceLang) {
+        // Replicate single-language input to missing languages
+        const sourcePosted = fieldsByLang[sourceLang].posted;
+        await db.createFocusArea({ lang: l, group_id: groupId, fields: sourcePosted, sort_order, published });
+      }
+    }
+  }
+  res.redirect(`/admin/focus-areas?lang=${res.locals.lang}&success=updated`);
+});
+
+app.post('/admin/focus-areas/:id/delete', basicAuth, async (req, res) => {
+  try{
+    const base = await db.getFocusArea(req.params.id);
+    if(base && base.group_id && typeof db.deleteFocusAreaGroup === 'function'){
+      await db.deleteFocusAreaGroup(base.group_id);
+    } else {
+      await db.deleteFocusArea(req.params.id);
+    }
+  }catch(e){
+    console.error('Delete focus area failed:', e?.message || e);
+  }
+  res.redirect(`/admin/focus-areas?lang=${res.locals.lang}&success=deleted`);
+});
+
+// Theme detail page (render via shared 'page' layout with gallery)
+app.get('/themes/:slug', async (req, res) => {
+  const idOrSlug = req.params.slug;
+  const gid = req.query.gid;
+  let theme = isNaN(idOrSlug) ? await db.getThemeBySlug(res.locals.lang, idOrSlug) : await db.getTheme(idOrSlug);
+  // If gid is provided and we have a base theme with a different group, prefer resolving by gid
+  if(gid && typeof db.getThemeByGroupAndLang === 'function'){
+    try{
+      const cur = await db.getThemeByGroupAndLang(gid, res.locals.lang);
+      if(cur) theme = cur;
+    }catch{}
+  }
+  // If not found in current language, try other languages by slug, then resolve to current language via group
+  if(!theme && isNaN(idOrSlug)){
+    try{
+      const langs = ['en','sk','hu'];
+      for(const l of langs){
+        const th = await db.getThemeBySlug(l, idOrSlug).catch(()=>null);
+        if(th){ theme = th; break; }
+      }
+      if(theme && theme.group_id && typeof db.getThemeByGroupAndLang === 'function'){
+        const cur = await db.getThemeByGroupAndLang(theme.group_id, res.locals.lang).catch(()=>null);
+        if(cur) theme = cur;
+      }
+    }catch{}
+  }
+  if(!theme) {
+    return res.status(404).render('page', { 
+      menu: [], 
+      page: { title: res.locals.t('themeNotFound'), content: '<p>'+res.locals.t('themeNotFound')+'</p>' }, 
+      lang: res.locals.lang, 
+      slider: null,
+      t: res.locals.t 
+    });
+  }
+  // Resolve to current language variant if group exists; fallback to en/sk/hu order
+  try{
+    if(theme.group_id){
+      const cur = await db.getThemeByGroupAndLang?.(theme.group_id, res.locals.lang);
+      if(cur){
+        theme = cur;
+      } else {
+        const en = await db.getThemeByGroupAndLang?.(theme.group_id, 'en');
+        const sk = await db.getThemeByGroupAndLang?.(theme.group_id, 'sk');
+        const hu = await db.getThemeByGroupAndLang?.(theme.group_id, 'hu');
+        theme = en || sk || hu || theme;
+      }
+    }
+  } catch {}
+  const pages = await db.listPages(res.locals.lang);
+  const menu = buildMenu(pages);
+  const ownerId = await resolveThemeGalleryOwnerId(theme);
+  const additionalImages = await db.getAdditionalImages('theme', ownerId);
+  const gallery = (additionalImages && additionalImages.length) ? `
+    <div class="mt-4">
+      <h3 class="mb-3">${res.locals.t('gallery')}</h3>
+      <div class="row g-3">
+        ${additionalImages.map((img)=>`
+          <div class="col-md-4">
+            <a href="${img.image_url}" class="lightbox" data-gallery="theme-${ownerId}">
+              <div class="card bg-light">
+                <img src="${img.image_url}" class="card-img-top" alt="Theme image" style="height:200px;object-fit:cover;">
+              </div>
+            </a>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+  const shareUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  const encUrl = encodeURIComponent(shareUrl);
+  const encTitle = encodeURIComponent(theme.title || 'Theme');
+  const share = `
+    <div class="mt-4 pt-3 border-top">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+  <span class="text-muted me-2">${res.locals.t('share')}</span>
+        <a class="btn btn-outline-secondary btn-sm" href="https://www.facebook.com/sharer/sharer.php?u=${encUrl}" target="_blank" rel="noopener" aria-label="Share on Facebook"><i class="fab fa-facebook-f me-1"></i>Facebook</a>
+        <a class="btn btn-outline-secondary btn-sm" href="https://twitter.com/intent/tweet?url=${encUrl}&text=${encTitle}" target="_blank" rel="noopener" aria-label="Share on X"><i class="fab fa-x-twitter me-1"></i>Twitter</a>
+        <a class="btn btn-outline-secondary btn-sm" href="https://www.linkedin.com/shareArticle?mini=true&url=${encUrl}&title=${encTitle}" target="_blank" rel="noopener" aria-label="Share on LinkedIn"><i class="fab fa-linkedin-in me-1"></i>LinkedIn</a>
+        <a class="btn btn-outline-secondary btn-sm" href="https://wa.me/?text=${encTitle}%20${encUrl}" target="_blank" rel="noopener" aria-label="Share on WhatsApp"><i class="fab fa-whatsapp me-1"></i>WhatsApp</a>
+  <a class="btn btn-outline-secondary btn-sm copy-link" href="#" data-copy="${shareUrl}" aria-label="Copy link"><i class="fas fa-link me-1"></i>${res.locals.t('copy')}</a>
+      </div>
+    </div>`;
+  const html = `
+    <div class="bg-white p-4 rounded">
+      <div class="content lead">${theme.description || ''}</div>
+      ${gallery}
+      ${share}
+    </div>`;
+  const sh = { kicker: res.locals.t('themeKicker'), heading: theme.title, subheading: '' };
+  return res.render('page', { 
+    menu, 
+    page: { title: '', content: html, image_url: theme.image_url || (additionalImages && additionalImages[0]?.image_url) || '' }, 
+    lang: res.locals.lang, 
+    slider: null,
+    sectionHeader: sh,
+    backLink: `/themes?lang=${res.locals.lang}`,
+    t: res.locals.t 
+  });
+});
+
+// Event detail page
+app.get('/events/:id', async (req, res) => {
+  const idOrSlug = req.params.id;
+  const gid = req.query.gid;
+  let event = isNaN(idOrSlug) ? await db.getEventBySlug(res.locals.lang, idOrSlug) : await db.getEvent(idOrSlug);
+  if(gid && typeof db.getEventByGroupAndLang === 'function'){
+    try{
+      const cur = await db.getEventByGroupAndLang(gid, res.locals.lang);
+      if(cur) event = cur;
+    }catch{}
+  }
+  // If not found by slug in current language, try other languages to locate the group, then resolve to requested language
+  if(!event && isNaN(idOrSlug)){
+    try{
+      const langs = ['en','sk','hu'];
+      for(const l of langs){
+        const ev = await db.getEventBySlug(l, idOrSlug).catch(()=>null);
+        if(ev){ event = ev; break; }
+      }
+      if(event && event.group_id && typeof db.getEventByGroupAndLang === 'function'){
+        const cur = await db.getEventByGroupAndLang(event.group_id, res.locals.lang).catch(()=>null);
+        if(cur) event = cur;
+      }
+    }catch{}
+  }
+  if(!event) {
+    return res.status(404).render('page', { 
+      menu: [], 
+      page: { title: res.locals.t('eventNotFound'), content: '<p>'+res.locals.t('eventNotFound')+'</p>' }, 
+      lang: res.locals.lang, 
+      slider: null,
+      t: res.locals.t 
+    });
+  }
+  // Resolve to the current language variant when possible
+  try{
+    if(event.group_id){
+      const cur = await db.getEventByGroupAndLang?.(event.group_id, res.locals.lang);
+      if(cur){
+        event = cur;
+      } else {
+        // Fallback order if current language variant is missing
+        const en = await db.getEventByGroupAndLang?.(event.group_id, 'en');
+        const sk = await db.getEventByGroupAndLang?.(event.group_id, 'sk');
+        const hu = await db.getEventByGroupAndLang?.(event.group_id, 'hu');
+        event = en || sk || hu || event;
+      }
+    }
+  } catch {}
+  const pages = await db.listPages(res.locals.lang);
+  const menu = buildMenu(pages);
+  const ownerId = await resolveEventGalleryOwnerId(event);
+  const additionalImages = await db.getAdditionalImages('event', ownerId);
+  const dateBadge = event.event_date ? `<span class="badge bg-primary me-2"><i class="fas fa-calendar me-1"></i>${new Date(event.event_date).toLocaleDateString()}</span>` : '';
+  const locBadge = event.location ? `<span class="badge bg-secondary"><i class="fas fa-map-marker-alt me-1"></i>${event.location}</span>` : '';
+  const gallery = (additionalImages && additionalImages.length) ? `
+    <div class="mt-4">
+      <h3 class="mb-3">${res.locals.t('gallery')}</h3>
+      <div class="row g-3">
+        ${additionalImages.map((img)=>`
+          <div class="col-md-4">
+            <a href="${img.image_url}" class="lightbox" data-gallery="event-${ownerId}">
+              <div class="card bg-light"><img src="${img.image_url}" class="card-img-top" alt="Event image" style="height:200px;object-fit:cover;"></div>
+            </a>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+  const shareUrlE = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  const encUrlE = encodeURIComponent(shareUrlE);
+  const encTitleE = encodeURIComponent(event.title || 'Event');
+  const shareE = `
+    <div class="mt-4 pt-3 border-top">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+  <span class="text-muted me-2">${res.locals.t('share')}</span>
+        <a class="btn btn-outline-secondary btn-sm" href="https://www.facebook.com/sharer/sharer.php?u=${encUrlE}" target="_blank" rel="noopener" aria-label="Share on Facebook"><i class="fab fa-facebook-f me-1"></i>Facebook</a>
+        <a class="btn btn-outline-secondary btn-sm" href="https://twitter.com/intent/tweet?url=${encUrlE}&text=${encTitleE}" target="_blank" rel="noopener" aria-label="Share on X"><i class="fab fa-x-twitter me-1"></i>Twitter</a>
+        <a class="btn btn-outline-secondary btn-sm" href="https://www.linkedin.com/shareArticle?mini=true&url=${encUrlE}&title=${encTitleE}" target="_blank" rel="noopener" aria-label="Share on LinkedIn"><i class="fab fa-linkedin-in me-1"></i>LinkedIn</a>
+        <a class="btn btn-outline-secondary btn-sm" href="https://wa.me/?text=${encTitleE}%20${encUrlE}" target="_blank" rel="noopener" aria-label="Share on WhatsApp"><i class="fab fa-whatsapp me-1"></i>WhatsApp</a>
+  <a class="btn btn-outline-secondary btn-sm copy-link" href="#" data-copy="${shareUrlE}" aria-label="Copy link"><i class="fas fa-link me-1"></i>${res.locals.t('copy')}</a>
+      </div>
+    </div>`;
+  const html = `
+    <div class="bg-white p-4 rounded">
+      <div class="mb-3">${dateBadge}${locBadge}</div>
+      <div class="content lead">${event.description || ''}</div>
+      ${gallery}
+      ${shareE}
+    </div>`;
+  const sh = { kicker: 'EVENT', heading: event.title, subheading: '' };
+  return res.render('page', { menu, page: { title: '', content: html, image_url: event.image_url || '' }, lang: res.locals.lang, slider: null, sectionHeader: sh, backLink: `/events?lang=${res.locals.lang}`, t: res.locals.t });
+});
+
+
+// Helper: resolve team variant for current language with sensible fallback
+async function resolveTeamVariant(member, lang){
+  if(!member || !member.group_id || !db.getTeamMemberByGroupAndLang) return member;
+  try{
+    const cur = await db.getTeamMemberByGroupAndLang(member.group_id, lang);
+    if(cur) return cur;
+    const en = await db.getTeamMemberByGroupAndLang(member.group_id, 'en');
+    const sk = await db.getTeamMemberByGroupAndLang(member.group_id, 'sk');
+    const hu = await db.getTeamMemberByGroupAndLang(member.group_id, 'hu');
+    return en || sk || hu || member;
+  }catch{return member;}
+}
+
+// Public team listing
+app.get('/team', async (req, res) => {
+  const pages = await db.listPages(res.locals.lang);
+  const menu = buildMenu(pages);
+  // Aggregate team members across languages, then pick per-group variant for current language
+  let allMembers = [];
+  try {
+    const [en, sk, hu] = await Promise.all([
+      db.listTeam('en').catch(()=>[]),
+      db.listTeam('sk').catch(()=>[]),
+      db.listTeam('hu').catch(()=>[])
+    ]);
+    allMembers = [...en, ...sk, ...hu];
+  } catch { allMembers = await db.listTeam(res.locals.lang).catch(()=>[]) || []; }
+  // Deduplicate by group (or id when no group)
+  const byGroup = new Map();
+  for(const m of allMembers){
+    const key = m.group_id || `single_${m.id}`;
+    if(!byGroup.has(key)) byGroup.set(key, m);
+  }
+  const bases = Array.from(byGroup.values());
+  const cards = (await Promise.all(bases.map(async (mBase) => {
+    const m = await resolveTeamVariant(mBase, res.locals.lang);
+    const bioText = String(m.bio || '').replace(/<[^>]+>/g, '').trim();
+    const bioShort = bioText.length > 100 ? bioText.substring(0, 100) + '...' : bioText;
+    const thumb = (m.photo_url || '').replace(/\.jpg$/i, '-thumb.jpg');
+    function socialBtn(url, icon){
+      if(url && url.trim()){
+        return `<a class="btn btn-square btn-warning my-2" href="${url}" target="_blank" rel="noopener" aria-label="${icon.replace('fa-','').replace('fab ','')}"><i class="${icon}"></i></a>`;
+      }
+      // disabled style when URL missing
+      return `<a class="btn btn-square btn-warning my-2 opacity-50" href="#" tabindex="-1" aria-disabled="true" aria-label="${icon.replace('fa-','').replace('fab ','')}"><i class="${icon}"></i></a>`;
+    }
+    const socials = [
+      socialBtn(m.facebook || '', 'fab fa-facebook-f'),
+      socialBtn(m.twitter || '', 'fab fa-x-twitter'),
+      socialBtn(m.instagram || '', 'fab fa-instagram'),
+      socialBtn(m.youtube || '', 'fab fa-youtube'),
+      socialBtn(m.linkedin || '', 'fab fa-linkedin-in')
+    ].join('');
+    const linkId = m.id; // link to resolved variant id
+    return `
+      <div class="col-md-6 col-lg-4">
+        <div class="team-item d-flex flex-column align-items-stretch h-100 p-0" style="background:#fff; box-shadow:0 0 30px rgba(0,0,0,.05); border-radius:12px; overflow:hidden;">
+          <div class="d-flex">
+            <div class="p-4 d-flex flex-column align-items-center justify-content-center" style="flex:1 1 0;">
+              ${m.photo_url ? `<a href="/team/${linkId}?lang=${res.locals.lang}"><img class="img-fluid" src="${thumb}" onerror="this.src='${m.photo_url}'" alt="${m.name}" style="width:180px; height:180px; object-fit:cover; border-radius:8px;"></a>` : `<a href="/team/${linkId}?lang=${res.locals.lang}"><img class="img-fluid" src="/img/placeholder-member.svg" alt="${m.name}" style="width:180px; height:180px; object-fit:cover; border-radius:8px;"></a>`}
+            </div>
+            <div class="d-flex flex-column justify-content-center align-items-center bg-warning bg-opacity-25 px-3" style="min-width:64px;">
+              ${socials}
+            </div>
+          </div>
+          <div class="px-4 pb-4 pt-2">
+            <h3 class="mb-1" style="font-size:1.3rem; font-weight:700;"><a href="/team/${linkId}?lang=${res.locals.lang}" class="text-decoration-none text-dark">${m.name}</a></h3>
+            <div class="mb-2" style="color:#888; font-size:1rem;">${m.role || ''}</div>
+            <div class="small" style="color:#444;">${bioShort}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }))).join('');
+  const html = `<div class="row g-4">${cards || `<div class=\"text-muted\">${res.locals.t('noTeamYet')}</div>`}</div>`;
+  const shTeam = { kicker: res.locals.t('teamKicker'), heading: res.locals.t('teamHeading'), subheading: '' };
+  return res.render('page', { menu, page: { title: res.locals.t('team'), content: html }, lang: res.locals.lang, slider: null, sectionHeader: shTeam, t: res.locals.t });
+});
+
+// Public team member detail
+app.get('/team/:id', async (req, res) => {
+  const idOrSlug = req.params.id;
+  // Try by id, fallback to slug if implemented in DB
+  let member = null;
+  if(!isNaN(idOrSlug)) {
+    member = await db.getTeamMember(idOrSlug);
+  } else if(db.getTeamMemberBySlug) {
+    // Try current language first
+    member = await db.getTeamMemberBySlug(res.locals.lang, idOrSlug);
+    if(!member){
+      // Fallback: search other languages to find group
+      const langs = ['en','sk','hu'];
+      for(const l of langs){
+        member = await db.getTeamMemberBySlug(l, idOrSlug).catch(()=>null);
+        if(member) break;
+      }
+    }
+  }
+  const pages = await db.listPages(res.locals.lang);
+  const menu = buildMenu(pages);
+  if(!member){
+    return res.status(404).render('page', { 
+      menu, 
+      page: { title: res.locals.t('teamNotFound'), content: `<p>${res.locals.t('teamNotFound')}</p>` }, 
+      lang: res.locals.lang, 
+      slider: null,
+      t: res.locals.t
+    });
+  }
+  // Resolve to the current language variant when grouped
+  try{
+    member = await resolveTeamVariant(member, res.locals.lang);
+  } catch {}
+  const photo = member.photo_url || '';
+  const socials = [
+    member.facebook ? `<a class="btn btn-sm btn-outline-primary me-2" href="${member.facebook}" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i></a>` : '',
+    member.twitter ? `<a class="btn btn-sm btn-outline-primary me-2" href="${member.twitter}" target="_blank" rel="noopener"><i class="fab fa-x-twitter"></i></a>` : '',
+    member.instagram ? `<a class="btn btn-sm btn-outline-primary me-2" href="${member.instagram}" target="_blank" rel="noopener"><i class="fab fa-instagram"></i></a>` : '',
+    member.linkedin ? `<a class="btn btn-sm btn-outline-primary me-2" href="${member.linkedin}" target="_blank" rel="noopener"><i class="fab fa-linkedin-in"></i></a>` : ''
+  ].filter(Boolean).join('');
+  const html = `
+    <div class="bg-white p-4 rounded">
+      <div class="row g-4 align-items-start">
+        <div class="col-md-4">
+          ${photo ? `<a href="${photo}" class="lightbox" data-gallery="team-${member.id}"><img src="${photo}" alt="${member.name}" class="img-fluid rounded w-100" style="object-fit:cover;"></a>` : ''}
+        </div>
+        <div class="col-md-8">
+          <h3 class="mb-1">${member.name}</h3>
+          ${member.role ? `<p class="text-muted mb-3">${member.role}</p>` : ''}
+          ${socials ? `<div class="mb-3">${socials}</div>` : ''}
+          <div class="content lead">${member.bio || ''}</div>
+        </div>
+      </div>
+    </div>`;
+  const sh = { kicker: res.locals.t('teamKicker'), heading: member.name, subheading: '' };
+  return res.render('page', { menu, page: { title: res.locals.t('team'), content: html, image_url: '' }, lang: res.locals.lang, slider: null, sectionHeader: sh, backLink: `/team?lang=${res.locals.lang}`, t: res.locals.t });
+});
+
+// News public page
+app.get('/news', async (req, res) => {
+    const pages = await db.listPages(res.locals.lang);
+    const menu = buildMenu(pages);
+    const news = await db.listPublishedNews(res.locals.lang);
+      const cards = news.map(n => {
+        const listImage = n.image_url && String(n.image_url).trim() ? n.image_url : '/img/placeholder-news.svg';
+        return `
+        <div class="col-lg-6 col-md-12 mb-4">
+          <div class="card bg-light shadow-sm h-100 d-flex flex-column">
+            <a href="/news/${n.slug || n.id}?lang=${res.locals.lang}">
+              <img src="${listImage}" class="card-img-top" alt="${n.title}" style="height: 200px; object-fit: cover;">
+            </a>
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title text-primary mb-2">${n.title}</h5>
+              ${n.published_at ? `<p class="card-text text-muted small"><i class="fas fa-calendar me-1"></i>${new Date(n.published_at).toLocaleDateString()}</p>` : ''}
+              <p class="card-text">${n.summary ? n.summary.substring(0, 150) + (n.summary.length > 150 ? '...' : '') : ''}</p>
+              <div class="mt-auto pt-2">
+                <a href="/news/${n.slug || n.id}?lang=${res.locals.lang}" class="btn btn-primary btn-sm w-100 text-center">
+                  <i class="fas fa-eye me-1"></i>${res.locals.t('readMore')}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      `}).join('');
+    const html = `<div class="row">${cards || `<div class=\"text-muted\">${res.locals.t('noNewsYet')}</div>`}</div>`;
+  const shNews = { kicker: res.locals.t('newsKicker'), heading: res.locals.t('newsHeading'), subheading: '' };
+  return res.render('page', { menu, page: { title: res.locals.t('newsTitle'), content: html }, lang: res.locals.lang, slider: null, sectionHeader: shNews, t: res.locals.t });
+});
+
+// News detail page
+app.get('/news/:slug', async (req, res) => {
+  const idOrSlug = req.params.slug;
+  let news = isNaN(idOrSlug) ? await db.getNewsBySlug(idOrSlug, res.locals.lang) : await db.getNews(idOrSlug);
+  // If not found by slug in current language, try other languages to locate the group, then resolve to requested language
+  if(!news && isNaN(idOrSlug)){
+    try{
+      const langs = ['en','sk','hu'];
+      for(const l of langs){
+        const n = await db.getNewsBySlug(idOrSlug, l).catch(()=>null);
+        if(n){ news = n; break; }
+      }
+    }catch{}
+  }
+  if(!news){
+    return res.status(404).render('page', { 
+      menu: [], 
+      page: { title: res.locals.t('newsNotFound'), content: '<p>'+res.locals.t('newsNotFound')+'</p>' }, 
+      lang: res.locals.lang, 
+      slider: null,
+      t: res.locals.t 
+    });
+  }
+  // Resolve to the current language variant when possible (same approach as events)
+  try{
+    if(news.group_id){
+      const cur = await db.getNewsByGroupAndLang?.(news.group_id, res.locals.lang);
+      if(cur){
+        news = cur;
+      } else {
+        const en = await db.getNewsByGroupAndLang?.(news.group_id, 'en');
+        const sk = await db.getNewsByGroupAndLang?.(news.group_id, 'sk');
+        const hu = await db.getNewsByGroupAndLang?.(news.group_id, 'hu');
+        news = en || sk || hu || news;
+      }
+    }
+  } catch {}
+  const pages = await db.listPages(res.locals.lang);
+  const menu = buildMenu(pages);
+  const ownerId = await resolveNewsGalleryOwnerId(news);
+  const additionalImages = await db.getAdditionalImages('news', ownerId);
+  const summary = news.summary ? `<p class="lead mb-3">${news.summary}</p>` : '';
+  const gallery = (additionalImages && additionalImages.length) ? `
+    <div class="mt-4">
+      <h3 class="mb-3">${res.locals.t('gallery')}</h3>
+      <div class="row g-3">
+        ${additionalImages.map((img)=>`
+          <div class="col-md-4">
+            <a href="${img.image_url}" class="lightbox" data-gallery="news-${ownerId}">
+              <div class="card bg-light"><img src="${img.image_url}" class="card-img-top" alt="News image" style="height:200px;object-fit:cover;"></div>
+            </a>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+  const shareUrlN = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  const encUrlN = encodeURIComponent(shareUrlN);
+  const encTitleN = encodeURIComponent(news.title || 'News');
+  const shareN = `
+    <div class="mt-4 pt-3 border-top">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+  <span class="text-muted me-2">${res.locals.t('share')}</span>
+        <a class="btn btn-outline-secondary btn-sm" href="https://www.facebook.com/sharer/sharer.php?u=${encUrlN}" target="_blank" rel="noopener" aria-label="Share on Facebook"><i class="fab fa-facebook-f me-1"></i>Facebook</a>
+        <a class="btn btn-outline-secondary btn-sm" href="https://twitter.com/intent/tweet?url=${encUrlN}&text=${encTitleN}" target="_blank" rel="noopener" aria-label="Share on X"><i class="fab fa-x-twitter me-1"></i>Twitter</a>
+        <a class="btn btn-outline-secondary btn-sm" href="https://www.linkedin.com/shareArticle?mini=true&url=${encUrlN}&title=${encTitleN}" target="_blank" rel="noopener" aria-label="Share on LinkedIn"><i class="fab fa-linkedin-in me-1"></i>LinkedIn</a>
+        <a class="btn btn-outline-secondary btn-sm" href="https://wa.me/?text=${encTitleN}%20${encUrlN}" target="_blank" rel="noopener" aria-label="Share on WhatsApp"><i class="fab fa-whatsapp me-1"></i>WhatsApp</a>
+  <a class="btn btn-outline-secondary btn-sm copy-link" href="#" data-copy="${shareUrlN}" aria-label="Copy link"><i class="fas fa-link me-1"></i>${res.locals.t('copy')}</a>
+      </div>
+    </div>`;
+  const html = `
+    <div class="bg-white p-4 rounded">
+      ${summary}
+      <div class="content lead">${news.content || ''}</div>
+      ${gallery}
+      ${shareN}
+    </div>`;
+  const sh = { kicker: res.locals.t('newsKicker'), heading: news.title, subheading: '' };
+  return res.render('page', { menu, page: { title: '', content: html, image_url: news.image_url || '' }, lang: res.locals.lang, slider: null, sectionHeader: sh, backLink: `/news?lang=${res.locals.lang}`, t: res.locals.t });
+});
+
+const server = app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+// Graceful shutdown handlers
+process.on('SIGTERM', () => {
+  try { server.close(() => process.exit(0)); } catch { process.exit(0); }
+});
+process.on('SIGINT', () => {
+  try { server.close(() => process.exit(0)); } catch { process.exit(0); }
+});
+
+// Keep the process alive in terminals that auto-close when stdio ends
+if (process.stdin && typeof process.stdin.resume === 'function') {
+  try { process.stdin.resume(); } catch {}
+}

@@ -1,0 +1,96 @@
+<%- include('admin-layout-top', { title: 'Themes Management', lang, useDb: true, active: 'themes' }) %>
+
+<div class="card wow fadeIn" data-wow-delay="0.1s">
+  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-tags fa-lg me-2"></i>
+      <h5 class="mb-0">Themes - <%= lang.toUpperCase() %></h5>
+    </div>
+    <a class="btn btn-light btn-sm" href="/admin/themes/new?lang=<%= lang %>">
+      <i class="fas fa-plus me-1"></i>New Theme
+    </a>
+  </div>
+  <div class="card-body">
+    <% if(typeof success !== 'undefined' && success) { %>
+      <% if(success === 'created') { %>
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+          <i class="fas fa-check-circle me-2"></i>
+          <div>Theme has been created successfully.</div>
+        </div>
+      <% } else if(success === 'updated') { %>
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+          <i class="fas fa-check-circle me-2"></i>
+          <div>Theme has been updated successfully.</div>
+        </div>
+      <% } else if(success === 'deleted') { %>
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-trash me-2"></i>
+          <div>Theme has been deleted.</div>
+        </div>
+      <% } %>
+    <% } %>
+    <% if(themes && themes.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Theme</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% themes.forEach(function(t) { %>
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <% if(t.image_url) { %>
+                      <img src="<%= t.image_url %>" alt="<%= t.title %>" class="me-3 rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                    <% } else { %>
+                      <div class="me-3 d-flex align-items-center justify-content-center bg-light rounded" style="width: 50px; height: 50px;">
+                        <i class="fas fa-image text-muted"></i>
+                      </div>
+                    <% } %>
+                    <div style="text-align: justify;">
+                      <h6 class="mb-1"><%= t.title %></h6>
+                      <% if(t.description) { %>
+                        <small class="text-muted"><%= (t.description || '').substring(0, 60) %><%= (t.description && t.description.length > 60) ? '...' : '' %></small>
+                      <% } %>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-end">
+                  <div class="btn-group" role="group">
+                    <% if(t.slug) { %>
+                      <a href="/themes/<%= t.slug %>?lang=<%= lang %><%= t.group_id ? ('&gid=' + encodeURIComponent(t.group_id)) : '' %>" class="btn btn-sm btn-outline-primary" target="_blank" title="View Theme">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                    <% } %>
+                    <a href="/admin/themes/<%= t.id %>/edit?lang=<%= lang %>" class="btn btn-sm btn-outline-secondary" title="Edit Theme">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <form method="post" action="/admin/themes/<%= t.id %>/delete?lang=<%= lang %>" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this theme?')">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Theme">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="text-center py-5">
+        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No Themes Yet</h5>
+        <p class="text-muted">Start by creating your first theme.</p>
+        <a href="/admin/themes/new?lang=<%= lang %>" class="btn btn-primary">
+          <i class="fas fa-plus me-2"></i>Create First Theme
+        </a>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('admin-layout-bottom') %>

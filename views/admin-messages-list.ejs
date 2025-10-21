@@ -1,0 +1,37 @@
+<%- include('admin-layout-top', { title: 'Admin › Contact Messages', lang, useDb: true, active: 'admin-messages' }) %>
+
+<div class="container mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Recent Contact Messages</h4>
+    <a class="btn btn-sm btn-outline-secondary" href="/admin/test-smtp?lang=<%= lang %>">Test SMTP</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th>ID</th><th>Created</th><th>Name</th><th>Email</th><th>Subject</th><th>Lang</th><th>Status</th><th>Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (Array.isArray(items) && items.length) { %>
+          <% items.forEach(function(m){ %>
+            <tr>
+              <td><%= m.id %></td>
+              <td><%= new Date(m.created_at).toLocaleString() %></td>
+              <td><%= m.name || '' %></td>
+              <td><%= m.email || '' %></td>
+              <td><%= m.subject || '' %></td>
+              <td><%= m.lang || '' %></td>
+              <td><span class="badge bg-<%= (m.status==='sent' ? 'success' : (m.status==='failed' ? 'danger' : 'secondary')) %>"><%= m.status || '' %></span></td>
+              <td class="text-break"><small><%= m.error || '' %></small></td>
+            </tr>
+          <% }); %>
+        <% } else { %>
+          <tr><td colspan="8" class="text-muted">No messages yet.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('admin-layout-bottom') %>

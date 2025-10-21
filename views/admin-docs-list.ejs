@@ -1,0 +1,80 @@
+<%- include('admin-layout-top', { title: 'Documents Management', lang, useDb: true, active: 'documents' }) %>
+<div class="card wow fadeIn" data-wow-delay="0.1s">
+  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-file-alt fa-lg me-2"></i>
+      <h5 class="mb-0">Documents - <%= lang.toUpperCase() %></h5>
+    </div>
+    <a class="btn btn-light btn-sm" href="/admin/documents/new?lang=<%= lang %>">
+      <i class="fas fa-plus me-1"></i>New Document
+    </a>
+  </div>
+  <div class="card-body">
+    <% if(typeof success !== 'undefined' && success) { %>
+      <% if(success === 'created') { %>
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+          <i class="fas fa-check-circle me-2"></i>
+          <div>Document has been created successfully.</div>
+        </div>
+      <% } else if(success === 'updated') { %>
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+          <i class="fas fa-check-circle me-2"></i>
+          <div>Document has been updated successfully.</div>
+        </div>
+      <% } else if(success === 'deleted') { %>
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-trash me-2"></i>
+          <div>Document has been deleted.</div>
+        </div>
+      <% } %>
+    <% } %>
+    <% if (Array.isArray(docs) && docs.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Title</th>
+              <th>File</th>
+              <th>Published</th>
+              <th>Sort</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% docs.forEach(d => { %>
+              <tr>
+                <td style="text-align: justify;">
+                  <strong><%= d.title %></strong>
+                  <% if(d.description) { %>
+                    <div class="text-muted small"><%= (d.description || '').substring(0, 90) %><%= (d.description && d.description.length > 90) ? '...' : '' %></div>
+                  <% } %>
+                </td>
+                <td><a href="<%= d.file_url %>" target="_blank"><i class="fas fa-download me-1"></i>view</a></td>
+                <td><span class="badge <%= d.published ? 'bg-success' : 'bg-secondary' %>"><%= d.published ? 'Yes' : 'No' %></span></td>
+                <td><%= d.sort_order || 0 %></td>
+                <td class="text-end">
+                  <div class="btn-group" role="group">
+                    <a class="btn btn-sm btn-outline-secondary" href="/admin/documents/<%= d.id %>/edit?lang=<%= lang %>" title="Edit Document"><i class="fas fa-edit"></i></a>
+                    <form method="post" action="/admin/documents/<%= d.id %>/delete?lang=<%= lang %>" style="display:inline" onsubmit="return confirm('Delete this document?')">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Document"><i class="fas fa-trash"></i></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="text-center py-5">
+        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No Documents Yet</h5>
+        <p class="text-muted">Start by creating your first document.</p>
+        <a class="btn btn-primary" href="/admin/documents/new?lang=<%= lang %>">
+          <i class="fas fa-plus me-2"></i>Create First Document
+        </a>
+      </div>
+    <% } %>
+  </div>
+</div>
+<%- include('admin-layout-bottom') %>

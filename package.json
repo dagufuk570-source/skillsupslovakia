@@ -1,0 +1,27 @@
+{
+  "name": "skillsupslovakia",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "node ./scripts/wait-for-db.js && node app.js",
+    "db:setup": "node ./scripts/setup-db.js",
+    "db:import": "node ./scripts/import-content-to-postgres.js",
+    "db:migrate:supabase": "node ./scripts/migrate-to-supabase.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "ejs": "^3.1.9",
+    "express": "^5.1.0",
+    "helmet": "^7.2.0",
+    "nodemailer": "^6.9.13",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.0",
+    "sharp": "^0.33.4"
+  }
+}

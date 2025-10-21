@@ -1,0 +1,121 @@
+<%- include('admin-layout-top', { title: 'Edit Page (Multi-language)', lang, useDb, active: null }) %>
+
+<div class="card shadow-sm">
+  <% const isColoredHeader = (slug === 'about-us' || slug === 'home'); %>
+  <% if (isColoredHeader) { %>
+    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center text-white">
+        <i class="<%= slug === 'home' ? 'fas fa-house' : 'fas fa-circle-info' %> fa-lg me-2 text-white"></i>
+        <h5 class="mb-0 text-white"><%= pageTitle %> — Multi-language</h5>
+      </div>
+      <small class="badge bg-dark">Language: <%= lang.toUpperCase() %></small>
+    </div>
+  <% } %>
+  <div class="card-body">
+    <% if (!isColoredHeader) { %>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0"><i class="fas fa-globe me-2"></i><%= pageTitle %> – Multi-language</h5>
+    </div>
+    <% } %>
+
+    <form method="post" action="/admin/pages/<%= slug %>/multi?lang=<%= lang %>" enctype="multipart/form-data">
+      <ul class="nav nav-pills mb-3" role="tablist">
+        <% (langs || []).forEach(function(l){ %>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link <%= l === lang ? 'active' : '' %>" data-bs-toggle="pill" data-bs-target="#tab-<%= l %>" type="button" role="tab" aria-controls="tab-<%= l %>" aria-selected="<%= l === lang ? 'true' : 'false' %>"><%= l.toUpperCase() %></button>
+          </li>
+        <% }) %>
+      </ul>
+
+      <div class="tab-content">
+        <% (langs || []).forEach(function(l){ const p = (pagesByLang && pagesByLang[l]) || { title: '', content: '', image_url: null }; %>
+          <div class="tab-pane fade <%= l === lang ? 'show active' : '' %>" id="tab-<%= l %>" role="tabpanel" aria-labelledby="tab-<%= l %>-tab">
+            <div class="row g-3">
+              <% if (!(slug === 'about-us' || slug === 'home')) { %>
+              <div class="col-12 col-lg-8">
+                <div class="mb-3">
+                  <label class="form-label" for="title_<%= l %>">Title (<%= l.toUpperCase() %>)</label>
+                  <input id="title_<%= l %>" type="text" class="form-control" name="title_<%= l %>" value="<%= p.title || '' %>" />
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="content_<%= l %>">Content (<%= l.toUpperCase() %>)</label>
+                  <textarea id="content_<%= l %>" class="form-control wysiwyg" name="content_<%= l %>" rows="8"><%= p.content || '' %></textarea>
+                </div>
+              </div>
+              <% } %>
+              <div class="col-12 <%= (slug === 'about-us' || slug === 'home') ? '' : 'col-lg-4' %>">
+                <div class="mb-3">
+                  <% if (slug === 'about-us' || slug === 'home') { %>
+                    <div class="form-label d-block"><%= slug === 'home' ? 'Home Sections' : 'About Us Sections' %> (<%= l.toUpperCase() %>) – 4 items</div>
+                    <div class="row g-3">
+                      <% for (let i = 1; i <= 4; i++) { const existingLang = (itemsByLang && itemsByLang[l] && itemsByLang[l][i-1]) ? itemsByLang[l][i-1] : null; const existingEn = (imagesEn && imagesEn[i-1]) ? imagesEn[i-1] : null; %>
+                        <div class="col-12">
+                          <div class="border rounded p-3 bg-white">
+                            <div class="mb-2 d-flex align-items-center justify-content-between">
+                              <strong class="text-muted">Section <%= i %></strong>
+                            </div>
+                            <% if ((slug === 'about-us' || slug === 'home') ? (i === 1 || i === 4) : true) { %>
+                              <div class="mb-2 d-flex gap-3 align-items-start">
+                                <div>
+                                  <% const previewUrl = (existingLang && existingLang.image_url) ? existingLang.image_url : (existingEn && existingEn.image_url ? existingEn.image_url : ''); %>
+                                  <% if (previewUrl) { %>
+                                    <img src="<%= previewUrl %>" alt="Section <%= i %>" style="height:80px;width:120px;object-fit:cover;border:1px solid #ddd;padding:2px;background:#fff;" />
+                                  <% } %>
+                                </div>
+                                <% if (l === 'en') { %>
+                                  <div class="flex-grow-1">
+                                    <label class="form-label" for="about_block_image_<%= i %>_<%= l %>">Upload image</label>
+                                    <input id="about_block_image_<%= i %>_<%= l %>" class="form-control" type="file" name="about_block_image_<%= i %>_<%= l %>" accept="image/*" />
+                                    <div class="form-check mt-2">
+                                      <input class="form-check-input" type="checkbox" value="1" name="about_block_remove_image_<%= i %>_<%= l %>" id="rm_blk_<%= i %>_<%= l %>">
+                                      <label class="form-check-label" for="rm_blk_<%= i %>_<%= l %>">Remove image</label>
+                                    </div>
+                                  </div>
+                                <% } else { %>
+                                  <div class="flex-grow-1"></div>
+                                <% } %>
+                              </div>
+                            <% } %>
+                            <div class="mb-0">
+                              <label class="form-label" for="about_block_text_<%= i %>_<%= l %>">Content (<%= l.toUpperCase() %>)</label>
+                              <textarea id="about_block_text_<%= i %>_<%= l %>" class="form-control wysiwyg" name="about_block_text_<%= i %>_<%= l %>" rows="4"><%= (existingLang && existingLang.alt_text) ? existingLang.alt_text : '' %></textarea>
+                            </div>
+                          </div>
+                        </div>
+                      <% } %>
+                    </div>
+                    <div class="form-text">Exactly 4 sections are saved. For Home and About Us, only Sections 1 and 4 have images (managed in English). Sections 2 and 3 are text-only and will be shown side-by-side.</div>
+                  <% } else { %>
+                    <div class="form-label d-block">Page Blocks (<%= l.toUpperCase() %>) – 4 items (content only)</div>
+                    <div class="row g-3">
+                      <% for (let i = 1; i <= 4; i++) { const existingLang = (itemsByLang && itemsByLang[l] && itemsByLang[l][i-1]) ? itemsByLang[l][i-1] : null; %>
+                        <div class="col-12">
+                          <div class="border rounded p-3 bg-white">
+                            <div class="mb-2"><strong class="text-muted">Item <%= i %></strong></div>
+                            <div class="mb-0">
+                              <label class="form-label" for="block_content_<%= i %>_<%= l %>">Content <%= i %> (<%= l.toUpperCase() %>)</label>
+                              <textarea id="block_content_<%= i %>_<%= l %>" class="form-control wysiwyg" name="block_content_<%= i %>_<%= l %>" rows="4"><%= (existingLang && existingLang.alt_text) ? existingLang.alt_text : '' %></textarea>
+                            </div>
+                          </div>
+                        </div>
+                      <% } %>
+                    </div>
+                    <div class="form-text">These contents will be shown under the page text.</div>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save All Languages</button>
+        <a href="/admin?lang=<%= lang %>" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+  
+</div>
+
+<%- include('admin-layout-bottom') %>

@@ -1,0 +1,449 @@
+<%- include('admin-layout-top', { title: 'Settings › Slider', lang, useDb, active: 'settings-slider' }) %>
+<div class="row g-3">
+  <div class="col-12">
+    <div class="card wow fadeIn" data-wow-delay="0.1s">
+      <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-sliders-h fa-lg me-2"></i>
+          <h5 class="mb-0">Homepage Slider Configuration</h5>
+        </div>
+        <small class="badge bg-dark">Language: <%= lang.toUpperCase() %></small>
+      </div>
+      <div class="card-body">
+        <form id="slider-form" class="card p-3" method="post" enctype="multipart/form-data" action="/admin/settings/slider?lang=<%= lang %>">
+          <div class="alert alert-info d-flex justify-content-between align-items-center">
+            <span>Manage slides dynamically. You can add or remove slides as needed.</span>
+            <div>
+              <button class="btn btn-sm btn-outline-primary" type="button" id="add-slide-btn"><i class="fas fa-plus me-1"></i>Add Slide</button>
+            </div>
+          </div>
+          <% const curBgGlobal = (cfgs && ((cfgs[lang] && cfgs[lang].slider_bg_image_url) || (cfgs.en && cfgs.en.slider_bg_image_url) || (cfgs.sk && cfgs.sk.slider_bg_image_url) || (cfgs.hu && cfgs.hu.slider_bg_image_url))) || ''; %>
+          <% const bgGallery = (cfgs && ((cfgs[lang] && cfgs[lang].slider_bg_gallery) || (cfgs.en && cfgs.en.slider_bg_gallery) || (cfgs.sk && cfgs.sk.slider_bg_gallery) || (cfgs.hu && cfgs.hu.slider_bg_gallery))) || []; %>
+          <div class="card mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between">
+              <span>Slider Background Image</span>
+              <% if (curBgGlobal) { %>
+                <small class="text-muted">Current set</small>
+              <% } %>
+            </div>
+            <div class="card-body">
+              <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                  <label class="form-label" for="slider_bg_images">Upload Background Images</label>
+                  <input id="slider_bg_images" class="form-control" type="file" name="slider_bg_images" accept="image/*" multiple />
+                  <% if (curBgGlobal) { %>
+                    <input type="hidden" name="slider_bg_existing" value="<%= curBgGlobal %>" />
+                  <% } %>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-label">Selected Background (thumbnail)</div>
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="border rounded p-2 bg-light text-center" style="width:160px;">
+                      <% if (curBgGlobal) { %>
+                        <img id="slider_bg_preview" src="<%= curBgGlobal %>" alt="Background preview" style="max-width:100%; max-height:120px; object-fit:cover;" />
+                      <% } else { %>
+                        <img id="slider_bg_preview" src="" alt="Background preview" style="max-width:100%; max-height:120px; object-fit:cover; display:none;" />
+                        <span id="slider_bg_placeholder" class="text-muted small">No background set</span>
+                      <% } %>
+                    </div>
+                    <div>
+                      <input type="hidden" id="slider_bg_selected" name="slider_bg_selected" value="<%= curBgGlobal %>">
+                      <% if (curBgGlobal) { %>
+                        <button class="btn btn-sm btn-outline-danger" type="button" id="btn-clear-selected"><i class="fas fa-trash me-1"></i>Remove Selected</button>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <% if (Array.isArray(bgGallery) && bgGallery.length) { %>
+                <hr>
+                <div class="row g-3" id="bg-gallery">
+                  <% bgGallery.forEach(function(u, idx){ const isSel = (u === curBgGlobal); %>
+                    <div class="col-6 col-md-3 col-lg-2 d-flex">
+                      <div class="card w-100">
+                        <img src="<%= u %>" alt="bg <%= idx+1 %>" class="card-img-top" style="height:100px; object-fit:cover;">
+                        <div class="card-body p-2 d-flex flex-column gap-1">
+                          <div class="form-check">
+                            <input class="form-check-input bg-radio" type="radio" name="bg_choice" id="bg_choice_<%= idx %>" value="<%= u %>" <%= isSel ? 'checked' : '' %>>
+                            <label class="form-check-label" for="bg_choice_<%= idx %>">Use</label>
+                          </div>
+                          <div class="d-flex gap-2">
+                            <a href="<%= u %>" target="_blank" class="btn btn-sm btn-outline-secondary w-100">View</a>
+                            <button class="btn btn-sm btn-outline-danger w-100 btn-del-bg" type="button" data-url="<%= u %>"><i class="fas fa-trash"></i></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% }) %>
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Text settings: alignment and colors -->
+          <% const curAlign = (cfgs && ((cfgs[lang] && cfgs[lang].slider_text_align) || (cfgs.en && cfgs.en.slider_text_align) || (cfgs.sk && cfgs.sk.slider_text_align) || (cfgs.hu && cfgs.hu.slider_text_align))) || 'center'; %>
+          <% const curTitleColor = (cfgs && ((cfgs[lang] && cfgs[lang].slider_title_color) || (cfgs.en && cfgs.en.slider_title_color) || (cfgs.sk && cfgs.sk.slider_title_color) || (cfgs.hu && cfgs.hu.slider_title_color))) || '#ffffff'; %>
+          <% const curCaptionColor = (cfgs && ((cfgs[lang] && cfgs[lang].slider_caption_color) || (cfgs.en && cfgs.en.slider_caption_color) || (cfgs.sk && cfgs.sk.slider_caption_color) || (cfgs.hu && cfgs.hu.slider_caption_color))) || '#ffffff'; %>
+          <div class="card mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between">
+              <span>Text Settings</span>
+            </div>
+            <div class="card-body">
+              <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label" for="slider_text_align">Alignment</label>
+                  <select id="slider_text_align" class="form-select" name="slider_text_align">
+                    <option value="left" <%= curAlign==='left'?'selected':'' %>>Left</option>
+                    <option value="center" <%= curAlign==='center'?'selected':'' %>>Center</option>
+                    <option value="right" <%= curAlign==='right'?'selected':'' %>>Right</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="slider_title_color">Title Color</label>
+                  <input id="slider_title_color" class="form-control form-control-color" type="color" name="slider_title_color" value="<%= curTitleColor %>" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="slider_caption_color">Caption Color</label>
+                  <input id="slider_caption_color" class="form-control form-control-color" type="color" name="slider_caption_color" value="<%= curCaptionColor %>" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <% const slides_en = (cfgs && cfgs.en && Array.isArray(cfgs.en.slider)) ? cfgs.en.slider : []; %>
+          <% const slides_sk = (cfgs && cfgs.sk && Array.isArray(cfgs.sk.slider)) ? cfgs.sk.slider : []; %>
+          <% const slides_hu = (cfgs && cfgs.hu && Array.isArray(cfgs.hu.slider)) ? cfgs.hu.slider : []; %>
+          <% const curSlides = (lang === 'sk') ? slides_sk : (lang === 'hu' ? slides_hu : slides_en); %>
+          <% const preCount = Array.isArray(curSlides) ? curSlides.length : 0; %>
+          <input type="hidden" name="slides_count" id="slides_count" value="<%= preCount %>">
+          <div id="slides-container">
+            <% const N = preCount; for(let i=0;i<N;i++){ const s_en = slides_en[i] || {}; const s_sk = slides_sk[i] || {}; const s_hu = slides_hu[i] || {}; %>
+            <div class="card mb-3 slide-item" data-index="<%= i %>">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Slide <span class="slide-number"><%= i+1 %></span></span>
+                <div class="d-flex align-items-center gap-2">
+                  <small class="text-muted">Title/Caption are per language</small>
+                  <button class="btn btn-sm btn-outline-danger remove-slide-btn" type="button"><i class="fas fa-trash me-1"></i>Remove</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <!-- link field removed -->
+
+                <!-- Language Tabs -->
+                <ul class="nav nav-tabs mt-3" id="slide<%= i %>Tabs" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="slide<%= i %>-en-tab" data-bs-toggle="tab" data-bs-target="#slide<%= i %>-en" type="button" role="tab" aria-controls="slide<%= i %>-en" aria-selected="true">EN</button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="slide<%= i %>-sk-tab" data-bs-toggle="tab" data-bs-target="#slide<%= i %>-sk" type="button" role="tab" aria-controls="slide<%= i %>-sk" aria-selected="false">SK</button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="slide<%= i %>-hu-tab" data-bs-toggle="tab" data-bs-target="#slide<%= i %>-hu" type="button" role="tab" aria-controls="slide<%= i %>-hu" aria-selected="false">HU</button>
+                  </li>
+                </ul>
+                <div class="tab-content border border-top-0 p-3" id="slide<%= i %>TabsContent">
+                  <div class="tab-pane fade show active" id="slide<%= i %>-en" role="tabpanel" aria-labelledby="slide<%= i %>-en-tab">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="form-label" for="slide<%= i %>_title_en">Title (EN)</label>
+                        <input id="slide<%= i %>_title_en" class="form-control" type="text" name="slide<%= i %>_title_en" value="<%= s_en.title || '' %>" />
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="slide<%= i %>_caption_en">Caption (EN)</label>
+                        <input id="slide<%= i %>_caption_en" class="form-control" type="text" name="slide<%= i %>_caption_en" value="<%= s_en.caption || '' %>" />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tab-pane fade" id="slide<%= i %>-sk" role="tabpanel" aria-labelledby="slide<%= i %>-sk-tab">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="form-label" for="slide<%= i %>_title_sk">Title (SK)</label>
+                        <input id="slide<%= i %>_title_sk" class="form-control" type="text" name="slide<%= i %>_title_sk" value="<%= s_sk.title || '' %>" />
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="slide<%= i %>_caption_sk">Caption (SK)</label>
+                        <input id="slide<%= i %>_caption_sk" class="form-control" type="text" name="slide<%= i %>_caption_sk" value="<%= s_sk.caption || '' %>" />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tab-pane fade" id="slide<%= i %>-hu" role="tabpanel" aria-labelledby="slide<%= i %>-hu-tab">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="form-label" for="slide<%= i %>_title_hu">Title (HU)</label>
+                        <input id="slide<%= i %>_title_hu" class="form-control" type="text" name="slide<%= i %>_title_hu" value="<%= s_hu.title || '' %>" />
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="slide<%= i %>_caption_hu">Caption (HU)</label>
+                        <input id="slide<%= i %>_caption_hu" class="form-control" type="text" name="slide<%= i %>_caption_hu" value="<%= s_hu.caption || '' %>" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <% } %>
+          </div>
+
+          <div class="text-center mt-3">
+            <button class="btn btn-warning btn-lg px-5" type="submit">
+              <i class="fas fa-save me-2"></i>Save Slider
+            </button>
+          </div>
+        </form>
+
+        <!-- Slide Template (hidden) -->
+        <template id="slide-template">
+          <div class="card mb-3 slide-item" data-index="__IDX__">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span>Slide <span class="slide-number">__NUM__</span></span>
+              <div class="d-flex align-items-center gap-2">
+                <small class="text-muted">Link is shared; Title/Caption are per language</small>
+                <button class="btn btn-sm btn-outline-danger remove-slide-btn" type="button"><i class="fas fa-trash me-1"></i>Remove</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- link field removed in template -->
+
+              <ul class="nav nav-tabs mt-3" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#slide__IDX__-en" type="button" role="tab">EN</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#slide__IDX__-sk" type="button" role="tab">SK</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#slide__IDX__-hu" type="button" role="tab">HU</button>
+                </li>
+              </ul>
+              <div class="tab-content border border-top-0 p-3">
+                <div class="tab-pane fade show active" id="slide__IDX__-en" role="tabpanel">
+                    <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="slide__IDX___title_en">Title (EN)</label>
+                        <input id="slide__IDX___title_en" class="form-control" type="text" name="slide__IDX___title_en" />
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label" for="slide__IDX___caption_en">Caption (EN)</label>
+                      <input id="slide__IDX___caption_en" class="form-control" type="text" name="slide__IDX___caption_en" />
+                    </div>
+                  </div>
+                </div>
+                <div class="tab-pane fade" id="slide__IDX__-sk" role="tabpanel">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label" for="slide__IDX___title_sk">Title (SK)</label>
+                      <input id="slide__IDX___title_sk" class="form-control" type="text" name="slide__IDX___title_sk" />
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label" for="slide__IDX___caption_sk">Caption (SK)</label>
+                      <input id="slide__IDX___caption_sk" class="form-control" type="text" name="slide__IDX___caption_sk" />
+                    </div>
+                  </div>
+                </div>
+                <div class="tab-pane fade" id="slide__IDX__-hu" role="tabpanel">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label" for="slide__IDX___title_hu">Title (HU)</label>
+                      <input id="slide__IDX___title_hu" class="form-control" type="text" name="slide__IDX___title_hu" />
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label" for="slide__IDX___caption_hu">Caption (HU)</label>
+                      <input id="slide__IDX___caption_hu" class="form-control" type="text" name="slide__IDX___caption_hu" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <script>
+          (function(){
+            const container = document.getElementById('slides-container');
+            const addBtn = document.getElementById('add-slide-btn');
+            const countInput = document.getElementById('slides_count');
+            const form = document.getElementById('slider-form');
+            const bgInput = document.getElementById('slider_bg_images');
+            const bgPreview = document.getElementById('slider_bg_preview');
+            const bgPh = document.getElementById('slider_bg_placeholder');
+            const bgSel = document.getElementById('slider_bg_selected');
+
+            function reindex(){
+              const items = Array.from(container.querySelectorAll('.slide-item'));
+              items.forEach((el, idx)=>{
+                el.dataset.index = idx;
+                el.querySelector('.slide-number').textContent = String(idx+1);
+                // rename inputs
+                el.querySelectorAll('input[name]').forEach(inp => {
+                  inp.name = inp.name
+                    // existing items like slide0_title_en
+                    .replace(/slide\d+_/g, `slide${idx}_`)
+                    // template items like slide__IDX___title_en -> slide{idx}_title_en
+                    .replace(/slide__IDX___/g, `slide${idx}_`)
+                    // template base like slide__IDX__link -> slide{idx}link (rare), keep fallback
+                    .replace(/slide__IDX__/g, `slide${idx}`);
+                  // sync ids with names where we follow the slide{idx}_field pattern
+                  if (inp.id) {
+                    inp.id = inp.id
+                      .replace(/slide\d+_/g, `slide${idx}_`)
+                      .replace(/slide__IDX___/g, `slide${idx}_`)
+                      .replace(/slide__IDX__/g, `slide${idx}`);
+                  }
+                });
+                // update label[for] bindings
+                el.querySelectorAll('label[for]').forEach(lb => {
+                  lb.htmlFor = lb.htmlFor
+                    .replace(/slide\d+_/g, `slide${idx}_`)
+                    .replace(/slide__IDX___/g, `slide${idx}_`)
+                    .replace(/slide__IDX__/g, `slide${idx}`);
+                });
+                // update tab ids/targets
+                el.querySelectorAll('[id]').forEach(node => {
+                  node.id = node.id
+                    .replace(/slide\d+-en/, `slide${idx}-en`)
+                    .replace(/slide\d+-sk/, `slide${idx}-sk`)
+                    .replace(/slide\d+-hu/, `slide${idx}-hu`)
+                    .replace(/slide__IDX__-en/, `slide${idx}-en`)
+                    .replace(/slide__IDX__-sk/, `slide${idx}-sk`)
+                    .replace(/slide__IDX__-hu/, `slide${idx}-hu`);
+                });
+                el.querySelectorAll('[data-bs-target]').forEach(btn => {
+                  btn.setAttribute('data-bs-target', btn.getAttribute('data-bs-target')
+                    .replace(/#slide\d+-en/, `#slide${idx}-en`)
+                    .replace(/#slide\d+-sk/, `#slide${idx}-sk`)
+                    .replace(/#slide\d+-hu/, `#slide${idx}-hu`)
+                    .replace(/#slide__IDX__-en/, `#slide${idx}-en`)
+                    .replace(/#slide__IDX__-sk/, `#slide${idx}-sk`)
+                    .replace(/#slide__IDX__-hu/, `#slide${idx}-hu`)
+                  );
+                });
+                  el.querySelectorAll('[aria-controls]').forEach(btn => {
+                    btn.setAttribute('aria-controls', btn.getAttribute('aria-controls')
+                      .replace(/slide\d+-en/, `slide${idx}-en`)
+                      .replace(/slide\d+-sk/, `slide${idx}-sk`)
+                      .replace(/slide\d+-hu/, `slide${idx}-hu`)
+                      .replace(/slide__IDX__-en/, `slide${idx}-en`)
+                      .replace(/slide__IDX__-sk/, `slide${idx}-sk`)
+                      .replace(/slide__IDX__-hu/, `slide${idx}-hu`)
+                    );
+                  });
+              });
+              countInput.value = String(Math.max(items.length, 0));
+            }
+
+            function addSlide(){
+              const tmpl = document.getElementById('slide-template');
+              const idx = container.querySelectorAll('.slide-item').length;
+              let html = tmpl.innerHTML.replaceAll('__IDX__', idx).replaceAll('__NUM__', idx+1);
+              const wrapper = document.createElement('div');
+              wrapper.innerHTML = html.trim();
+              const node = wrapper.firstElementChild;
+              container.appendChild(node);
+              reindex();
+            }
+
+            function removeHandler(e){
+              const btn = e.target.closest('.remove-slide-btn');
+              if(btn){
+                  const ok = window.confirm('Bu slaytı kaldırmak istediğinizden emin misiniz?');
+                  if(!ok) return;
+                const item = btn.closest('.slide-item');
+                if(item){
+                  item.remove();
+                  reindex();
+                  // Auto-save after removal so the deletion persists immediately
+                  try {
+                    if (form && typeof form.requestSubmit === 'function') {
+                      form.requestSubmit();
+                    } else if (form) {
+                      form.submit();
+                    }
+                  } catch(_){ /* ignore */ }
+                }
+              }
+            }
+
+            addBtn.addEventListener('click', addSlide);
+            container.addEventListener('click', removeHandler);
+
+            form.addEventListener('submit', () => {
+              reindex();
+            });
+
+            // Live preview for background image
+            if (bgInput) {
+              bgInput.addEventListener('change', () => {
+                const file = bgInput.files && bgInput.files[0];
+                if (!file) return;
+                const url = URL.createObjectURL(file);
+                if (bgPreview) { bgPreview.src = url; bgPreview.style.display = ''; }
+                if (bgPh) { bgPh.style.display = 'none'; }
+                if (bgSel) { bgSel.value = url; }
+              });
+            }
+
+            // Selecting from gallery
+            document.querySelectorAll('.bg-radio').forEach(r => {
+              r.addEventListener('change', (e) => {
+                const v = e.target.value;
+                if (bgSel) bgSel.value = v;
+                if (bgPreview) { bgPreview.src = v; bgPreview.style.display = ''; }
+                if (bgPh) { bgPh.style.display = 'none'; }
+                // Auto-save to immediately apply selection
+                try {
+                  if (form && typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                  } else if (form) {
+                    form.submit();
+                  }
+                } catch(_){}
+              });
+            });
+
+            // Clear current selected
+            const btnClear = document.getElementById('btn-clear-selected');
+            if (btnClear) {
+              btnClear.addEventListener('click', () => {
+                if (bgSel) bgSel.value = '';
+                if (bgPreview) { bgPreview.src = ''; bgPreview.style.display = 'none'; }
+                if (bgPh) { bgPh.style.display = ''; }
+              });
+            }
+
+            // Delete from gallery (AJAX)
+            document.querySelectorAll('.btn-del-bg').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const url = btn.getAttribute('data-url');
+                if (!url) return;
+                const ok = window.confirm('Bu görseli galeriden kaldırmak istiyor musunuz?');
+                if (!ok) return;
+                try {
+                  const resp = await fetch('/admin/settings/slider/bg/delete?lang=<%= lang %>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                  });
+                  if (resp.ok) {
+                    // Remove card from UI
+                    const col = btn.closest('.col-6, .col-md-3, .col-lg-2');
+                    if (col) col.remove();
+                    // If deleted was selected, clear preview
+                    if (bgSel && bgSel.value === url) {
+                      bgSel.value = '';
+                      if (bgPreview) { bgPreview.src = ''; bgPreview.style.display = 'none'; }
+                      if (bgPh) { bgPh.style.display = ''; }
+                    }
+                  } else {
+                    alert('Silinemedi.');
+                  }
+                } catch {
+                  alert('Silme işlemi sırasında hata oluştu.');
+                }
+              });
+            });
+          })();
+        </script>
+      </div>
+    </div>
+  </div>
+</div>
+<%- include('admin-layout-bottom') %>

@@ -1,0 +1,65 @@
+{
+  "en": {
+    "menu": [
+      { "label": "About us", "slug": "about" },
+      { "label": "Themes", "slug": "themes" },
+      { "label": "Focus areas", "slug": "focus" },
+      { "label": "Events", "slug": "events" },
+      { "label": "Our team", "slug": "team" },
+      { "label": "GDPR", "slug": "gdpr" },
+      { "label": "Contact", "slug": "contact" }
+    ],
+    "pages": {
+      "home": { "title": "Welcome", "content": "<p>Welcome to our site (EN)</p>" },
+      "about": { "title": "About us", "content": "<p>About us content (EN)</p>" },
+      "themes": { "title": "Themes", "content": "<p>Themes content (EN)</p>" },
+      "focus": { "title": "Focus areas", "content": "<p>Focus areas content (EN)</p>" },
+      "events": { "title": "Events", "content": "<p>Events content (EN)</p>" },
+      "team": { "title": "Our team", "content": "<p>Team content (EN)</p>" },
+      "gdpr": { "title": "GDPR", "content": "<p>GDPR info (EN)</p>" },
+      "contact": { "title": "Contact", "content": "<p>Contact info (EN)</p>" }
+    }
+  },
+  "sk": {
+    "menu": [
+      { "label": "O nás", "slug": "about" },
+      { "label": "Témy", "slug": "themes" },
+      { "label": "Oblasti záujmu", "slug": "focus" },
+      { "label": "Udalosti", "slug": "events" },
+      { "label": "Náš tím", "slug": "team" },
+      { "label": "GDPR", "slug": "gdpr" },
+      { "label": "Kontakt", "slug": "contact" }
+    ],
+    "pages": {
+      "home": { "title": "Vitajte", "content": "<p>Vitajte na našej stránke (SK)</p>" },
+      "about": { "title": "O nás", "content": "<p>O nás (SK)</p>" },
+      "themes": { "title": "Témy", "content": "<p>Témy (SK)</p>" },
+      "focus": { "title": "Oblasti záujmu", "content": "<p>Oblasti (SK)</p>" },
+      "events": { "title": "Udalosti", "content": "<p>Udalosti (SK)</p>" },
+      "team": { "title": "Náš tím", "content": "<p>Tím (SK)</p>" },
+      "gdpr": { "title": "GDPR", "content": "<p>GDPR (SK)</p>" },
+      "contact": { "title": "Kontakt", "content": "<p>Kontakt (SK)</p>" }
+    }
+  },
+  "hu": {
+    "menu": [
+      { "label": "Rólunk", "slug": "about" },
+      { "label": "Témák", "slug": "themes" },
+      { "label": "Fókuszterületek", "slug": "focus" },
+      { "label": "Események", "slug": "events" },
+      { "label": "Csapatunk", "slug": "team" },
+      { "label": "Adatvédelem", "slug": "gdpr" },
+      { "label": "Kapcsolat", "slug": "contact" }
+    ],
+    "pages": {
+      "home": { "title": "Üdvözöljük", "content": "<p>Üdvözöljük oldalunkon (HU)</p>" },
+      "about": { "title": "Rólunk", "content": "<p>Rólunk szóló tartalom (HU)</p>" },
+      "themes": { "title": "Témák", "content": "<p>Témáink (HU)</p>" },
+      "focus": { "title": "Fókuszterületek", "content": "<p>Fókuszterületek (HU)</p>" },
+      "events": { "title": "Események", "content": "<p>Események (HU)</p>" },
+      "team": { "title": "Csapatunk", "content": "<p>Csapatunk bemutatása (HU)</p>" },
+      "gdpr": { "title": "Adatvédelem", "content": "<p>Adatvédelmi információk (HU)</p>" },
+      "contact": { "title": "Kapcsolat", "content": "<p>Kapcsolatfelvételi információk (HU)</p>" }
+    }
+  }
+}

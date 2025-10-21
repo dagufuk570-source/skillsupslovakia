@@ -1,0 +1,116 @@
+<%- include('admin-layout-top', { title: 'Team Management', lang, useDb: true, active: 'team' }) %>
+<div class="card wow fadeIn" data-wow-delay="0.1s">
+  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-users fa-lg me-2"></i>
+      <h5 class="mb-0">Team - <%= lang.toUpperCase() %></h5>
+    </div>
+    <a class="btn btn-light btn-sm" href="/admin/team/new?lang=<%= lang %>">
+      <i class="fas fa-plus me-1"></i>New Member
+    </a>
+  </div>
+  <div class="card-body">
+    <% if(typeof success !== 'undefined' && success) { %>
+      <% if(success === 'created') { %>
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+          <i class="fas fa-check-circle me-2"></i>
+          <div>Member has been created successfully.</div>
+        </div>
+      <% } else if(success === 'updated') { %>
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+          <i class="fas fa-check-circle me-2"></i>
+          <div>Member has been updated successfully.</div>
+        </div>
+      <% } else if(success === 'deleted') { %>
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-trash me-2"></i>
+          <div>Member has been deleted.</div>
+        </div>
+      <% } %>
+    <% } %>
+  <% if (members.length === 0) { %>
+          <div class="p-5 text-center">
+            <div class="display-6 text-muted mb-3">
+              <i class="fas fa-users"></i>
+            </div>
+            <h5 class="text-muted mb-2">No Team Members Yet</h5>
+            <p class="text-muted">Start by creating your first team member.</p>
+            <a class="btn btn-primary" href="/admin/team/new?lang=<%= lang %>">
+              <i class="fas fa-plus me-1"></i> Create First Member
+            </a>
+          </div>
+        <% } else { %>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Member</th>
+              <th>Bio</th>
+              <th>Order</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% members.forEach(m => { %>
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <% if (m.photo_url) { %>
+                      <img src="<%= m.photo_url.replace(/\.jpg$/, '-thumb.jpg') %>" onerror="this.src='<%= m.photo_url %>'" alt="<%= m.name %>" class="me-3 rounded" style="width: 50px; height: 50px; object-fit: cover;" />
+                    <% } else { %>
+                      <div class="me-3 d-flex align-items-center justify-content-center bg-light rounded" style="width: 50px; height: 50px;">
+                        <i class="fas fa-user text-muted"></i>
+                      </div>
+                    <% } %>
+                    <div style="text-align: justify;">
+                      <div class="fw-semibold mb-1"><%= m.name %></div>
+                      <div class="text-muted small"><%= m.role || '' %></div>
+                    </div>
+                  </div>
+                </td>
+                <td style="max-width:420px;">
+                  <% const bioText = String(m.bio || '').replace(/<[^>]+>/g, ''); const bioShort = bioText.length > 180 ? (bioText.substring(0,180) + '...') : bioText; %>
+                  <div class="text-muted" style="text-align:justify; text-justify:inter-word;">
+                    <%= bioShort %>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge bg-secondary"><%= m.sort_order || 0 %></span>
+                </td>
+                <td class="text-end">
+                  <div class="btn-group" role="group">
+                    <a href="/team/<%= m.id %>?lang=<%= lang %>" class="btn btn-sm btn-outline-primary" target="_blank" title="View Member">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    <a class="btn btn-sm btn-outline-secondary" href="/admin/team/<%= m.id %>/edit?lang=<%= lang %>" title="Edit"><i class="fas fa-edit"></i></a>
+                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#confirmDelete<%= m.id %>"><i class="fas fa-trash"></i></button>
+                  </div>
+                  <div class="modal fade" id="confirmDelete<%= m.id %>" tabindex="-1" aria-labelledby="confirmDeleteLabel<%= m.id %>" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="confirmDeleteLabel<%= m.id %>">Delete Confirmation</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                          <p>Are you sure you want to delete <strong><%= m.name %></strong>?</p>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                          <form method="post" action="/admin/team/<%= m.id %>/delete?lang=<%= lang %>">
+                            <button class="btn btn-danger" type="submit">Delete</button>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+  </div>
+      <% } %>
+  </div>
+</div>
+<%- include('admin-layout-bottom') %>

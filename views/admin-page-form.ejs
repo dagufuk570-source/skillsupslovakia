@@ -1,0 +1,46 @@
+<%- include('admin-layout-top', { title: 'Edit Page', lang, useDb, active }) %>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i><%= pageTitle %> - <span class="badge bg-secondary text-uppercase"><%= lang %></span></h5>
+      <div class="d-flex gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="/<%= returnPath %>?lang=<%= lang %>" target="_blank"><i class="fas fa-external-link-alt me-1"></i>View</a>
+      </div>
+    </div>
+    <form method="post" action="/admin/pages/<%= slug %>?lang=<%= lang %>" enctype="multipart/form-data">
+      <div class="mb-3">
+        <label class="form-label" for="page_title">Title</label>
+        <input id="page_title" type="text" class="form-control" name="title" value="<%= pageData.title || '' %>" required />
+      </div>
+      <% if (lang === 'en') { %>
+      <div class="mb-3">
+        <label class="form-label" for="image">Lead Image (optional)</label>
+        <% if(pageData.image_url){ %>
+          <div class="mb-2">
+            <img src="<%= pageData.image_url %>" alt="Current image" style="max-height:160px;border:1px solid #ccc;padding:4px;background:#fff;" />
+          </div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" value="1" id="remove_image" name="remove_image">
+            <label class="form-check-label" for="remove_image">
+              Remove existing image
+            </label>
+          </div>
+        <% } %>
+        <input id="image" class="form-control" type="file" name="image" accept="image/*" />
+        <div class="form-text">Uploading a new file replaces the current one. Supported: images only.</div>
+      </div>
+      <% } %>
+      <div class="mb-3">
+        <label class="form-label" for="page_content">Content (HTML allowed)</label>
+        <textarea id="page_content" class="form-control wysiwyg" name="content" rows="10"><%= pageData.content || '' %></textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save</button>
+        <a href="/admin?lang=<%= lang %>" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('admin-layout-bottom') %>

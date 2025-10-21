@@ -1,0 +1,36 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#1A685B"/>
+      <stop offset="100%" stop-color="#2EA68F"/>
+    </linearGradient>
+    <linearGradient id="grad2" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#FFD15C"/>
+      <stop offset="100%" stop-color="#FFB703"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1200" height="400" rx="24" fill="url(#grad)"/>
+  <g transform="translate(80,60)">
+    <rect x="0" y="0" width="520" height="280" rx="16" fill="white" opacity="0.08"/>
+    <rect x="24" y="24" width="472" height="232" rx="12" fill="white" opacity="0.12"/>
+    <rect x="48" y="48" width="424" height="184" rx="10" fill="white" opacity="0.16"/>
+  </g>
+  <g transform="translate(720,70)">
+    <circle cx="100" cy="100" r="100" fill="url(#grad2)" opacity="0.92"/>
+    <path d="M100 52c8 0 16 1 24 3v20c0 18-10 34-24 42-14-8-24-24-24-42V55c8-2 16-3 24-3z" fill="#fff"/>
+    <path d="M60 162c0-22 18-40 40-40h0c22 0 40 18 40 40v22H60v-22z" fill="#fff"/>
+    <rect x="-10" y="220" width="220" height="18" rx="9" fill="#ffffff" opacity="0.2"/>
+  </g>
+  <g transform="translate(120,120)">
+    <rect x="0" y="0" width="10" height="10" fill="#fff" opacity="0.3"/>
+    <rect x="30" y="0" width="10" height="10" fill="#fff" opacity="0.3"/>
+    <rect x="60" y="0" width="10" height="10" fill="#fff" opacity="0.3"/>
+    <rect x="90" y="0" width="10" height="10" fill="#fff" opacity="0.3"/>
+  </g>
+  <g transform="translate(160,290)">
+    <rect x="0" y="0" width="250" height="8" rx="4" fill="#fff" opacity="0.4"/>
+    <rect x="0" y="16" width="200" height="8" rx="4" fill="#fff" opacity="0.3"/>
+  </g>
+  <text x="140" y="150" fill="#ffffff" font-family="'Josefin Sans', Arial, sans-serif" font-size="44" font-weight="700">Privacy & Data Protection</text>
+  <text x="140" y="190" fill="#eaf8f5" font-family="'Open Sans', Arial, sans-serif" font-size="18">We respect your privacy and process data responsibly under GDPR.</text>
+</svg>

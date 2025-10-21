@@ -1,0 +1,127 @@
+          <!-- page content ends -->
+        </div>
+      </main>
+    </div>
+    
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/lib/wow/wow.min.js"></script>
+    <script src="/lib/easing/easing.min.js"></script>
+  <!-- TinyMCE WYSIWYG -->
+  <script src="https://cdn.tiny.cloud/1/4qtyjmzwgrzybn10gx5so9ss4rcmjhtr6367vtfpjowjxhfx/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    
+    <!-- Suppress noisy extension errors (e.g., MutationObserver observe target not a Node) to avoid breaking admin UX -->
+    <script>
+      window.addEventListener('unhandledrejection', function(e){
+        try{
+          var reason = e && e.reason ? (e.reason.message || String(e.reason)) : '';
+          if(/Failed to execute 'observe' on 'MutationObserver'/.test(reason)){
+            e.preventDefault();
+          }
+        }catch(_){ /* ignore */ }
+      });
+    </script>
+    
+    <!-- Initialize WOW.js for animations -->
+    <script>
+      new WOW().init();
+      // Robust TinyMCE initialization for all textareas with class 'wysiwyg'
+      (function(){
+        var INIT_SELECTOR = 'textarea.wysiwyg';
+        var MAX_TRIES = 20; // ~10s with 500ms interval
+        var tries = 0;
+        var fallbackInjected = false;
+        function injectFallbackCdn(){
+          if(fallbackInjected) return;
+          try {
+            var s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js';
+            s.referrerPolicy = 'origin';
+            s.onload = function(){ try { console.log('[TinyMCE] fallback (jsDelivr) loaded'); } catch(_) {} };
+            s.onerror = function(){ try { console.warn('[TinyMCE] fallback (jsDelivr) failed to load'); } catch(_) {} };
+            document.head.appendChild(s);
+            fallbackInjected = true;
+            try { console.warn('[TinyMCE] injecting fallback from jsDelivr'); } catch(_) {}
+          } catch(_) {}
+        }
+        function initEditors(){
+          if(!window.tinymce || !window.tinymce.init){
+            // Retry until TinyMCE is available
+            if(tries++ < MAX_TRIES){
+              // If primary CDN seems blocked, inject fallback after a few tries
+              if(tries === 4) injectFallbackCdn();
+              return setTimeout(initEditors, 500);
+            }
+            try { console.warn('[TinyMCE] not available after retries'); } catch(_) {}
+            return;
+          }
+          // Avoid double-initialization
+          try{
+            var existing = document.querySelectorAll('.tox-tinymce');
+            if(existing && existing.length && tinymce.remove){
+              tinymce.remove();
+            }
+          }catch(_){ }
+          // Only init if there are targets
+          if(!document.querySelector(INIT_SELECTOR)) return;
+          try { console.log('[TinyMCE] initializing on', document.querySelectorAll(INIT_SELECTOR).length, 'textarea(s)'); } catch(_) {}
+          tinymce.init({
+            selector: INIT_SELECTOR,
+            menubar: false,
+            plugins: 'link lists code autoresize',
+            toolbar: 'undo redo | blocks | fontselect fontsizeselect | bold italic underline | bullist numlist | link | removeformat | code',
+            font_family_formats:
+              "Arial=arial,helvetica,sans-serif;" +
+              "Georgia=georgia,serif;" +
+              "Times New Roman='times new roman',times,serif;" +
+              "Trebuchet MS='Trebuchet MS',Helvetica,sans-serif;" +
+              "Verdana=verdana,geneva,sans-serif;" +
+              "Courier New='courier new',courier,monospace",
+            fontsize_formats: '12px 14px 16px 18px 20px 24px 28px 32px 36px 48px',
+            min_height: 120,
+            statusbar: false,
+            branding: false,
+            convert_urls: false
+          });
+        }
+        function onReady(fn){
+          if(document.readyState === 'loading'){
+            document.addEventListener('DOMContentLoaded', fn, { once: true });
+          } else {
+            fn();
+          }
+        }
+        // If TinyMCE script fires load after this block, try immediately
+        if(window.tinymce){ initEditors(); }
+        onReady(initEditors);
+        // If using Bootstrap tabs in admin forms, re-init editors when a tab is shown
+        document.addEventListener('shown.bs.tab', function(){
+          // Allow time for tab content to become visible before initializing
+          setTimeout(initEditors, 150);
+        });
+      })();
+    </script>
+    <script>
+      // Hide sidebar on nav click or outside click (mobile)
+      document.addEventListener('DOMContentLoaded', function() {
+        var sidebar = document.querySelector('.admin-sidebar');
+        var links = sidebar ? sidebar.querySelectorAll('.nav-link') : [];
+        links.forEach(function(link) {
+          link.addEventListener('click', function() {
+            if(window.innerWidth < 992) document.body.classList.remove('admin-sidebar-open');
+          });
+        });
+        document.addEventListener('click', function(e) {
+          if(window.innerWidth < 992 && document.body.classList.contains('admin-sidebar-open')) {
+            var sidebar = document.querySelector('.admin-sidebar');
+            var toggle = document.querySelector('.admin-sidebar-toggle');
+            if(sidebar && !sidebar.contains(e.target) && toggle && !toggle.contains(e.target)) {
+              document.body.classList.remove('admin-sidebar-open');
+            }
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

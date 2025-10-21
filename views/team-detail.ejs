@@ -1,0 +1,27 @@
+<%- include('layout-charitize', { menu, lang, slider, page, t }) %>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <% if(member){ %>
+        <div class="card shadow-sm">
+          <% if(member.photo_url){ %>
+            <img src="<%= member.photo_url.replace(/\.jpg$/i, '-thumb.jpg') %>" onerror="this.src='<%= member.photo_url %>'" class="card-img-top" alt="<%= member.name %>" style="max-height:320px; object-fit:cover;">
+          <% } %>
+          <div class="card-body">
+            <h2 class="card-title text-primary mb-2"><%= member.name %></h2>
+            <% if(member.role){ %><div class="mb-2 text-muted"><%= member.role %></div><% } %>
+            <% if(member.bio){ %><div class="mb-3" style="white-space:pre-line;"><%= member.bio %></div><% } %>
+            <div class="d-flex gap-2">
+              <% if(member.linkedin){ %><a href="<%= member.linkedin %>" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fab fa-linkedin-in"></i></a><% } %>
+              <% if(member.facebook){ %><a href="<%= member.facebook %>" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fab fa-facebook-f"></i></a><% } %>
+              <% if(member.twitter){ %><a href="<%= member.twitter %>" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fab fa-x-twitter"></i></a><% } %>
+            </div>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="alert alert-warning">Team member not found.</div>
+      <% } %>
+    </div>
+  </div>
+</div>
+<%- include('layout-charitize-bottom') %>

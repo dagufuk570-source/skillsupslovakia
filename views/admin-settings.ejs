@@ -1,0 +1,76 @@
+<%- include('admin-layout-top', { title: 'Site Settings', lang, useDb, active: 'settings' }) %>
+    <div class="card wow fadeIn" data-wow-delay="0.1s">
+      <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-sliders-h fa-lg me-2"></i>
+          <h5 class="mb-0">Homepage Slider Configuration</h5>
+        </div>
+        <small class="badge bg-dark">Language: <%= lang.toUpperCase() %></small>
+      </div>
+      <div class="card-body">
+
+    <form class="card p-3" method="post" enctype="multipart/form-data" action="/admin/settings?lang=<%= lang %>">
+      <div class="alert alert-info">Up to 5 slides. Leave fields blank to skip a slide.</div>
+      <div class="row g-3">
+        <% const slides_en = (cfgs && cfgs.en && Array.isArray(cfgs.en.slider)) ? cfgs.en.slider : []; %>
+        <% const slides_sk = (cfgs && cfgs.sk && Array.isArray(cfgs.sk.slider)) ? cfgs.sk.slider : []; %>
+        <% const slides_hu = (cfgs && cfgs.hu && Array.isArray(cfgs.hu.slider)) ? cfgs.hu.slider : []; %>
+        <% for(let i=0;i<5;i++){ const s_en = slides_en[i] || {}; const s_sk = slides_sk[i] || {}; const s_hu = slides_hu[i] || {}; const anyImage = (s_en.image_url || s_sk.image_url || s_hu.image_url); %>
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">Slide <%= i+1 %></div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label class="form-label" for="slide<%= i %>_image">Image</label>
+                  <input id="slide<%= i %>_image" class="form-control" type="file" name="slide<%= i %>_image" accept="image/*" />
+                  <% if(anyImage){ %>
+                    <div class="form-text">Current: <a href="<%= s_en.image_url || s_sk.image_url || s_hu.image_url %>" target="_blank"><%= s_en.image_url || s_sk.image_url || s_hu.image_url %></a></div>
+                    <input type="hidden" name="slide<%= i %>_existing_image_url" value="<%= s_en.image_url || s_sk.image_url || s_hu.image_url %>" />
+                  <% } %>
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label" for="slide<%= i %>_title_en">Title (EN)</label>
+                    <input id="slide<%= i %>_title_en" class="form-control" type="text" name="slide<%= i %>_title_en" value="<%= s_en.title || '' %>" />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label" for="slide<%= i %>_title_sk">Title (SK)</label>
+                    <input id="slide<%= i %>_title_sk" class="form-control" type="text" name="slide<%= i %>_title_sk" value="<%= s_sk.title || '' %>" />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label" for="slide<%= i %>_title_hu">Title (HU)</label>
+                    <input id="slide<%= i %>_title_hu" class="form-control" type="text" name="slide<%= i %>_title_hu" value="<%= s_hu.title || '' %>" />
+                  </div>
+                </div>
+                <div class="row g-3 mt-2">
+                  <div class="col-md-4">
+                    <label class="form-label" for="slide<%= i %>_caption_en">Caption (EN)</label>
+                    <input id="slide<%= i %>_caption_en" class="form-control" type="text" name="slide<%= i %>_caption_en" value="<%= s_en.caption || '' %>" />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label" for="slide<%= i %>_caption_sk">Caption (SK)</label>
+                    <input id="slide<%= i %>_caption_sk" class="form-control" type="text" name="slide<%= i %>_caption_sk" value="<%= s_sk.caption || '' %>" />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label" for="slide<%= i %>_caption_hu">Caption (HU)</label>
+                    <input id="slide<%= i %>_caption_hu" class="form-control" type="text" name="slide<%= i %>_caption_hu" value="<%= s_hu.caption || '' %>" />
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="slide<%= i %>_link">Link (optional)</label>
+                  <input id="slide<%= i %>_link" class="form-control" type="url" name="slide<%= i %>_link" value="<%= s_en.link || s_sk.link || s_hu.link || '' %>" />
+                </div>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+        <div class="text-center mt-4">
+          <button class="btn btn-warning btn-lg px-5" type="submit">
+            <i class="fas fa-save me-2"></i>Save Settings
+          </button>
+        </div>
+      </form>
+      </div>
+    </div>
+<%- include('admin-layout-bottom') %>

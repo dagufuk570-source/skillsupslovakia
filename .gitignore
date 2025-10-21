@@ -1,0 +1,43 @@
+# Node
+node_modules/
+.npmrc
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage & build
+coverage/
+dist/
+build/
+.tmp/
+.cache/
+.next/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Env & local secrets
+.env
+.env.*.local
+.env.local
+
+# Uploads (keep folder but ignore contents)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Sharp/cache artifacts
+*.node
