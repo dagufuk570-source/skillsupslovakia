@@ -3234,49 +3234,58 @@ app.post('/admin/reset-all-images', basicAuth, express.json(), async (req, res) 
     // Clear all URLs from database
     console.log('[reset-images] Clearing all image URLs from database...');
 
-    // Clear Events
+    // Collect unique group_ids to avoid duplicates
+    const eventGroups = new Set();
+    const newsGroups = new Set();
+    const themeGroups = new Set();
+    const teamGroups = new Set();
+    const docGroups = new Set();
+
     for (const lang of langs) {
       const events = await db.listEvents(lang);
-      for (const event of events) {
-        await db.updateEventImageForGroup(event.group_id, '');
-        report.clearedFromDb++;
-      }
-    }
-
-    // Clear News
-    for (const lang of langs) {
+      events.forEach(e => e.group_id && eventGroups.add(e.group_id));
+      
       const news = await db.listNews(lang);
-      for (const article of news) {
-        await db.updateNewsImageForGroup(article.group_id, '');
-        report.clearedFromDb++;
-      }
-    }
-
-    // Clear Themes
-    for (const lang of langs) {
+      news.forEach(n => n.group_id && newsGroups.add(n.group_id));
+      
       const themes = await db.listThemes(lang);
-      for (const theme of themes) {
-        await db.updateThemeImageForGroup(theme.group_id, '');
-        report.clearedFromDb++;
-      }
-    }
-
-    // Clear Team
-    for (const lang of langs) {
+      themes.forEach(t => t.group_id && themeGroups.add(t.group_id));
+      
       const team = await db.listTeam(lang);
-      for (const member of team) {
-        await db.updateTeamPhotoForGroup(member.group_id, '');
-        report.clearedFromDb++;
-      }
+      team.forEach(m => m.group_id && teamGroups.add(m.group_id));
+      
+      const docs = await db.listDocuments(lang);
+      docs.forEach(d => d.group_id && docGroups.add(d.group_id));
     }
 
-    // Clear Documents
-    for (const lang of langs) {
-      const docs = await db.listDocuments(lang);
-      for (const doc of docs) {
-        await db.updateDocumentFileForGroup(doc.group_id, '');
-        report.clearedFromDb++;
-      }
+    // Clear Events (unique groups only)
+    for (const group_id of eventGroups) {
+      await db.updateEventImageForGroup(group_id, '');
+      report.clearedFromDb++;
+    }
+
+    // Clear News (unique groups only)
+    for (const group_id of newsGroups) {
+      await db.updateNewsImageForGroup(group_id, '');
+      report.clearedFromDb++;
+    }
+
+    // Clear Themes (unique groups only)
+    for (const group_id of themeGroups) {
+      await db.updateThemeImageForGroup(group_id, '');
+      report.clearedFromDb++;
+    }
+
+    // Clear Team (unique groups only)
+    for (const group_id of teamGroups) {
+      await db.updateTeamPhotoForGroup(group_id, '');
+      report.clearedFromDb++;
+    }
+
+    // Clear Documents (unique groups only)
+    for (const group_id of docGroups) {
+      await db.updateDocumentFileForGroup(group_id, '');
+      report.clearedFromDb++;
     }
 
     // Clear Pages - pages don't have shared image fields, skip for now
