@@ -62,4 +62,41 @@ Backend selection:
 	:DD
 	koymamışım :DD
 	.env okuyor. 
-	
+
+## Vercel deployment
+
+This project is configured for Vercel serverless deployment:
+
+- **Build:** Vercel automatically runs `npm install` and builds.
+- **Serverless handler:** All routes handled by `api/index.js` (Express app).
+- **Static files:** Served from `public/` automatically by Vercel.
+
+### Required environment variables (Vercel dashboard)
+
+Set these in Project Settings > Environment Variables:
+
+- `DATABASE_URL`: PostgreSQL connection string (e.g., Supabase)
+  - Example: `postgresql://user:pass@db.xxx.supabase.co:5432/postgres`
+- `DATABASE_SSL=1` (optional; auto-detected for Supabase)
+- `ADMIN_USER`, `ADMIN_PASS` (optional; protect `/admin` with Basic Auth)
+- SMTP settings (optional; for contact form email):
+  - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`
+  - `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`, `CONTACT_TO`
+- reCAPTCHA (optional; for contact form):
+  - `RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET`
+
+### Deploy workflow
+
+1. Push changes to GitHub (main branch).
+2. Vercel auto-deploys on each commit.
+3. Check logs at Vercel dashboard > Deployments > [your-deploy] > Function Logs.
+
+### Local testing with Vercel CLI (optional)
+
+```powershell
+npm install -g vercel
+vercel login
+vercel dev
+```
+
+This simulates serverless locally and reads `.env` for environment variables.

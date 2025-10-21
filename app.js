@@ -248,8 +248,6 @@ async function connectDbWithRetry(){
   process.exit(1);
 }
 
-await connectDbWithRetry();
-
 // One-time cleanup at startup: ensure About Us sections 2 and 3 have no images
 async function purgeAboutUsMidImages() {
   try {
@@ -290,13 +288,31 @@ async function purgeAboutUsMidImages() {
   }
 }
 
-await purgeAboutUsMidImages();
+// Lazy initialization state (runs once on first request in serverless environments)
+let dbInitialized = false;
+async function ensureDbInitialized() {
+  if (dbInitialized) return;
+  await connectDbWithRetry();
+  await purgeAboutUsMidImages();
+  dbInitialized = true;
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Lazy DB init middleware (runs once on first request in serverless)
+app.use(async (req, res, next) => {
+  try {
+    await ensureDbInitialized();
+    next();
+  } catch (err) {
+    console.error('DB initialization failed:', err);
+    res.status(500).send('Database initialization failed');
+  }
+});
 
 // Security headers (Helmet) + CSP
 // Note: We keep 'unsafe-eval' DISALLOWED. Inline scripts are temporarily allowed via 'unsafe-inline'.
