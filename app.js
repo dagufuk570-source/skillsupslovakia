@@ -312,9 +312,21 @@ async function purgeAboutUsMidImages() {
 let dbInitialized = false;
 async function ensureDbInitialized() {
   if (dbInitialized) return;
-  await connectDbWithRetry();
-  await purgeAboutUsMidImages();
-  dbInitialized = true;
+  
+  console.log('[ensureDbInitialized] Starting DB initialization...');
+  console.log('[ensureDbInitialized] DATABASE_URL present:', !!process.env.DATABASE_URL);
+  console.log('[ensureDbInitialized] DATABASE_URL prefix:', process.env.DATABASE_URL?.substring(0, 30) + '...');
+  
+  try {
+    await connectDbWithRetry();
+    await purgeAboutUsMidImages();
+    dbInitialized = true;
+    console.log('[ensureDbInitialized] DB initialization SUCCESS');
+  } catch (error) {
+    console.error('[ensureDbInitialized] DB initialization FAILED:', error.message);
+    console.error('[ensureDbInitialized] Stack:', error.stack);
+    throw error; // Re-throw so middleware can catch it
+  }
 }
 
 const app = express();
@@ -329,8 +341,20 @@ app.use(async (req, res, next) => {
     await ensureDbInitialized();
     next();
   } catch (err) {
-    console.error('DB initialization failed:', err);
-    res.status(500).send('Database initialization failed');
+    console.error('[Middleware] DB initialization failed:', err.message);
+    console.error('[Middleware] Full error:', err);
+    
+    // Send detailed error to user (helpful for debugging)
+    const errorDetails = {
+      error: 'Database initialization failed',
+      message: err.message,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      suggestion: !process.env.DATABASE_URL 
+        ? 'DATABASE_URL environment variable is not set. Please configure it in Vercel dashboard.' 
+        : 'Check if DATABASE_URL is correct and database is accessible.'
+    };
+    
+    res.status(500).json(errorDetails);
   }
 });
 
