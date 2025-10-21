@@ -202,8 +202,8 @@ async function connectDbWithRetry(){
   const requireDb = true; // always require DB
   const shouldTryDb = true;
   // In serverless, reduce retries to avoid cold start timeout
-  const defaultAttempts = isServerless ? '5' : '20';
-  const defaultDelay = isServerless ? '1000' : '1500';
+  const defaultAttempts = isServerless ? '3' : '20'; // Only 3 attempts in serverless
+  const defaultDelay = isServerless ? '500' : '1500'; // 500ms delay in serverless
   const attempts = parseInt(process.env.DB_RETRY_ATTEMPTS || defaultAttempts, 10);
   const delayMs = parseInt(process.env.DB_RETRY_DELAY_MS || defaultDelay, 10);
   let lastErr = null;
@@ -213,20 +213,28 @@ async function connectDbWithRetry(){
         db = await import('./db/postgres.js');
       }
       await db.ping();
-    await db.ensurePagesTable?.();
-      await db.ensureEventsTable?.();
-      await db.ensureThemesTable?.();
-      await db.ensureTeamMembersTable?.();
-      await db.ensureSettingsTable?.();
-  await db.ensureFocusAreasTable?.();
-      await db.ensureAdditionalImagesTable?.();
-      await db.ensureNewsTable?.();
-  await db.ensureDocumentsTable?.();
-  await db.ensureContactMessagesTable?.();
-  // Backfill consistency: ensure events in the same group share the same lead image
-  await db.backfillEventLeadImages?.();
-  await db.backfillThemeLeadImages?.();
-  await db.backfillNewsLeadImages?.();
+      
+      // Create tables in parallel for faster initialization
+      await Promise.all([
+        db.ensurePagesTable?.(),
+        db.ensureEventsTable?.(),
+        db.ensureThemesTable?.(),
+        db.ensureTeamMembersTable?.(),
+        db.ensureSettingsTable?.(),
+        db.ensureFocusAreasTable?.(),
+        db.ensureAdditionalImagesTable?.(),
+        db.ensureNewsTable?.(),
+        db.ensureDocumentsTable?.(),
+        db.ensureContactMessagesTable?.()
+      ]);
+      
+      // Backfill consistency in parallel
+      await Promise.all([
+        db.backfillEventLeadImages?.(),
+        db.backfillThemeLeadImages?.(),
+        db.backfillNewsLeadImages?.()
+      ]);
+      
       // Ensure key pages exist (About Us, Focus Areas, Contact, GDPR) if not present
       try{
         const langs = ['en','sk','hu'];

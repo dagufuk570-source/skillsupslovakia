@@ -14,12 +14,12 @@ let poolConfig = {
   connectionString,
   // Serverless-optimized defaults (Vercel, AWS Lambda)
   max: parseInt(process.env.PG_POOL_MAX || '1', 10), // Serverless: 1 connection per function instance
-  idleTimeoutMillis: parseInt(process.env.PG_IDLE_TIMEOUT_MS || '30000', 10),
-  connectionTimeoutMillis: parseInt(process.env.PG_CONN_TIMEOUT_MS || '5000', 10), // Faster timeout
+  idleTimeoutMillis: parseInt(process.env.PG_IDLE_TIMEOUT_MS || '10000', 10), // 10s idle timeout
+  connectionTimeoutMillis: parseInt(process.env.PG_CONN_TIMEOUT_MS || '3000', 10), // 3s connection timeout
   keepAlive: true,
   // Reduce statement_timeout for faster failures
-  statement_timeout: 10000, // 10 seconds
-  query_timeout: 10000
+  statement_timeout: 5000, // 5 seconds per query
+  query_timeout: 5000
 };
 try {
   const host = new URL(connectionString).hostname || '';
