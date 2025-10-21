@@ -3139,6 +3139,184 @@ app.post('/admin/migrate-uploads-to-blob', basicAuth, express.json(), async (req
     });
   }
 });
+
+// Reset all images - delete from Blob Storage and clear database URLs
+app.post('/admin/reset-all-images', basicAuth, express.json(), async (req, res) => {
+  try {
+    console.log('[reset-images] Starting complete image reset...');
+    
+    const report = {
+      deletedFromBlob: 0,
+      clearedFromDb: 0,
+      errors: [],
+      startTime: Date.now()
+    };
+
+    const allUrls = new Set();
+
+    // Collect all image URLs from database
+    console.log('[reset-images] Collecting all image URLs from database...');
+
+    // 1. Events
+    const events = await db.query('SELECT id, data FROM events');
+    for (const event of events.rows) {
+      const data = event.data || {};
+      if (data.lead_image_url) allUrls.add(data.lead_image_url);
+      if (Array.isArray(data.images)) {
+        data.images.forEach(url => url && allUrls.add(url));
+      }
+    }
+
+    // 2. News
+    const news = await db.query('SELECT id, data FROM news');
+    for (const article of news.rows) {
+      const data = article.data || {};
+      if (data.lead_image_url) allUrls.add(data.lead_image_url);
+      if (Array.isArray(data.images)) {
+        data.images.forEach(url => url && allUrls.add(url));
+      }
+    }
+
+    // 3. Themes
+    const themes = await db.query('SELECT id, data FROM themes');
+    for (const theme of themes.rows) {
+      const data = theme.data || {};
+      if (data.lead_image_url) allUrls.add(data.lead_image_url);
+      if (Array.isArray(data.images)) {
+        data.images.forEach(url => url && allUrls.add(url));
+      }
+    }
+
+    // 4. Team
+    const team = await db.query('SELECT id, data FROM team');
+    for (const member of team.rows) {
+      const data = member.data || {};
+      if (data.photo_url) allUrls.add(data.photo_url);
+      if (data.thumbnail_url) allUrls.add(data.thumbnail_url);
+    }
+
+    // 5. Documents
+    const docs = await db.query('SELECT id, data FROM documents');
+    for (const doc of docs.rows) {
+      const data = doc.data || {};
+      if (data.file_url) allUrls.add(data.file_url);
+    }
+
+    // 6. Pages
+    const pages = await db.query('SELECT id, data FROM pages');
+    for (const page of pages.rows) {
+      const data = page.data || {};
+      if (data.image_url) allUrls.add(data.image_url);
+      if (data.cover_image_url) allUrls.add(data.cover_image_url);
+    }
+
+    // 7. Settings (slider backgrounds)
+    const settings = await db.query('SELECT lang, data FROM settings');
+    for (const setting of settings.rows) {
+      const data = setting.data || {};
+      if (data.slider_bg_image_url) allUrls.add(data.slider_bg_image_url);
+      if (Array.isArray(data.slider_bg_gallery)) {
+        data.slider_bg_gallery.forEach(url => url && allUrls.add(url));
+      }
+    }
+
+    console.log(`[reset-images] Found ${allUrls.size} unique image URLs`);
+
+    // Delete from Blob Storage
+    for (const url of allUrls) {
+      try {
+        await deleteFile(url);
+        report.deletedFromBlob++;
+        console.log(`[reset-images] Deleted: ${url}`);
+      } catch (err) {
+        console.warn(`[reset-images] Failed to delete ${url}:`, err.message);
+        report.errors.push({ url, error: err.message });
+      }
+    }
+
+    // Clear all URLs from database
+    console.log('[reset-images] Clearing all image URLs from database...');
+
+    // Clear Events
+    for (const event of events.rows) {
+      const data = event.data || {};
+      data.lead_image_url = '';
+      data.images = [];
+      await db.query('UPDATE events SET data = $1 WHERE id = $2', [data, event.id]);
+      report.clearedFromDb++;
+    }
+
+    // Clear News
+    for (const article of news.rows) {
+      const data = article.data || {};
+      data.lead_image_url = '';
+      data.images = [];
+      await db.query('UPDATE news SET data = $1 WHERE id = $2', [data, article.id]);
+      report.clearedFromDb++;
+    }
+
+    // Clear Themes
+    for (const theme of themes.rows) {
+      const data = theme.data || {};
+      data.lead_image_url = '';
+      data.images = [];
+      await db.query('UPDATE themes SET data = $1 WHERE id = $2', [data, theme.id]);
+      report.clearedFromDb++;
+    }
+
+    // Clear Team
+    for (const member of team.rows) {
+      const data = member.data || {};
+      data.photo_url = '';
+      data.thumbnail_url = '';
+      await db.query('UPDATE team SET data = $1 WHERE id = $2', [data, member.id]);
+      report.clearedFromDb++;
+    }
+
+    // Clear Documents
+    for (const doc of docs.rows) {
+      const data = doc.data || {};
+      data.file_url = '';
+      await db.query('UPDATE documents SET data = $1 WHERE id = $2', [data, doc.id]);
+      report.clearedFromDb++;
+    }
+
+    // Clear Pages
+    for (const page of pages.rows) {
+      const data = page.data || {};
+      data.image_url = '';
+      data.cover_image_url = '';
+      await db.query('UPDATE pages SET data = $1 WHERE id = $2', [data, page.id]);
+      report.clearedFromDb++;
+    }
+
+    // Clear Settings
+    for (const setting of settings.rows) {
+      const data = setting.data || {};
+      data.slider_bg_image_url = '';
+      data.slider_bg_gallery = [];
+      await db.query('UPDATE settings SET data = $1 WHERE lang = $2', [data, setting.lang]);
+      report.clearedFromDb++;
+    }
+
+    report.duration = ((Date.now() - report.startTime) / 1000).toFixed(1);
+    
+    console.log('[reset-images] Reset completed:', report);
+    
+    return res.json({
+      success: true,
+      message: `Reset completed: ${report.deletedFromBlob} files deleted, ${report.clearedFromDb} DB records cleared`,
+      report
+    });
+
+  } catch (err) {
+    console.error('[reset-images] Reset failed:', err);
+    return res.status(500).json({
+      error: 'Reset failed',
+      message: err.message
+    });
+  }
+});
  
 
 // Settings: Contact
