@@ -375,7 +375,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// Content Security Policy: strict by default, relaxed for /admin to support TinyMCE if needed
+// Content Security Policy: strict by default, relaxed for /admin to support Quill editor if needed
 // Note: Some third-party libraries used on public pages (e.g., animation/carousel plugins) may rely on eval-like constructs.
 // To avoid persistent CSP console errors and broken behavior, we explicitly allow 'unsafe-eval' for public pages here.
 // If you want to harden this later, consider removing/replacing those libraries and then removing 'unsafe-eval'.
@@ -429,7 +429,7 @@ const cspAdmin = helmet.contentSecurityPolicy({
     scriptSrc: [
       "'self'",
       "'unsafe-inline'",
-      "'unsafe-eval'", // allow eval for TinyMCE/editor-only context
+      "'unsafe-eval'", // allow eval for Quill editor-only context
       'https://code.jquery.com',
       'https://cdn.jsdelivr.net',
       'https://cdn.tiny.cloud',

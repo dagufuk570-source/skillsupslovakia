@@ -8,8 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/lib/wow/wow.min.js"></script>
     <script src="/lib/easing/easing.min.js"></script>
-  <!-- TinyMCE WYSIWYG -->
-  <script src="https://cdn.tiny.cloud/1/4qtyjmzwgrzybn10gx5so9ss4rcmjhtr6367vtfpjowjxhfx/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+  <!-- Quill WYSIWYG Editor (no domain restrictions) -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     
     <!-- Suppress noisy extension errors (e.g., MutationObserver observe target not a Node) to avoid breaking admin UX -->
     <script>
@@ -26,65 +27,65 @@
     <!-- Initialize WOW.js for animations -->
     <script>
       new WOW().init();
-      // Robust TinyMCE initialization for all textareas with class 'wysiwyg'
+      
+      // Initialize Quill editor for all textareas with class 'wysiwyg'
       (function(){
         var INIT_SELECTOR = 'textarea.wysiwyg';
-        var MAX_TRIES = 20; // ~10s with 500ms interval
-        var tries = 0;
-        var fallbackInjected = false;
-        function injectFallbackCdn(){
-          if(fallbackInjected) return;
-          try {
-            var s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js';
-            s.referrerPolicy = 'origin';
-            s.onload = function(){ try { console.log('[TinyMCE] fallback (jsDelivr) loaded'); } catch(_) {} };
-            s.onerror = function(){ try { console.warn('[TinyMCE] fallback (jsDelivr) failed to load'); } catch(_) {} };
-            document.head.appendChild(s);
-            fallbackInjected = true;
-            try { console.warn('[TinyMCE] injecting fallback from jsDelivr'); } catch(_) {}
-          } catch(_) {}
-        }
+        
         function initEditors(){
-          if(!window.tinymce || !window.tinymce.init){
-            // Retry until TinyMCE is available
-            if(tries++ < MAX_TRIES){
-              // If primary CDN seems blocked, inject fallback after a few tries
-              if(tries === 4) injectFallbackCdn();
-              return setTimeout(initEditors, 500);
-            }
-            try { console.warn('[TinyMCE] not available after retries'); } catch(_) {}
-            return;
+          if(!window.Quill) {
+            console.warn('[Quill] not loaded yet, retrying...');
+            return setTimeout(initEditors, 500);
           }
-          // Avoid double-initialization
-          try{
-            var existing = document.querySelectorAll('.tox-tinymce');
-            if(existing && existing.length && tinymce.remove){
-              tinymce.remove();
+          
+          var textareas = document.querySelectorAll(INIT_SELECTOR);
+          if(!textareas.length) return;
+          
+          console.log('[Quill] initializing on', textareas.length, 'textarea(s)');
+          
+          textareas.forEach(function(textarea){
+            // Skip if already initialized
+            if(textarea.nextSibling && textarea.nextSibling.classList && textarea.nextSibling.classList.contains('ql-container')){
+              return;
             }
-          }catch(_){ }
-          // Only init if there are targets
-          if(!document.querySelector(INIT_SELECTOR)) return;
-          try { console.log('[TinyMCE] initializing on', document.querySelectorAll(INIT_SELECTOR).length, 'textarea(s)'); } catch(_) {}
-          tinymce.init({
-            selector: INIT_SELECTOR,
-            menubar: false,
-            plugins: 'link lists code autoresize',
-            toolbar: 'undo redo | blocks | fontselect fontsizeselect | bold italic underline | bullist numlist | link | removeformat | code',
-            font_family_formats:
-              "Arial=arial,helvetica,sans-serif;" +
-              "Georgia=georgia,serif;" +
-              "Times New Roman='times new roman',times,serif;" +
-              "Trebuchet MS='Trebuchet MS',Helvetica,sans-serif;" +
-              "Verdana=verdana,geneva,sans-serif;" +
-              "Courier New='courier new',courier,monospace",
-            fontsize_formats: '12px 14px 16px 18px 20px 24px 28px 32px 36px 48px',
-            min_height: 120,
-            statusbar: false,
-            branding: false,
-            convert_urls: false
+            
+            // Hide original textarea
+            textarea.style.display = 'none';
+            
+            // Create Quill container
+            var editorDiv = document.createElement('div');
+            editorDiv.innerHTML = textarea.value || '';
+            textarea.parentNode.insertBefore(editorDiv, textarea.nextSibling);
+            
+            // Initialize Quill
+            var quill = new Quill(editorDiv, {
+              theme: 'snow',
+              modules: {
+                toolbar: [
+                  [{ 'header': [1, 2, 3, false] }],
+                  ['bold', 'italic', 'underline'],
+                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                  ['link'],
+                  ['clean']
+                ]
+              }
+            });
+            
+            // Sync Quill content to textarea
+            quill.on('text-change', function() {
+              textarea.value = quill.root.innerHTML;
+            });
+            
+            // Sync on form submit
+            var form = textarea.closest('form');
+            if(form){
+              form.addEventListener('submit', function(){
+                textarea.value = quill.root.innerHTML;
+              });
+            }
           });
         }
+        
         function onReady(fn){
           if(document.readyState === 'loading'){
             document.addEventListener('DOMContentLoaded', fn, { once: true });
@@ -92,12 +93,12 @@
             fn();
           }
         }
-        // If TinyMCE script fires load after this block, try immediately
-        if(window.tinymce){ initEditors(); }
+        
+        if(window.Quill){ initEditors(); }
         onReady(initEditors);
-        // If using Bootstrap tabs in admin forms, re-init editors when a tab is shown
+        
+        // Re-init when Bootstrap tabs are shown
         document.addEventListener('shown.bs.tab', function(){
-          // Allow time for tab content to become visible before initializing
           setTimeout(initEditors, 150);
         });
       })();
