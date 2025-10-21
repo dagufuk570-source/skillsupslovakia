@@ -461,7 +461,15 @@ app.get('/gdpr', (req, res) => {
 // File uploads (images)
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 if(!fsSync.existsSync(uploadsDir)){
-  fsSync.mkdirSync(uploadsDir, { recursive: true });
+  try {
+    fsSync.mkdirSync(uploadsDir, { recursive: true });
+  } catch (e) {
+    if (isServerless) {
+      console.warn('[Serverless] Cannot create uploads dir (read-only filesystem). File uploads will fail unless using cloud storage.');
+    } else {
+      throw e;
+    }
+  }
 }
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
@@ -520,7 +528,15 @@ async function optimizeUploadedImage(absPath) {
 // Team-specific upload handling: save under /public/uploads/team and process images with sharp (600x600 + thumbnail)
 const teamUploadsDir = path.join(uploadsDir, 'team');
 if(!fsSync.existsSync(teamUploadsDir)){
-  fsSync.mkdirSync(teamUploadsDir, { recursive: true });
+  try {
+    fsSync.mkdirSync(teamUploadsDir, { recursive: true });
+  } catch (e) {
+    if (isServerless) {
+      console.warn('[Serverless] Cannot create team uploads dir (read-only filesystem).');
+    } else {
+      throw e;
+    }
+  }
 }
 function safeSlugFilename(title, ext){
   const base = slugify(title || 'member') || 'member';
