@@ -2311,8 +2311,15 @@ app.post('/admin/team/:id', basicAuth, uploadTeam.single('photo'), async (req,re
     const rolesPosted = Object.fromEntries(langs.map(l => [l, (body[`role_${l}`] ?? '').toString().trim()]));
     const biosPosted  = Object.fromEntries(langs.map(l => [l, (body[`bio_${l}`]  ?? '').toString().trim()]));
     const sourceLang = langs.find(l => rolesPosted[l] || biosPosted[l]) || null;
+    
     for(const l of langs){
-      let mv = await db.getTeamMemberByGroupAndLang?.(groupId, l);
+      let mv = null;
+      try {
+        mv = await db.getTeamMemberByGroupAndLang(groupId, l);
+      } catch (err) {
+        console.warn(`[team] Failed to get member for lang ${l}:`, err.message);
+      }
+      
       const existingRoleEmpty = !mv || !mv.role || !mv.role.trim();
       const existingBioEmpty  = !mv || !mv.bio  || !mv.bio.trim();
       let newRole = rolesPosted[l];
@@ -2322,6 +2329,7 @@ app.post('/admin/team/:id', basicAuth, uploadTeam.single('photo'), async (req,re
       if(!newBio  && sourceLang && existingBioEmpty){  newBio  = biosPosted[sourceLang]  || ''; }
 
       if(mv){
+        console.log(`[team] Updating existing member for lang ${l}:`, mv.id);
         // If nothing to change, keep existing values
         await db.updateTeamMember(mv.id, {
           name,
@@ -2333,7 +2341,10 @@ app.post('/admin/team/:id', basicAuth, uploadTeam.single('photo'), async (req,re
       } else {
         // Create missing variant if we have any content (posted or replicated)
         if(newRole || newBio){
+          console.log(`[team] Creating new member for lang ${l}`);
           await db.createTeamMember({ lang: l, group_id: groupId, slug: null, name, role: newRole || '', photo_url, bio: newBio || '', linkedin, facebook, twitter, sort_order });
+        } else {
+          console.log(`[team] Skipping lang ${l} - no role or bio`);
         }
       }
     }
