@@ -3153,70 +3153,67 @@ app.post('/admin/reset-all-images', basicAuth, express.json(), async (req, res) 
     };
 
     const allUrls = new Set();
+    const langs = ['en', 'sk', 'hu'];
 
     // Collect all image URLs from database
     console.log('[reset-images] Collecting all image URLs from database...');
 
-    // 1. Events
-    const events = await db.query('SELECT id, data FROM events');
-    for (const event of events.rows) {
-      const data = event.data || {};
-      if (data.lead_image_url) allUrls.add(data.lead_image_url);
-      if (Array.isArray(data.images)) {
-        data.images.forEach(url => url && allUrls.add(url));
+    // 1. Events (use listEvents for each language)
+    for (const lang of langs) {
+      const events = await db.listEvents(lang);
+      for (const event of events) {
+        if (event.image_url) allUrls.add(event.image_url);
       }
     }
 
-    // 2. News
-    const news = await db.query('SELECT id, data FROM news');
-    for (const article of news.rows) {
-      const data = article.data || {};
-      if (data.lead_image_url) allUrls.add(data.lead_image_url);
-      if (Array.isArray(data.images)) {
-        data.images.forEach(url => url && allUrls.add(url));
+    // 2. News (use listNews for each language)
+    for (const lang of langs) {
+      const news = await db.listNews(lang);
+      for (const article of news) {
+        if (article.image_url) allUrls.add(article.image_url);
       }
     }
 
-    // 3. Themes
-    const themes = await db.query('SELECT id, data FROM themes');
-    for (const theme of themes.rows) {
-      const data = theme.data || {};
-      if (data.lead_image_url) allUrls.add(data.lead_image_url);
-      if (Array.isArray(data.images)) {
-        data.images.forEach(url => url && allUrls.add(url));
+    // 3. Themes (use listThemes for each language)
+    for (const lang of langs) {
+      const themes = await db.listThemes(lang);
+      for (const theme of themes) {
+        if (theme.image_url) allUrls.add(theme.image_url);
       }
     }
 
-    // 4. Team
-    const team = await db.query('SELECT id, data FROM team');
-    for (const member of team.rows) {
-      const data = member.data || {};
-      if (data.photo_url) allUrls.add(data.photo_url);
-      if (data.thumbnail_url) allUrls.add(data.thumbnail_url);
+    // 4. Team (use listTeam for each language)
+    for (const lang of langs) {
+      const team = await db.listTeam(lang);
+      for (const member of team) {
+        if (member.photo_url) allUrls.add(member.photo_url);
+        if (member.thumbnail_url) allUrls.add(member.thumbnail_url);
+      }
     }
 
-    // 5. Documents
-    const docs = await db.query('SELECT id, data FROM documents');
-    for (const doc of docs.rows) {
-      const data = doc.data || {};
-      if (data.file_url) allUrls.add(data.file_url);
+    // 5. Documents (use listDocuments for each language)
+    for (const lang of langs) {
+      const docs = await db.listDocuments(lang);
+      for (const doc of docs) {
+        if (doc.file_url) allUrls.add(doc.file_url);
+      }
     }
 
-    // 6. Pages
-    const pages = await db.query('SELECT id, data FROM pages');
-    for (const page of pages.rows) {
-      const data = page.data || {};
-      if (data.image_url) allUrls.add(data.image_url);
-      if (data.cover_image_url) allUrls.add(data.cover_image_url);
+    // 6. Pages (use listPages for each language)
+    for (const lang of langs) {
+      const pages = await db.listPages(lang);
+      for (const page of pages) {
+        if (page.image_url) allUrls.add(page.image_url);
+        if (page.cover_image_url) allUrls.add(page.cover_image_url);
+      }
     }
 
     // 7. Settings (slider backgrounds)
-    const settings = await db.query('SELECT lang, data FROM settings');
-    for (const setting of settings.rows) {
-      const data = setting.data || {};
-      if (data.slider_bg_image_url) allUrls.add(data.slider_bg_image_url);
-      if (Array.isArray(data.slider_bg_gallery)) {
-        data.slider_bg_gallery.forEach(url => url && allUrls.add(url));
+    for (const lang of langs) {
+      const cfg = await db.getSettings(lang);
+      if (cfg.slider_bg_image_url) allUrls.add(cfg.slider_bg_image_url);
+      if (Array.isArray(cfg.slider_bg_gallery)) {
+        cfg.slider_bg_gallery.forEach(url => url && allUrls.add(url));
       }
     }
 
@@ -3238,64 +3235,59 @@ app.post('/admin/reset-all-images', basicAuth, express.json(), async (req, res) 
     console.log('[reset-images] Clearing all image URLs from database...');
 
     // Clear Events
-    for (const event of events.rows) {
-      const data = event.data || {};
-      data.lead_image_url = '';
-      data.images = [];
-      await db.query('UPDATE events SET data = $1 WHERE id = $2', [data, event.id]);
-      report.clearedFromDb++;
+    for (const lang of langs) {
+      const events = await db.listEvents(lang);
+      for (const event of events) {
+        await db.updateEventImageForGroup(event.group_id, '');
+        report.clearedFromDb++;
+      }
     }
 
     // Clear News
-    for (const article of news.rows) {
-      const data = article.data || {};
-      data.lead_image_url = '';
-      data.images = [];
-      await db.query('UPDATE news SET data = $1 WHERE id = $2', [data, article.id]);
-      report.clearedFromDb++;
+    for (const lang of langs) {
+      const news = await db.listNews(lang);
+      for (const article of news) {
+        await db.updateNewsImageForGroup(article.group_id, '');
+        report.clearedFromDb++;
+      }
     }
 
     // Clear Themes
-    for (const theme of themes.rows) {
-      const data = theme.data || {};
-      data.lead_image_url = '';
-      data.images = [];
-      await db.query('UPDATE themes SET data = $1 WHERE id = $2', [data, theme.id]);
-      report.clearedFromDb++;
+    for (const lang of langs) {
+      const themes = await db.listThemes(lang);
+      for (const theme of themes) {
+        await db.updateThemeImageForGroup(theme.group_id, '');
+        report.clearedFromDb++;
+      }
     }
 
     // Clear Team
-    for (const member of team.rows) {
-      const data = member.data || {};
-      data.photo_url = '';
-      data.thumbnail_url = '';
-      await db.query('UPDATE team SET data = $1 WHERE id = $2', [data, member.id]);
-      report.clearedFromDb++;
+    for (const lang of langs) {
+      const team = await db.listTeam(lang);
+      for (const member of team) {
+        await db.updateTeamPhotoForGroup(member.group_id, '');
+        report.clearedFromDb++;
+      }
     }
 
     // Clear Documents
-    for (const doc of docs.rows) {
-      const data = doc.data || {};
-      data.file_url = '';
-      await db.query('UPDATE documents SET data = $1 WHERE id = $2', [data, doc.id]);
-      report.clearedFromDb++;
+    for (const lang of langs) {
+      const docs = await db.listDocuments(lang);
+      for (const doc of docs) {
+        await db.updateDocumentFileForGroup(doc.group_id, '');
+        report.clearedFromDb++;
+      }
     }
 
-    // Clear Pages
-    for (const page of pages.rows) {
-      const data = page.data || {};
-      data.image_url = '';
-      data.cover_image_url = '';
-      await db.query('UPDATE pages SET data = $1 WHERE id = $2', [data, page.id]);
-      report.clearedFromDb++;
-    }
+    // Clear Pages - pages don't have shared image fields, skip for now
+    // (Page images are usually unique per language, user can delete manually)
 
-    // Clear Settings
-    for (const setting of settings.rows) {
-      const data = setting.data || {};
-      data.slider_bg_image_url = '';
-      data.slider_bg_gallery = [];
-      await db.query('UPDATE settings SET data = $1 WHERE lang = $2', [data, setting.lang]);
+    // Clear Settings (slider backgrounds)
+    for (const lang of langs) {
+      const cfg = await db.getSettings(lang);
+      cfg.slider_bg_image_url = '';
+      cfg.slider_bg_gallery = [];
+      await db.updateSettings(lang, cfg);
       report.clearedFromDb++;
     }
 
