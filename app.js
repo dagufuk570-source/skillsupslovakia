@@ -18,6 +18,9 @@ let useDb = true; // enforce DB-only
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Detect serverless environment globally
+const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+
 // Global safety nets to avoid process exit on transient DB terminations and unhandled rejections
 process.on('uncaughtException', (err) => {
   try {
@@ -190,8 +193,11 @@ async function uniqueEventSlug(lang, base){
 async function connectDbWithRetry(){
   const requireDb = true; // always require DB
   const shouldTryDb = true;
-  const attempts = parseInt(process.env.DB_RETRY_ATTEMPTS || '20', 10);
-  const delayMs = parseInt(process.env.DB_RETRY_DELAY_MS || '1500', 10);
+  // In serverless, reduce retries to avoid cold start timeout
+  const defaultAttempts = isServerless ? '5' : '20';
+  const defaultDelay = isServerless ? '1000' : '1500';
+  const attempts = parseInt(process.env.DB_RETRY_ATTEMPTS || defaultAttempts, 10);
+  const delayMs = parseInt(process.env.DB_RETRY_DELAY_MS || defaultDelay, 10);
   let lastErr = null;
   for(let i=1;i<=attempts;i++){
     try{
@@ -244,7 +250,15 @@ async function connectDbWithRetry(){
       await new Promise(r=>setTimeout(r, delayMs));
     }
   }
-  console.error('Backend: PostgreSQL required but unavailable:', lastErr?.stack || lastErr?.message || 'unknown error');
+  const errMsg = 'Backend: PostgreSQL required but unavailable: ' + (lastErr?.stack || lastErr?.message || 'unknown error');
+  console.error(errMsg);
+  
+  // In serverless environments, throw instead of exit so middleware can handle it
+  if (isServerless) {
+    throw new Error(errMsg);
+  }
+  
+  // In traditional Node server, exit
   process.exit(1);
 }
 
@@ -3660,7 +3674,6 @@ app.get('/news/:slug', async (req, res) => {
 // In serverless environments (e.g., Vercel) we do NOT call listen();
 // instead, we export the Express app for the platform to handle requests.
 let server;
-const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 if (!isServerless) {
   server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
