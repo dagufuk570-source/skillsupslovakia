@@ -351,6 +351,8 @@
                   item.remove();
                   reindex();
                   // Auto-save after removal so the deletion persists immediately
+                  if (isSubmitting) return; // Prevent during active submit
+                  isSubmitting = true;
                   try {
                     if (form && typeof form.requestSubmit === 'function') {
                       form.requestSubmit();
@@ -365,8 +367,25 @@
             addBtn.addEventListener('click', addSlide);
             container.addEventListener('click', removeHandler);
 
-            form.addEventListener('submit', () => {
+            // Prevent double-submit
+            let isSubmitting = false;
+            form.addEventListener('submit', (e) => {
+              if (isSubmitting) {
+                e.preventDefault();
+                return false;
+              }
+              isSubmitting = true;
               reindex();
+              // Disable submit button
+              const submitBtn = form.querySelector('button[type="submit"]');
+              if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+              }
+              // Clear file input to prevent accidental re-submission
+              if (bgInput) {
+                setTimeout(() => { bgInput.value = ''; }, 100);
+              }
             });
 
             // Live preview for background image
@@ -384,11 +403,13 @@
             // Selecting from gallery
             document.querySelectorAll('.bg-radio').forEach(r => {
               r.addEventListener('change', (e) => {
+                if (isSubmitting) return; // Prevent during active submit
                 const v = e.target.value;
                 if (bgSel) bgSel.value = v;
                 if (bgPreview) { bgPreview.src = v; bgPreview.style.display = ''; }
                 if (bgPh) { bgPh.style.display = 'none'; }
                 // Auto-save to immediately apply selection
+                isSubmitting = true;
                 try {
                   if (form && typeof form.requestSubmit === 'function') {
                     form.requestSubmit();
