@@ -2766,11 +2766,29 @@ app.post('/admin/settings/slider/bg/delete', basicAuth, express.json(), async (r
   try {
     const { url } = req.body || {};
     if (!url || typeof url !== 'string') return res.status(400).json({ error: 'url required' });
-    const cur_en = await db.getSettings('en').catch(()=>({})) || {};
+    
+    // Retry wrapper for DB operations with timeout recovery
+    const withRetry = async (fn, maxRetries = 2) => {
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          return await fn();
+        } catch (err) {
+          if (i === maxRetries - 1) throw err;
+          if (err.message?.includes('timeout') || err.message?.includes('Connection terminated')) {
+            console.warn(`[slider/bg/delete] Retry ${i+1}/${maxRetries} after timeout`);
+            await new Promise(r => setTimeout(r, 300));
+            continue;
+          }
+          throw err;
+        }
+      }
+    };
+    
+    const cur_en = await withRetry(() => db.getSettings('en').catch(()=>({}))) || {};
     let gallery = Array.isArray(cur_en.slider_bg_gallery) ? cur_en.slider_bg_gallery : [];
     const idx = gallery.indexOf(url);
     const langs = ['en','sk','hu'];
-    const cfgs = await Promise.all(langs.map(l => db.getSettings(l).catch(()=>({}))));
+    const cfgs = await withRetry(() => Promise.all(langs.map(l => db.getSettings(l).catch(()=>({})))));
     if (idx === -1) {
       // Not in gallery; allow deletion if it's currently selected in any language
       let isSelectedSomewhere = false;
@@ -2786,7 +2804,7 @@ app.post('/admin/settings/slider/bg/delete', basicAuth, express.json(), async (r
         const l = langs[i];
         const cur = cfgs[i] || {};
         const sel = (cur.slider_bg_image_url === url) ? '' : (cur.slider_bg_image_url || '');
-        await db.updateSettings(l, { ...cur, slider_bg_image_url: sel });
+        await withRetry(() => db.updateSettings(l, { ...cur, slider_bg_image_url: sel }));
       }
       // Unlink local file if under uploads
       if (url.startsWith('/uploads/')){
@@ -2802,7 +2820,7 @@ app.post('/admin/settings/slider/bg/delete', basicAuth, express.json(), async (r
       const cur = cfgs[i] || {};
       let sel = cur.slider_bg_image_url || '';
       if (sel === url){ sel = gallery[0] || ''; }
-      await db.updateSettings(l, { ...cur, slider_bg_gallery: gallery, slider_bg_image_url: sel });
+      await withRetry(() => db.updateSettings(l, { ...cur, slider_bg_gallery: gallery, slider_bg_image_url: sel }));
     }
     // Try to unlink only local uploads
     if (url.startsWith('/uploads/')){
@@ -2811,7 +2829,8 @@ app.post('/admin/settings/slider/bg/delete', basicAuth, express.json(), async (r
     }
     return res.json({ ok: true, removedFromGallery: true });
   } catch (e) {
-    return res.status(500).json({ error: 'failed' });
+    console.error('[slider/bg/delete] Error:', e);
+    return res.status(500).json({ error: 'failed', message: e.message });
   }
 });
  

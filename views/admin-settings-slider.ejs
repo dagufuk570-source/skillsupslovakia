@@ -430,13 +430,24 @@
               });
             }
 
-            // Delete from gallery (AJAX)
+            // Delete from gallery (AJAX) with rate limiting
+            let deleteInProgress = false;
             document.querySelectorAll('.btn-del-bg').forEach(btn => {
               btn.addEventListener('click', async () => {
+                if (deleteInProgress) {
+                  alert('Lütfen önceki silme işlemi tamamlanana kadar bekleyin.');
+                  return;
+                }
                 const url = btn.getAttribute('data-url');
                 if (!url) return;
                 const ok = window.confirm('Bu görseli galeriden kaldırmak istiyor musunuz?');
                 if (!ok) return;
+                
+                deleteInProgress = true;
+                btn.disabled = true;
+                const origHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
                 try {
                   const resp = await fetch('/admin/settings/slider/bg/delete?lang=<%= lang %>', {
                     method: 'POST',
@@ -453,11 +464,19 @@
                       if (bgPreview) { bgPreview.src = ''; bgPreview.style.display = 'none'; }
                       if (bgPh) { bgPh.style.display = ''; }
                     }
+                    // Wait 500ms before allowing next delete (prevent rapid fire)
+                    await new Promise(resolve => setTimeout(resolve, 500));
                   } else {
-                    alert('Silinemedi.');
+                    const data = await resp.json().catch(() => ({}));
+                    alert('Silinemedi: ' + (data.error || 'Bilinmeyen hata'));
                   }
-                } catch {
-                  alert('Silme işlemi sırasında hata oluştu.');
+                } catch (err) {
+                  console.error('Delete error:', err);
+                  alert('Silme işlemi sırasında hata oluştu. Lütfen tekrar deneyin.');
+                } finally {
+                  deleteInProgress = false;
+                  btn.disabled = false;
+                  btn.innerHTML = origHtml;
                 }
               });
             });
