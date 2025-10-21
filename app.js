@@ -3318,6 +3318,133 @@ app.post('/admin/reset-all-images', basicAuth, express.json(), async (req, res) 
     });
   }
 });
+
+// Clean duplicate events (keep only one per group_id)
+app.post('/admin/clean-duplicates', basicAuth, express.json(), async (req, res) => {
+  try {
+    console.log('[clean-duplicates] Starting duplicate cleanup...');
+    
+    const report = {
+      eventsDeleted: 0,
+      newsDeleted: 0,
+      themesDeleted: 0,
+      teamDeleted: 0,
+      docsDeleted: 0,
+      startTime: Date.now()
+    };
+
+    const langs = ['en', 'sk', 'hu'];
+
+    // Clean Events - keep first of each group_id per language
+    for (const lang of langs) {
+      const events = await db.listEvents(lang);
+      const seen = new Map();
+      
+      for (const event of events) {
+        const key = `${event.group_id || 'null'}_${event.title || 'notitle'}`;
+        
+        if (!seen.has(key)) {
+          seen.set(key, event.id);
+        } else {
+          // Delete duplicate
+          await db.deleteEvent(event.id);
+          report.eventsDeleted++;
+          console.log(`[clean-duplicates] Deleted duplicate event: ${event.id} (${event.title})`);
+        }
+      }
+    }
+
+    // Clean News
+    for (const lang of langs) {
+      const news = await db.listNews(lang);
+      const seen = new Map();
+      
+      for (const article of news) {
+        const key = `${article.group_id || 'null'}_${article.title || 'notitle'}`;
+        
+        if (!seen.has(key)) {
+          seen.set(key, article.id);
+        } else {
+          await db.deleteNews(article.id);
+          report.newsDeleted++;
+          console.log(`[clean-duplicates] Deleted duplicate news: ${article.id} (${article.title})`);
+        }
+      }
+    }
+
+    // Clean Themes
+    for (const lang of langs) {
+      const themes = await db.listThemes(lang);
+      const seen = new Map();
+      
+      for (const theme of themes) {
+        const key = `${theme.group_id || 'null'}_${theme.title || 'notitle'}`;
+        
+        if (!seen.has(key)) {
+          seen.set(key, theme.id);
+        } else {
+          await db.deleteTheme(theme.id);
+          report.themesDeleted++;
+          console.log(`[clean-duplicates] Deleted duplicate theme: ${theme.id} (${theme.title})`);
+        }
+      }
+    }
+
+    // Clean Team
+    for (const lang of langs) {
+      const team = await db.listTeam(lang);
+      const seen = new Map();
+      
+      for (const member of team) {
+        const key = `${member.group_id || 'null'}_${member.name || 'noname'}`;
+        
+        if (!seen.has(key)) {
+          seen.set(key, member.id);
+        } else {
+          await db.deleteTeamMember(member.id);
+          report.teamDeleted++;
+          console.log(`[clean-duplicates] Deleted duplicate team member: ${member.id} (${member.name})`);
+        }
+      }
+    }
+
+    // Clean Documents
+    for (const lang of langs) {
+      const docs = await db.listDocuments(lang);
+      const seen = new Map();
+      
+      for (const doc of docs) {
+        const key = `${doc.group_id || 'null'}_${doc.title || 'notitle'}`;
+        
+        if (!seen.has(key)) {
+          seen.set(key, doc.id);
+        } else {
+          await db.deleteDocument(doc.id);
+          report.docsDeleted++;
+          console.log(`[clean-duplicates] Deleted duplicate document: ${doc.id} (${doc.title})`);
+        }
+      }
+    }
+
+    report.duration = ((Date.now() - report.startTime) / 1000).toFixed(1);
+    report.totalDeleted = report.eventsDeleted + report.newsDeleted + report.themesDeleted + report.teamDeleted + report.docsDeleted;
+    
+    console.log('[clean-duplicates] Cleanup completed:', report);
+    
+    return res.json({
+      success: true,
+      message: `Cleanup completed: ${report.totalDeleted} duplicates removed`,
+      report
+    });
+
+  } catch (err) {
+    console.error('[clean-duplicates] Cleanup failed:', err);
+    return res.status(500).json({
+      error: 'Cleanup failed',
+      message: err.message
+    });
+  }
+});
  
 
 // Settings: Contact

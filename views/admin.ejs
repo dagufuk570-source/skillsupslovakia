@@ -198,6 +198,19 @@
       <a href="#" id="reset-images-btn" class="stretched-link" aria-label="Reset All Images"></a>
     </div>
   </div>
+  <!-- Clean Duplicates -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile" style="background: linear-gradient(45deg,#ff6f00,#ff8f00);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Clean Duplicates</div>
+          <small class="opacity-75">Remove duplicate entries</small>
+        </div>
+        <i class="fas fa-broom fa-2x icon"></i>
+      </div>
+      <a href="#" id="clean-duplicates-btn" class="stretched-link" aria-label="Clean Duplicates"></a>
+    </div>
+  </div>
   <!-- View Site -->
   <div class="col-12 col-sm-6 col-md-4 col-lg-3">
     <div class="card dash-tile" style="background: linear-gradient(45deg,#2d3436,#636e72);">
@@ -315,6 +328,62 @@
       }
     } catch (err) {
       alert('❌ Reset failed:\n\n' + err.message);
+    } finally {
+      btn.innerHTML = originalHtml;
+      btn.style.pointerEvents = '';
+    }
+  });
+
+  // Clean Duplicates
+  document.getElementById('clean-duplicates-btn')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
+    const ok = confirm('Bu işlem duplicate (tekrarlanan) kayıtları temizleyecek:\n\n' +
+                       '• Aynı group_id ve title\'a sahip Event, News, Theme kayıtları\n' +
+                       '• İlk kayıt korunur, diğerleri silinir\n\n' +
+                       'Devam etmek istiyor musunuz?');
+    if (!ok) return;
+    
+    const btn = e.target.closest('.dash-tile');
+    const originalHtml = btn.innerHTML;
+    
+    btn.innerHTML = `
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <div class="text-center">
+          <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+          <div class="fw-semibold">Cleaning...</div>
+          <small class="opacity-75">Please wait</small>
+        </div>
+      </div>
+    `;
+    btn.style.pointerEvents = 'none';
+    
+    try {
+      const response = await fetch('/admin/clean-duplicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        const { report } = result;
+        alert(`✅ Cleanup completed successfully!\n\n` +
+              `Events deleted: ${report.eventsDeleted}\n` +
+              `News deleted: ${report.newsDeleted}\n` +
+              `Themes deleted: ${report.themesDeleted}\n` +
+              `Team deleted: ${report.teamDeleted}\n` +
+              `Documents deleted: ${report.docsDeleted}\n` +
+              `Total: ${report.totalDeleted}\n` +
+              `Duration: ${report.duration}s`);
+        
+        // Refresh page after 1 second
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        throw new Error(result.message || result.error || 'Cleanup failed');
+      }
+    } catch (err) {
+      alert('❌ Cleanup failed:\n\n' + err.message);
     } finally {
       btn.innerHTML = originalHtml;
       btn.style.pointerEvents = '';
