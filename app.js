@@ -2833,6 +2833,308 @@ app.post('/admin/settings/slider/bg/delete', basicAuth, express.json(), async (r
     return res.status(500).json({ error: 'failed', message: e.message });
   }
 });
+
+// Migrate local uploads to Vercel Blob Storage (admin utility)
+app.post('/admin/migrate-uploads-to-blob', basicAuth, express.json(), async (req, res) => {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return res.status(500).json({ 
+      error: 'BLOB_READ_WRITE_TOKEN not configured',
+      message: 'Vercel Blob Storage token is required for migration'
+    });
+  }
+
+  try {
+    console.log('[migrate] Starting upload migration to Blob Storage...');
+    
+    const report = {
+      scanned: 0,
+      uploaded: 0,
+      failed: 0,
+      dbUpdates: 0,
+      errors: [],
+      startTime: Date.now()
+    };
+
+    // Helper: Get all files recursively from local uploads
+    const getLocalFiles = () => {
+      const files = [];
+      const uploadsDir = path.join(__dirname, 'public', 'uploads');
+      
+      if (!fsSync.existsSync(uploadsDir)) {
+        return files;
+      }
+
+      const scanDir = (dir, baseDir = dir) => {
+        const items = fsSync.readdirSync(dir);
+        for (const item of items) {
+          if (item === '.gitkeep') continue;
+          const fullPath = path.join(dir, item);
+          const stat = fsSync.statSync(fullPath);
+          
+          if (stat.isDirectory()) {
+            scanDir(fullPath, baseDir);
+          } else {
+            const relativePath = path.relative(baseDir, fullPath).replace(/\\/g, '/');
+            files.push({
+              fullPath,
+              relativePath,
+              size: stat.size,
+              oldUrl: `/uploads/${relativePath}`
+            });
+          }
+        }
+      };
+
+      scanDir(uploadsDir);
+      return files;
+    };
+
+    // Helper: Upload file to Blob
+    const uploadToBlob = async (file) => {
+      const buffer = fsSync.readFileSync(file.fullPath);
+      const ext = path.extname(file.relativePath).toLowerCase();
+      
+      const contentTypes = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.webp': 'image/webp',
+        '.gif': 'image/gif',
+        '.pdf': 'application/pdf',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.xls': 'application/vnd.ms-excel',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      };
+      
+      const contentType = contentTypes[ext] || 'application/octet-stream';
+      return await uploadFile(buffer, file.relativePath, contentType);
+    };
+
+    // Helper: Update database URLs
+    const updateDatabaseUrls = async (oldUrl, newUrl) => {
+      const updates = [];
+      
+      // 1. Events
+      const events = await db.query('SELECT id, data FROM events');
+      for (const event of events.rows) {
+        const data = event.data || {};
+        let changed = false;
+        
+        if (data.lead_image_url === oldUrl) {
+          data.lead_image_url = newUrl;
+          changed = true;
+        }
+        
+        if (Array.isArray(data.images)) {
+          const idx = data.images.indexOf(oldUrl);
+          if (idx !== -1) {
+            data.images[idx] = newUrl;
+            changed = true;
+          }
+        }
+        
+        if (changed) {
+          await db.query('UPDATE events SET data = $1 WHERE id = $2', [data, event.id]);
+          updates.push(`Event #${event.id}`);
+        }
+      }
+      
+      // 2. News
+      const news = await db.query('SELECT id, data FROM news');
+      for (const article of news.rows) {
+        const data = article.data || {};
+        let changed = false;
+        
+        if (data.lead_image_url === oldUrl) {
+          data.lead_image_url = newUrl;
+          changed = true;
+        }
+        
+        if (Array.isArray(data.images)) {
+          const idx = data.images.indexOf(oldUrl);
+          if (idx !== -1) {
+            data.images[idx] = newUrl;
+            changed = true;
+          }
+        }
+        
+        if (changed) {
+          await db.query('UPDATE news SET data = $1 WHERE id = $2', [data, article.id]);
+          updates.push(`News #${article.id}`);
+        }
+      }
+      
+      // 3. Themes
+      const themes = await db.query('SELECT id, data FROM themes');
+      for (const theme of themes.rows) {
+        const data = theme.data || {};
+        let changed = false;
+        
+        if (data.lead_image_url === oldUrl) {
+          data.lead_image_url = newUrl;
+          changed = true;
+        }
+        
+        if (Array.isArray(data.images)) {
+          const idx = data.images.indexOf(oldUrl);
+          if (idx !== -1) {
+            data.images[idx] = newUrl;
+            changed = true;
+          }
+        }
+        
+        if (changed) {
+          await db.query('UPDATE themes SET data = $1 WHERE id = $2', [data, theme.id]);
+          updates.push(`Theme #${theme.id}`);
+        }
+      }
+      
+      // 4. Team
+      const team = await db.query('SELECT id, data FROM team');
+      for (const member of team.rows) {
+        const data = member.data || {};
+        let changed = false;
+        
+        if (data.photo_url === oldUrl) {
+          data.photo_url = newUrl;
+          changed = true;
+        }
+        
+        if (data.thumbnail_url === oldUrl) {
+          data.thumbnail_url = newUrl;
+          changed = true;
+        }
+        
+        if (changed) {
+          await db.query('UPDATE team SET data = $1 WHERE id = $2', [data, member.id]);
+          updates.push(`Team #${member.id}`);
+        }
+      }
+      
+      // 5. Documents
+      const docs = await db.query('SELECT id, data FROM documents');
+      for (const doc of docs.rows) {
+        const data = doc.data || {};
+        
+        if (data.file_url === oldUrl) {
+          data.file_url = newUrl;
+          await db.query('UPDATE documents SET data = $1 WHERE id = $2', [data, doc.id]);
+          updates.push(`Document #${doc.id}`);
+        }
+      }
+      
+      // 6. Pages
+      const pages = await db.query('SELECT id, data FROM pages');
+      for (const page of pages.rows) {
+        const data = page.data || {};
+        let changed = false;
+        
+        if (data.image_url === oldUrl) {
+          data.image_url = newUrl;
+          changed = true;
+        }
+        
+        if (data.cover_image_url === oldUrl) {
+          data.cover_image_url = newUrl;
+          changed = true;
+        }
+        
+        if (changed) {
+          await db.query('UPDATE pages SET data = $1 WHERE id = $2', [data, page.id]);
+          updates.push(`Page #${page.id}`);
+        }
+      }
+      
+      // 7. Settings (slider backgrounds)
+      const settings = await db.query('SELECT lang, data FROM settings');
+      for (const setting of settings.rows) {
+        const data = setting.data || {};
+        let changed = false;
+        
+        if (data.slider_bg_image_url === oldUrl) {
+          data.slider_bg_image_url = newUrl;
+          changed = true;
+        }
+        
+        if (Array.isArray(data.slider_bg_gallery)) {
+          const idx = data.slider_bg_gallery.indexOf(oldUrl);
+          if (idx !== -1) {
+            data.slider_bg_gallery[idx] = newUrl;
+            changed = true;
+          }
+        }
+        
+        if (changed) {
+          await db.query('UPDATE settings SET data = $1 WHERE lang = $2', [data, setting.lang]);
+          updates.push(`Settings (${setting.lang})`);
+        }
+      }
+      
+      return updates;
+    };
+
+    // Main migration logic
+    const files = getLocalFiles();
+    report.scanned = files.length;
+    
+    console.log(`[migrate] Found ${files.length} files to migrate`);
+    
+    if (files.length === 0) {
+      return res.json({ 
+        success: true, 
+        message: 'No local files found to migrate',
+        report 
+      });
+    }
+
+    // Process files with rate limiting
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      try {
+        console.log(`[migrate] [${i + 1}/${files.length}] Uploading: ${file.relativePath}`);
+        
+        // Upload to Blob
+        const newUrl = await uploadToBlob(file);
+        report.uploaded++;
+        
+        // Update database
+        const updates = await updateDatabaseUrls(file.oldUrl, newUrl);
+        report.dbUpdates += updates.length;
+        
+        console.log(`[migrate] ✓ ${file.relativePath} → ${newUrl} (${updates.length} DB updates)`);
+        
+        // Rate limiting: 200ms between uploads
+        if (i < files.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        
+      } catch (err) {
+        console.error(`[migrate] ✗ Failed: ${file.relativePath}`, err.message);
+        report.failed++;
+        report.errors.push({ file: file.relativePath, error: err.message });
+      }
+    }
+
+    report.duration = ((Date.now() - report.startTime) / 1000).toFixed(1);
+    
+    console.log('[migrate] Migration completed:', report);
+    
+    return res.json({ 
+      success: true,
+      message: `Migrated ${report.uploaded}/${report.scanned} files successfully`,
+      report
+    });
+    
+  } catch (err) {
+    console.error('[migrate] Migration failed:', err);
+    return res.status(500).json({ 
+      error: 'Migration failed', 
+      message: err.message 
+    });
+  }
+});
  
 
 // Settings: Contact

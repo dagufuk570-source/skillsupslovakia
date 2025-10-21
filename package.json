@@ -9,6 +9,8 @@
     "db:setup": "node ./scripts/setup-db.js",
     "db:import": "node ./scripts/import-content-to-postgres.js",
     "db:migrate:supabase": "node ./scripts/migrate-to-supabase.js",
+    "migrate:uploads:blob": "node ./scripts/migrate-uploads-to-blob.js",
+    "migrate:uploads:blob:dry": "node ./scripts/migrate-uploads-to-blob.js --dry-run",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

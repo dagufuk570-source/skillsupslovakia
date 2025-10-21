@@ -172,6 +172,19 @@
       <a href="<%= useDb ? ('/admin/pages/about-us?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Edit About Us Page" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
+  <!-- Migrate Uploads to Blob -->
+  <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <div class="card dash-tile" style="background: linear-gradient(45deg,#dc3545,#e74c3c);">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Migrate Uploads</div>
+          <small class="opacity-75">Move to Blob Storage</small>
+        </div>
+        <i class="fas fa-cloud-upload-alt fa-2x icon"></i>
+      </div>
+      <a href="#" id="migrate-btn" class="stretched-link" aria-label="Migrate Uploads"></a>
+    </div>
+  </div>
   <!-- View Site -->
   <div class="col-12 col-sm-6 col-md-4 col-lg-3">
     <div class="card dash-tile" style="background: linear-gradient(45deg,#2d3436,#636e72);">
@@ -186,6 +199,56 @@
     </div>
   </div>
 </div>
+
+<!-- Migration Script -->
+<script>
+  document.getElementById('migrate-btn')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
+    const ok = confirm('Bu işlem tüm local resimleri Vercel Blob Storage\'a yükleyecek ve database URL\'lerini güncelleyecek.\n\nDevam etmek istiyor musunuz?\n\n(İşlem birkaç dakika sürebilir)');
+    if (!ok) return;
+    
+    const btn = e.target.closest('.dash-tile');
+    const originalHtml = btn.innerHTML;
+    
+    btn.innerHTML = `
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <div class="text-center">
+          <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+          <div class="fw-semibold">Migrating...</div>
+          <small class="opacity-75">Please wait</small>
+        </div>
+      </div>
+    `;
+    btn.style.pointerEvents = 'none';
+    
+    try {
+      const response = await fetch('/admin/migrate-uploads-to-blob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        const { report } = result;
+        alert(`✅ Migration completed successfully!\n\n` +
+              `Files scanned: ${report.scanned}\n` +
+              `Uploaded: ${report.uploaded}\n` +
+              `Failed: ${report.failed}\n` +
+              `Database updates: ${report.dbUpdates}\n` +
+              `Duration: ${report.duration}s`);
+      } else {
+        throw new Error(result.message || result.error || 'Migration failed');
+      }
+    } catch (err) {
+      alert('❌ Migration failed:\n\n' + err.message);
+    } finally {
+      btn.innerHTML = originalHtml;
+      btn.style.pointerEvents = '';
+    }
+  });
+</script>
 
 <!-- Bottom info bar: Multi-Language Content -->
 <div class="row g-3 mt-1">
