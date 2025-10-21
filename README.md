@@ -57,3 +57,9 @@ Backend selection:
 - On startup, the app logs the active backend, e.g.:
 	- `Backend: PostgreSQL (connected)` or
 	- `Backend: content.json (no DB env)`
+
+	logout yok :D
+	:DD
+	koymamışım :DD
+	.env okuyor. 
+	
