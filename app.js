@@ -2806,10 +2806,12 @@ app.post('/admin/settings/slider/bg/delete', basicAuth, express.json(), async (r
         const sel = (cur.slider_bg_image_url === url) ? '' : (cur.slider_bg_image_url || '');
         await withRetry(() => db.updateSettings(l, { ...cur, slider_bg_image_url: sel }));
       }
-      // Unlink local file if under uploads
-      if (url.startsWith('/uploads/')){
-        const p = path.join(__dirname, 'public', url.replace(/^\//, ''));
-        try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+      // Delete file from storage (Blob or local disk)
+      try {
+        await deleteFile(url);
+        console.log('[slider/bg/delete] Deleted from storage:', url);
+      } catch (err) {
+        console.warn('[slider/bg/delete] Storage delete failed:', err.message);
       }
       return res.json({ ok: true, clearedSelected: true });
     }
@@ -2822,10 +2824,12 @@ app.post('/admin/settings/slider/bg/delete', basicAuth, express.json(), async (r
       if (sel === url){ sel = gallery[0] || ''; }
       await withRetry(() => db.updateSettings(l, { ...cur, slider_bg_gallery: gallery, slider_bg_image_url: sel }));
     }
-    // Try to unlink only local uploads
-    if (url.startsWith('/uploads/')){
-      const p = path.join(__dirname, 'public', url.replace(/^\//, ''));
-      try { if (fsSync.existsSync(p)) fsSync.unlinkSync(p); } catch {}
+    // Delete file from storage (Blob or local disk)
+    try {
+      await deleteFile(url);
+      console.log('[slider/bg/delete] Deleted from storage:', url);
+    } catch (err) {
+      console.warn('[slider/bg/delete] Storage delete failed:', err.message);
     }
     return res.json({ ok: true, removedFromGallery: true });
   } catch (e) {
