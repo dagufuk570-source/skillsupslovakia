@@ -1382,6 +1382,49 @@ app.get('/admin', basicAuth, async (req,res)=>{
   res.render('admin', { lang: res.locals.lang, useDb: true });
 });
 
+// Admin logout endpoint
+app.get('/admin/logout', (req, res) => {
+  // Send 401 to clear Basic Auth credentials in browser
+  res.set('WWW-Authenticate', 'Basic realm="Admin"');
+  res.status(401).send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Logged Out</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-light">
+      <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+          <div class="col-md-6 text-center">
+            <div class="card shadow">
+              <div class="card-body p-5">
+                <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                <h2 class="mt-3 mb-3">Successfully Logged Out</h2>
+                <p class="text-muted mb-4">You have been logged out from the admin panel.</p>
+                <a href="/" class="btn btn-primary me-2">
+                  <i class="fas fa-home me-1"></i>Go to Homepage
+                </a>
+                <a href="/admin" class="btn btn-outline-secondary">
+                  <i class="fas fa-sign-in-alt me-1"></i>Login Again
+                </a>
+              </div>
+            </div>
+            <p class="text-muted mt-3 small">
+              <i class="fas fa-info-circle"></i> 
+              Close your browser completely to clear the session, or use incognito mode for a fresh login.
+            </p>
+          </div>
+        </div>
+      </div>
+      <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" rel="stylesheet">
+    </body>
+    </html>
+  `);
+});
+
 // SMTP test endpoint (admin only): attempts to connect and optionally send a test email
 app.get('/admin/test-smtp', basicAuth, async (req, res) => {
   try {
