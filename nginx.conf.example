@@ -1,0 +1,86 @@
+# Nginx configuration for SkillsUp Slovakia
+# Save this file to: /etc/nginx/sites-available/skillsupslovakia
+# Enable it: sudo ln -s /etc/nginx/sites-available/skillsupslovakia /etc/nginx/sites-enabled/
+# Test config: sudo nginx -t
+# Reload: sudo systemctl reload nginx
+
+server {
+    listen 80;
+    listen [::]:80;
+    
+    # Replace with your domain or server IP
+    server_name your-domain.com www.your-domain.com;
+    
+    # Logging
+    access_log /var/log/nginx/skillsupslovakia-access.log;
+    error_log /var/log/nginx/skillsupslovakia-error.log;
+    
+    # Max upload size (for images)
+    client_max_body_size 10M;
+    
+    # Serve static files directly
+    location /uploads/ {
+        alias /var/www/skillsupslovakia/public/uploads/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location /css/ {
+        alias /var/www/skillsupslovakia/public/css/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location /js/ {
+        alias /var/www/skillsupslovakia/public/js/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location /img/ {
+        alias /var/www/skillsupslovakia/public/img/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location /lib/ {
+        alias /var/www/skillsupslovakia/public/lib/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Proxy to Node.js app
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+
+# SSL Configuration (after installing Let's Encrypt certificate)
+# Uncomment and configure after running: sudo certbot --nginx -d your-domain.com
+#
+# server {
+#     listen 443 ssl http2;
+#     listen [::]:443 ssl http2;
+#     
+#     server_name your-domain.com www.your-domain.com;
+#     
+#     ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#     ssl_ciphers HIGH:!aNULL:!MD5;
+#     
+#     # ... (same location blocks as above)
+# }
