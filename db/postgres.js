@@ -12,14 +12,18 @@ if(!connectionString){
 // Enable SSL automatically for Supabase or when DATABASE_SSL=1
 let poolConfig = {
   connectionString,
-  // Serverless-optimized defaults (Vercel, AWS Lambda)
-  max: parseInt(process.env.PG_POOL_MAX || '1', 10), // Serverless: 1 connection per function instance
-  idleTimeoutMillis: parseInt(process.env.PG_IDLE_TIMEOUT_MS || '10000', 10), // 10s idle timeout
-  connectionTimeoutMillis: parseInt(process.env.PG_CONN_TIMEOUT_MS || '3000', 10), // 3s connection timeout
+  // Server-optimized defaults for persistent app (not serverless)
+  max: parseInt(process.env.PG_POOL_MAX || '10', 10), // 10 connections for normal server
+  min: parseInt(process.env.PG_POOL_MIN || '2', 10), // Keep 2 connections alive
+  idleTimeoutMillis: parseInt(process.env.PG_IDLE_TIMEOUT_MS || '30000', 10), // 30s idle timeout
+  connectionTimeoutMillis: parseInt(process.env.PG_CONN_TIMEOUT_MS || '10000', 10), // 10s connection timeout
   keepAlive: true,
+  keepAliveInitialDelayMillis: 10000, // Send keepalive every 10s
   // Reduce statement_timeout for faster failures
-  statement_timeout: 5000, // 5 seconds per query
-  query_timeout: 5000
+  statement_timeout: 10000, // 10 seconds per query
+  query_timeout: 10000,
+  // Retry connection on failure
+  allowExitOnIdle: false // Prevent pool from closing when idle
 };
 // Force SSL with rejectUnauthorized: false for Supabase (accepts self-signed certs)
 try {

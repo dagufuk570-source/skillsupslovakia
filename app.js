@@ -1686,11 +1686,12 @@ app.post('/admin/documents/:id/delete', basicAuth, async (req,res)=>{
 
 // Public documents listing
 app.get('/documents', async (req,res)=>{
-  const pages = await db.listPages(res.locals.lang);
-  const menu = buildMenu(pages);
-  // List only current language documents
-  const docs = await db.listDocuments(res.locals.lang).catch(()=>[]) || [];
-  const items = docs.filter(d=>d.published).map(d=>{
+  try {
+    const pages = await db.listPages(res.locals.lang);
+    const menu = buildMenu(pages);
+    // List only current language documents
+    const docs = await db.listDocuments(res.locals.lang).catch(()=>[]) || [];
+    const items = docs.filter(d=>d.published).map(d=>{
     const fileUrl = d.file_url || '#';
     const listImage = '/img/placeholder-doc.svg';
     const extMatch = (d.file_url || '').match(/\.([a-z0-9]+)(?:\?|#|$)/i);
@@ -1727,6 +1728,10 @@ app.get('/documents', async (req,res)=>{
   const L = labels[lang] || labels.en;
   const shDocs = { kicker: L.kicker, heading: L.heading, subheading: '' };
   return res.render('page', { menu, page: { title: L.title, content: html }, lang: res.locals.lang, slider: null, sectionHeader: shDocs, t: res.locals.t });
+  } catch(err) {
+    console.error('[app.get /documents] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 // Events management (DB only)
@@ -3857,11 +3862,12 @@ app.post('/admin/pages/:slug/multi', basicAuth, uploadImages.any(), async (req,r
 
 // Public themes & team pages
 app.get('/themes', async (req, res) => {
-  if(useDb){
-    const pages = await db.listPages(res.locals.lang);
-    const menu = buildMenu(pages);
-    const themes = await db.listThemes(res.locals.lang);
-    const cards = themes.map(t => {
+  try {
+    if(useDb){
+      const pages = await db.listPages(res.locals.lang);
+      const menu = buildMenu(pages);
+      const themes = await db.listThemes(res.locals.lang);
+      const cards = themes.map(t => {
       const listImage = t.image_url && String(t.image_url).trim() ? t.image_url : '/img/placeholder-theme.svg';
       return `
       <div class="col-lg-4 col-md-6 mb-4">
@@ -3884,6 +3890,10 @@ app.get('/themes', async (req, res) => {
     const html = `<div class="row">${cards || `<div class=\"text-muted\">${res.locals.t('noThemesYet')}</div>`}</div>`;
   const shThemes = { kicker: res.locals.t('themesKicker'), heading: res.locals.t('themesHeading'), subheading: '' };
   return res.render('page', { menu, page: { title: res.locals.t('themesTitle'), content: html }, lang: res.locals.lang, slider: null, sectionHeader: shThemes, t: res.locals.t });
+  }
+  } catch(err) {
+    console.error('[app.get /themes] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
   }
 });
 
@@ -3922,9 +3932,10 @@ async function resolveFocusAreaVariant(row, lang){
 
 // Focus Areas public page (table)
 app.get('/focus-areas', async (req, res) => {
-  const pages = await db.listPages(res.locals.lang);
-  const menu = buildMenu(pages);
-  const cols = getFocusAreaColumns();
+  try {
+    const pages = await db.listPages(res.locals.lang);
+    const menu = buildMenu(pages);
+    const cols = getFocusAreaColumns();
   const labels = cols.map(focusAreaLabelFactory(res.locals.t));
   // Aggregate across languages and deduplicate by group; prefer current language variant
   let all = [];
@@ -3953,6 +3964,10 @@ app.get('/focus-areas', async (req, res) => {
   const tableHtml = `<div class="table-responsive"><table class="table table-striped align-middle focus-areas-table">${thead}${tbody}</table></div>`;
   const shFocus = { kicker: res.locals.t('focusAreasKicker'), heading: res.locals.t('focusAreasHeading'), subheading: '' };
   return res.render('page', { menu, page: { title: res.locals.t('focusAreasTitle'), content: tableHtml }, lang: res.locals.lang, slider: null, sectionHeader: shFocus, t: res.locals.t });
+  } catch(err) {
+    console.error('[app.get /focus-areas] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 // Admin: Focus Areas list
@@ -4111,9 +4126,10 @@ app.post('/admin/focus-areas/:id/delete', basicAuth, async (req, res) => {
 
 // Theme detail page (render via shared 'page' layout with gallery)
 app.get('/themes/:slug', async (req, res) => {
-  const idOrSlug = req.params.slug;
-  const gid = req.query.gid;
-  let theme = isNaN(idOrSlug) ? await db.getThemeBySlug(res.locals.lang, idOrSlug) : await db.getTheme(idOrSlug);
+  try {
+    const idOrSlug = req.params.slug;
+    const gid = req.query.gid;
+    let theme = isNaN(idOrSlug) ? await db.getThemeBySlug(res.locals.lang, idOrSlug) : await db.getTheme(idOrSlug);
   // If gid is provided and we have a base theme with a different group, prefer resolving by gid
   if(gid && typeof db.getThemeByGroupAndLang === 'function'){
     try{
@@ -4206,13 +4222,18 @@ app.get('/themes/:slug', async (req, res) => {
     backLink: `/themes?lang=${res.locals.lang}`,
     t: res.locals.t 
   });
+  } catch(err) {
+    console.error('[app.get /themes/:slug] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 // Event detail page
 app.get('/events/:id', async (req, res) => {
-  const idOrSlug = req.params.id;
-  const gid = req.query.gid;
-  let event = isNaN(idOrSlug) ? await db.getEventBySlug(res.locals.lang, idOrSlug) : await db.getEvent(idOrSlug);
+  try {
+    const idOrSlug = req.params.id;
+    const gid = req.query.gid;
+    let event = isNaN(idOrSlug) ? await db.getEventBySlug(res.locals.lang, idOrSlug) : await db.getEvent(idOrSlug);
   if(gid && typeof db.getEventByGroupAndLang === 'function'){
     try{
       const cur = await db.getEventByGroupAndLang(gid, res.locals.lang);
@@ -4298,6 +4319,10 @@ app.get('/events/:id', async (req, res) => {
     </div>`;
   const sh = { kicker: 'EVENT', heading: event.title, subheading: '' };
   return res.render('page', { menu, page: { title: '', content: html, image_url: event.image_url || '' }, lang: res.locals.lang, slider: null, sectionHeader: sh, backLink: `/events?lang=${res.locals.lang}`, t: res.locals.t });
+  } catch(err) {
+    console.error('[app.get /events/:id] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 
@@ -4316,11 +4341,12 @@ async function resolveTeamVariant(member, lang){
 
 // Public team listing
 app.get('/team', async (req, res) => {
-  const pages = await db.listPages(res.locals.lang);
-  const menu = buildMenu(pages);
-  // Aggregate team members across languages, then pick per-group variant for current language
-  let allMembers = [];
   try {
+    const pages = await db.listPages(res.locals.lang);
+    const menu = buildMenu(pages);
+    // Aggregate team members across languages, then pick per-group variant for current language
+    let allMembers = [];
+    try {
     const [en, sk, hu] = await Promise.all([
       db.listTeam('en').catch(()=>[]),
       db.listTeam('sk').catch(()=>[]),
@@ -4378,15 +4404,20 @@ app.get('/team', async (req, res) => {
   const html = `<div class="row g-4">${cards || `<div class=\"text-muted\">${res.locals.t('noTeamYet')}</div>`}</div>`;
   const shTeam = { kicker: res.locals.t('teamKicker'), heading: res.locals.t('teamHeading'), subheading: '' };
   return res.render('page', { menu, page: { title: res.locals.t('team'), content: html }, lang: res.locals.lang, slider: null, sectionHeader: shTeam, t: res.locals.t });
+  } catch(err) {
+    console.error('[app.get /team] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 // Public team member detail
 app.get('/team/:id', async (req, res) => {
-  const idOrSlug = req.params.id;
-  // Try by id, fallback to slug if implemented in DB
-  let member = null;
-  if(!isNaN(idOrSlug)) {
-    member = await db.getTeamMember(idOrSlug);
+  try {
+    const idOrSlug = req.params.id;
+    // Try by id, fallback to slug if implemented in DB
+    let member = null;
+    if(!isNaN(idOrSlug)) {
+      member = await db.getTeamMember(idOrSlug);
   } else if(db.getTeamMemberBySlug) {
     // Try current language first
     member = await db.getTeamMemberBySlug(res.locals.lang, idOrSlug);
@@ -4437,10 +4468,15 @@ app.get('/team/:id', async (req, res) => {
     </div>`;
   const sh = { kicker: res.locals.t('teamKicker'), heading: member.name, subheading: '' };
   return res.render('page', { menu, page: { title: res.locals.t('team'), content: html, image_url: '' }, lang: res.locals.lang, slider: null, sectionHeader: sh, backLink: `/team?lang=${res.locals.lang}`, t: res.locals.t });
+  } catch(err) {
+    console.error('[app.get /team/:id] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 // News public page
 app.get('/news', async (req, res) => {
+  try {
     const pages = await db.listPages(res.locals.lang);
     const menu = buildMenu(pages);
     const news = await db.listPublishedNews(res.locals.lang);
@@ -4468,12 +4504,17 @@ app.get('/news', async (req, res) => {
     const html = `<div class="row">${cards || `<div class=\"text-muted\">${res.locals.t('noNewsYet')}</div>`}</div>`;
   const shNews = { kicker: res.locals.t('newsKicker'), heading: res.locals.t('newsHeading'), subheading: '' };
   return res.render('page', { menu, page: { title: res.locals.t('newsTitle'), content: html }, lang: res.locals.lang, slider: null, sectionHeader: shNews, t: res.locals.t });
+  } catch(err) {
+    console.error('[app.get /news] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 // News detail page
 app.get('/news/:slug', async (req, res) => {
-  const idOrSlug = req.params.slug;
-  let news = isNaN(idOrSlug) ? await db.getNewsBySlug(idOrSlug, res.locals.lang) : await db.getNews(idOrSlug);
+  try {
+    const idOrSlug = req.params.slug;
+    let news = isNaN(idOrSlug) ? await db.getNewsBySlug(idOrSlug, res.locals.lang) : await db.getNews(idOrSlug);
   // If not found by slug in current language, try other languages to locate the group, then resolve to requested language
   if(!news && isNaN(idOrSlug)){
     try{
@@ -4547,6 +4588,10 @@ app.get('/news/:slug', async (req, res) => {
     </div>`;
   const sh = { kicker: res.locals.t('newsKicker'), heading: news.title, subheading: '' };
   return res.render('page', { menu, page: { title: '', content: html, image_url: news.image_url || '' }, lang: res.locals.lang, slider: null, sectionHeader: sh, backLink: `/news?lang=${res.locals.lang}`, t: res.locals.t });
+  } catch(err) {
+    console.error('[app.get /news/:slug] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 // In serverless environments (e.g., Vercel) we do NOT call listen();
