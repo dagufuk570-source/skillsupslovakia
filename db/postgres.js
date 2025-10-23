@@ -21,18 +21,25 @@ let poolConfig = {
   statement_timeout: 5000, // 5 seconds per query
   query_timeout: 5000
 };
+// Force SSL with rejectUnauthorized: false for Supabase (accepts self-signed certs)
 try {
   const host = new URL(connectionString).hostname || '';
-  const hasSslParam = /[?&](sslmode|ssl)=/i.test(connectionString);
-  if (host.includes('supabase.co') && !hasSslParam) {
+  // Always use SSL for Supabase with rejectUnauthorized: false
+  if (host.includes('supabase.co') || host.includes('supabase.com') || host.includes('.supabase.')) {
+    // Must set ssl to true first, then configure with rejectUnauthorized: false
+    poolConfig.ssl = true;
     poolConfig.ssl = { rejectUnauthorized: false };
+    console.log('[postgres.js] SSL enabled for Supabase host:', host);
   }
 } catch (e) {
   // ignore URL parse issues, fall back to non-SSL
+  console.warn('[postgres.js] URL parse failed:', e.message);
 }
 if (process.env.DATABASE_SSL === '1') {
   poolConfig.ssl = { rejectUnauthorized: false };
+  console.log('[postgres.js] SSL enabled via DATABASE_SSL=1');
 }
+console.log('[postgres.js] Final SSL config:', poolConfig.ssl);
 
 const pool = new Pool(poolConfig);
 // Prevent unhandled 'error' events from crashing the app when the DB restarts/terminates idle clients

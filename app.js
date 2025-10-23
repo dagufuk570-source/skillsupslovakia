@@ -1411,6 +1411,11 @@ app.get('/admin', basicAuth, async (req,res)=>{
   res.render('admin', { lang: res.locals.lang, useDb: true });
 });
 
+// Admin User Guide
+app.get('/admin/user-guide', basicAuth, (req, res) => {
+  res.render('admin-user-guide', { lang: res.locals.lang, useDb: true, active: 'user-guide', title: 'User Guide' });
+});
+
 // Admin logout endpoint
 app.get('/admin/logout', (req, res) => {
   // Send 401 to clear Basic Auth credentials in browser

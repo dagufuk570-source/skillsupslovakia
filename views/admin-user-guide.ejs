@@ -1,0 +1,530 @@
+<%- include('admin-layout-top', { title: 'User Guide', active: 'user-guide', lang: lang || 'en', useDb: true }) %>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0"><i class="fas fa-book me-2"></i>Admin Panel User Guide</h4>
+        </div>
+        <div class="card-body">
+          <!-- Table of Contents -->
+          <div class="alert alert-info">
+            <h5><i class="fas fa-list me-2"></i>Quick Navigation</h5>
+            <div class="row">
+              <div class="col-md-4">
+                <ul class="list-unstyled">
+                  <li><a href="#getting-started">Getting Started</a></li>
+                  <li><a href="#dashboard">Dashboard Overview</a></li>
+                  <li><a href="#themes">Managing Themes</a></li>
+                  <li><a href="#events">Managing Events</a></li>
+                </ul>
+              </div>
+              <div class="col-md-4">
+                <ul class="list-unstyled">
+                  <li><a href="#team">Managing Team</a></li>
+                  <li><a href="#news">Managing News</a></li>
+                  <li><a href="#documents">Managing Documents</a></li>
+                  <li><a href="#focus">Managing Focus Areas</a></li>
+                </ul>
+              </div>
+              <div class="col-md-4">
+                <ul class="list-unstyled">
+                  <li><a href="#settings">Settings</a></li>
+                  <li><a href="#pages">Managing Pages</a></li>
+                  <li><a href="#multilanguage">Multi-Language Content</a></li>
+                  <li><a href="#tips">Tips & Best Practices</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Content -->
+          <div class="user-guide-content">
+            <h2 id="getting-started"><i class="fas fa-rocket me-2"></i>Getting Started</h2>
+            
+            <h3>Accessing the Admin Panel</h3>
+            <ol>
+              <li>Navigate to: <code>https://your-domain.com/admin</code></li>
+              <li>Enter credentials:
+                <ul>
+                  <li><strong>Username:</strong> <code>admin</code></li>
+                  <li><strong>Password:</strong> <code>s3cret</code></li>
+                </ul>
+              </li>
+              <li>Click "Sign In" or press Enter</li>
+            </ol>
+
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Security Tip:</strong> Change default credentials immediately by updating the <code>.env</code> file:
+              <pre class="mt-2 mb-0"><code>ADMIN_USER=your_username
+ADMIN_PASS=your_secure_password</code></pre>
+            </div>
+
+            <hr class="my-4">
+
+            <h2 id="dashboard"><i class="fas fa-tachometer-alt me-2"></i>Dashboard Overview</h2>
+            <p>The dashboard provides quick access to all management sections:</p>
+            
+            <div class="row">
+              <div class="col-md-6">
+                <h4>Main Sections</h4>
+                <ul>
+                  <li><strong>Themes</strong> - Manage thematic project areas</li>
+                  <li><strong>Events</strong> - Training events and workshops</li>
+                  <li><strong>Our Team</strong> - Team member profiles</li>
+                  <li><strong>News</strong> - News articles and updates</li>
+                  <li><strong>Documents</strong> - Downloadable files</li>
+                  <li><strong>Focus Areas</strong> - Organization's focus areas</li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <h4>Configuration</h4>
+                <ul>
+                  <li><strong>Settings</strong> - Slider, contact, GDPR, stats</li>
+                  <li><strong>Pages</strong> - Edit Home and About Us</li>
+                  <li><strong>View Site</strong> - Preview public website</li>
+                  <li><strong>Logout</strong> - Sign out securely</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="alert alert-info mt-3">
+              <i class="fas fa-globe me-2"></i>
+              <strong>Multi-Language Support:</strong> Content can be managed in 3 languages:
+              <span class="badge bg-primary ms-2">🇬🇧 English</span>
+              <span class="badge bg-primary ms-2">🇸🇰 Slovak</span>
+              <span class="badge bg-primary ms-2">🇭🇺 Hungarian</span>
+            </div>
+
+            <hr class="my-4">
+
+            <h2 id="themes"><i class="fas fa-tags me-2"></i>Managing Themes</h2>
+            <p><strong>Themes</strong> represent major project areas or thematic focuses.</p>
+            
+            <h3>Adding a New Theme</h3>
+            <ol>
+              <li>Click <strong>Themes</strong> in the sidebar</li>
+              <li>Click <strong>"Add New Theme"</strong> button</li>
+              <li>Fill in the form fields:
+                <ul>
+                  <li><strong>Title</strong> (Required) - Name of the theme</li>
+                  <li><strong>Description</strong> (Required) - Use WYSIWYG editor for formatting</li>
+                  <li><strong>Slug</strong> (Optional) - Auto-generated URL-friendly version</li>
+                  <li><strong>Status</strong> - Published or Draft</li>
+                  <li><strong>Image</strong> (Optional) - Recommended: 800x600px</li>
+                  <li><strong>Additional Images</strong> (Optional) - Up to 4 supporting images</li>
+                </ul>
+              </li>
+              <li>Click <strong>"Save Theme"</strong></li>
+            </ol>
+
+            <div class="card bg-light mt-3">
+              <div class="card-body">
+                <h5><i class="fas fa-lightbulb me-2"></i>Pro Tip: Multi-Language Themes</h5>
+                <p class="mb-0">Create themes in all languages by using the same title or group_id. Switch language with <code>?lang=sk</code> or <code>?lang=hu</code> in the URL.</p>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h2 id="events"><i class="fas fa-calendar-alt me-2"></i>Managing Events</h2>
+            <p>Manage workshops, training sessions, conferences, and activities.</p>
+            
+            <h3>Key Fields</h3>
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Description</th>
+                  <th>Required</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Title</strong></td>
+                  <td>Event name</td>
+                  <td><span class="badge bg-danger">Yes</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Description</strong></td>
+                  <td>Full event details (WYSIWYG)</td>
+                  <td><span class="badge bg-danger">Yes</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Event Date</strong></td>
+                  <td>Date picker (YYYY-MM-DD)</td>
+                  <td><span class="badge bg-secondary">No</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Location</strong></td>
+                  <td>Venue name and address</td>
+                  <td><span class="badge bg-secondary">No</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Registration Link</strong></td>
+                  <td>External URL for registration</td>
+                  <td><span class="badge bg-secondary">No</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Theme</strong></td>
+                  <td>Link to related theme</td>
+                  <td><span class="badge bg-secondary">No</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Group ID</strong></td>
+                  <td>Group multilingual versions (e.g., "workshop-2025")</td>
+                  <td><span class="badge bg-warning">Recommended</span></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <hr class="my-4">
+
+            <h2 id="team"><i class="fas fa-users me-2"></i>Managing Team Members</h2>
+            <p>Showcase your team with profiles, photos, and contact information.</p>
+            
+            <h3>Profile Photo Guidelines</h3>
+            <ul>
+              <li><strong>Size:</strong> 400x400px (square)</li>
+              <li><strong>Format:</strong> JPG or PNG</li>
+              <li><strong>Quality:</strong> Professional headshot</li>
+              <li><strong>File size:</strong> Keep under 500KB</li>
+            </ul>
+
+            <hr class="my-4">
+
+            <h2 id="news"><i class="fas fa-newspaper me-2"></i>Managing News</h2>
+            <p>Publish news articles, updates, and announcements.</p>
+            
+            <h3>Best Practices</h3>
+            <ul>
+              <li><strong>Title:</strong> Keep it clear and compelling (50-60 characters)</li>
+              <li><strong>Excerpt:</strong> Write a short summary (150-200 characters)</li>
+              <li><strong>Featured Image:</strong> 1200x630px (optimized for social sharing)</li>
+              <li><strong>Content:</strong> Use headings, lists, and bold text for structure</li>
+            </ul>
+
+            <hr class="my-4">
+
+            <h2 id="documents"><i class="fas fa-file-alt me-2"></i>Managing Documents</h2>
+            <p>Upload downloadable files (PDFs, reports, guidelines).</p>
+            
+            <h3>Supported Formats</h3>
+            <div class="row">
+              <div class="col-md-6">
+                <ul>
+                  <li>PDF (.pdf)</li>
+                  <li>Word (.doc, .docx)</li>
+                  <li>Excel (.xls, .xlsx)</li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <ul>
+                  <li>PowerPoint (.ppt, .pptx)</li>
+                  <li>Text (.txt)</li>
+                  <li>Check server settings for size limits</li>
+                </ul>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h2 id="focus"><i class="fas fa-bullseye me-2"></i>Managing Focus Areas</h2>
+            <p>Define the core focus areas of your organization (4 recommended).</p>
+            
+            <h3>Icon Selection</h3>
+            <p>Use Font Awesome icons to visually represent each focus area:</p>
+            <ul>
+              <li><code>fa-users</code> - People/Community</li>
+              <li><code>fa-graduation-cap</code> - Education</li>
+              <li><code>fa-hands-helping</code> - Support/Help</li>
+              <li><code>fa-lightbulb</code> - Innovation</li>
+            </ul>
+            <p>Browse more icons: <a href="https://fontawesome.com/icons" target="_blank">fontawesome.com/icons</a></p>
+
+            <hr class="my-4">
+
+            <h2 id="settings"><i class="fas fa-cog me-2"></i>Settings</h2>
+            
+            <h3>1. Slider Settings</h3>
+            <p>Control the homepage hero slider:</p>
+            <ul>
+              <li>Add up to 5 slides</li>
+              <li>Upload banner images (1920x800px recommended)</li>
+              <li>Set title, caption, button text, and link for each slide</li>
+              <li>Configure text alignment and colors</li>
+            </ul>
+
+            <h3>2. Contact Settings</h3>
+            <p>Manage contact information:</p>
+            <ul>
+              <li>Address, email, phone number</li>
+              <li>Google reCAPTCHA for spam protection</li>
+            </ul>
+
+            <h3>3. GDPR Settings</h3>
+            <p>Edit privacy policy and data protection information.</p>
+
+            <h3>4. Stats / Counters</h3>
+            <p>Display key metrics on homepage:</p>
+            <ul>
+              <li>Add up to 4 statistics</li>
+              <li>Set value, suffix, labels (in all languages), and icon</li>
+              <li>Example: "500+ Students Trained"</li>
+            </ul>
+
+            <hr class="my-4">
+
+            <h2 id="pages"><i class="fas fa-file me-2"></i>Managing Pages</h2>
+            <p>Edit static pages: <strong>Home</strong> and <strong>About Us</strong>.</p>
+            
+            <h3>Editing Pages</h3>
+            <ol>
+              <li>Click <strong>Pages → Home</strong> or <strong>About Us</strong></li>
+              <li>Select language: <code>?lang=en</code>, <code>?lang=sk</code>, or <code>?lang=hu</code></li>
+              <li>Edit main content with WYSIWYG editor</li>
+              <li>Upload additional images (up to 4) with captions</li>
+              <li>Click <strong>"Update Page"</strong></li>
+            </ol>
+
+            <hr class="my-4">
+
+            <h2 id="multilanguage"><i class="fas fa-globe me-2"></i>Multi-Language Content</h2>
+            <p>The website supports <strong>English, Slovak, and Hungarian</strong>.</p>
+            
+            <h3>Creating Multi-Language Content</h3>
+            <ol>
+              <li><strong>Create English Version First</strong>
+                <ul>
+                  <li>Always start with English (default)</li>
+                  <li>Fill all fields completely</li>
+                </ul>
+              </li>
+              <li><strong>Create Slovak Version</strong>
+                <ul>
+                  <li>Add <code>?lang=sk</code> to URL</li>
+                  <li>Create new item with translated content</li>
+                  <li>Use same <code>group_id</code> (for events) or matching title</li>
+                </ul>
+              </li>
+              <li><strong>Create Hungarian Version</strong>
+                <ul>
+                  <li>Add <code>?lang=hu</code> to URL</li>
+                  <li>Create new item with translated content</li>
+                  <li>Use same <code>group_id</code> or matching title</li>
+                </ul>
+              </li>
+            </ol>
+
+            <div class="alert alert-success">
+              <i class="fas fa-check-circle me-2"></i>
+              <strong>Translation Tip:</strong> Translate naturally for each culture. Don't use word-by-word literal translation.
+            </div>
+
+            <hr class="my-4">
+
+            <h2 id="tips"><i class="fas fa-star me-2"></i>Tips & Best Practices</h2>
+            
+            <h3>Content Writing</h3>
+            <ul>
+              <li><strong>Be Clear and Concise</strong> - Use simple language</li>
+              <li><strong>Use Visuals</strong> - Include relevant, optimized images</li>
+              <li><strong>SEO-Friendly</strong> - Write descriptive titles and unique slugs</li>
+            </ul>
+
+            <h3>Image Guidelines</h3>
+            <table class="table table-sm table-bordered">
+              <thead>
+                <tr>
+                  <th>Image Type</th>
+                  <th>Recommended Size</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Slider images</td>
+                  <td>1920x800px</td>
+                </tr>
+                <tr>
+                  <td>Theme/Event banners</td>
+                  <td>1200x600px</td>
+                </tr>
+                <tr>
+                  <td>Team photos</td>
+                  <td>400x400px (square)</td>
+                </tr>
+                <tr>
+                  <td>News featured images</td>
+                  <td>1200x630px</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>Security</h3>
+            <ul>
+              <li><strong>Change Default Credentials</strong> - Update immediately</li>
+              <li><strong>Use Strong Passwords</strong> - Min 12 characters, mixed case, numbers, symbols</li>
+              <li><strong>Regular Backups</strong> - Back up database and files regularly</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+              <li><strong>Optimize Images</strong> - Compress before upload (use TinyPNG)</li>
+              <li><strong>Limit Additional Images</strong> - Use 2-4 per item max</li>
+              <li><strong>Clean Up Unused Content</strong> - Delete old drafts and unused files</li>
+            </ul>
+
+            <hr class="my-4">
+
+            <h2><i class="fas fa-question-circle me-2"></i>Troubleshooting</h2>
+            
+            <div class="accordion" id="faqAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                    WYSIWYG Editor Not Loading
+                  </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body">
+                    <strong>Solution:</strong>
+                    <ol>
+                      <li>Hard refresh: <kbd>Ctrl+Shift+R</kbd> (Windows) or <kbd>Cmd+Shift+R</kbd> (Mac)</li>
+                      <li>Clear browser cache</li>
+                      <li>Try different browser (Chrome, Firefox, Edge)</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwo">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                    Images Not Uploading
+                  </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body">
+                    <strong>Possible causes:</strong>
+                    <ul>
+                      <li>File too large (reduce size below 5MB)</li>
+                      <li>Unsupported format (use JPG/PNG)</li>
+                      <li>Server storage full (contact administrator)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingThree">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                    Changes Not Appearing on Website
+                  </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body">
+                    <strong>Solution:</strong>
+                    <ol>
+                      <li>Check item status is "Published" (not "Draft")</li>
+                      <li>Clear browser cache</li>
+                      <li>Verify correct language version</li>
+                      <li>Wait a few seconds and refresh</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="alert alert-primary">
+              <h4><i class="fas fa-info-circle me-2"></i>Need Help?</h4>
+              <p class="mb-2">For technical support or questions:</p>
+              <ul class="mb-0">
+                <li><strong>Email:</strong> info@skillsupslovakia.org</li>
+                <li><strong>Documentation:</strong> Check README files in project folder</li>
+              </ul>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="text-center text-muted">
+              <p class="mb-1"><strong>Admin Panel User Guide</strong></p>
+              <p class="mb-0">Version 1.0 - October 2025</p>
+              <p class="mb-0">SkillsUp Slovakia - Empowering Communities Through Education</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .user-guide-content {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .user-guide-content h2 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #dee2e6;
+    color: #2c3e50;
+  }
+  .user-guide-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #34495e;
+  }
+  .user-guide-content code {
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #e83e8c;
+    font-size: 90%;
+  }
+  .user-guide-content pre {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #007bff;
+  }
+  .user-guide-content kbd {
+    background: #333;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 85%;
+  }
+  .user-guide-content ul, .user-guide-content ol {
+    margin-bottom: 1rem;
+  }
+  .user-guide-content li {
+    margin-bottom: 0.5rem;
+  }
+  .user-guide-content .alert {
+    border-left: 4px solid;
+  }
+  .user-guide-content .alert-info {
+    border-left-color: #17a2b8;
+  }
+  .user-guide-content .alert-warning {
+    border-left-color: #ffc107;
+  }
+  .user-guide-content .alert-success {
+    border-left-color: #28a745;
+  }
+  .user-guide-content .alert-primary {
+    border-left-color: #007bff;
+  }
+  .user-guide-content .table {
+    margin-bottom: 1.5rem;
+  }
+  .accordion-button:not(.collapsed) {
+    background-color: #e7f3ff;
+    color: #004085;
+  }
+</style>
+
+<%- include('admin-layout-bottom') %>
