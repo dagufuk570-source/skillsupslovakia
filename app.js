@@ -345,34 +345,19 @@ const port = process.env.PORT || 3000;
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Lazy DB init middleware (runs once on first request in serverless)
-app.use(async (req, res, next) => {
-  try {
-    await ensureDbInitialized();
-    next();
-  } catch (err) {
-    console.error('[Middleware] DB initialization failed:', err.message);
-    console.error('[Middleware] Full error:', err);
-    
-    // Send detailed error to user (helpful for debugging)
-    const errorDetails = {
-      error: 'Database initialization failed',
-      message: err.message,
-      hasDatabaseUrl: !!process.env.DATABASE_URL,
-      suggestion: !process.env.DATABASE_URL 
-        ? 'DATABASE_URL environment variable is not set. Please configure it in Vercel dashboard.' 
-        : 'Check if DATABASE_URL is correct and database is accessible.'
-    };
-    
-    res.status(500).json(errorDetails);
-  }
-});
+// NOTE: DB initialization middleware moved further down so static assets can be
+// served even when the database is unavailable. The actual middleware is
+// inserted after the static file handler below.
 
 // Security headers (Helmet) + CSP
-// Note: We keep 'unsafe-eval' DISALLOWED. Inline scripts are temporarily allowed via 'unsafe-inline'.
-// If you want to harden further, move inline scripts to external files and replace 'unsafe-inline' with nonces.
+// Note: Helmet disabled temporarily to allow HTTP connections without HTTPS upgrade
+// Re-enable after SSL certificate is installed
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false,
+  strictTransportSecurity: false,
+  crossOriginOpenerPolicy: false,
+  originAgentCluster: false,
 }));
 
 // Content Security Policy: strict by default, relaxed for /admin to support Quill editor if needed
@@ -479,6 +464,30 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Lazy DB init middleware (runs once on first request in serverless/traditional)
+app.use(async (req, res, next) => {
+  try {
+    await ensureDbInitialized();
+    next();
+  } catch (err) {
+    console.error('[Middleware] DB initialization failed:', err.message);
+    console.error('[Middleware] Full error:', err);
+    
+    // Send detailed error to user (helpful for debugging) but allow static
+    // requests to have already been served above.
+    const errorDetails = {
+      error: 'Database initialization failed',
+      message: err.message,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      suggestion: !process.env.DATABASE_URL
+        ? 'DATABASE_URL environment variable is not set. Please configure it in your environment.'
+        : 'Check if DATABASE_URL is correct and database is accessible.'
+    };
+    
+    res.status(500).json(errorDetails);
+  }
+});
 
 // Legacy route alias: /focus -> /focus-areas
 app.get('/focus', (req, res) => {
@@ -804,11 +813,21 @@ function basicAuth(req, res, next){
 
 app.get('/', async (req,res) =>{
   // get home page from DB
-  const pages = await db.listPages(res.locals.lang);
-  const menu = buildMenu(pages);
-  const home = pages.find(p=>p.slug === 'home');
-  const settings = await db.getSettings?.(res.locals.lang).catch(()=>({})) || {};
-  const slider = Array.isArray(settings.slider) ? settings.slider : [];
+  let pages = [];
+  let menu = [];
+  let home = null;
+  let settings = {};
+  let slider = [];
+  try {
+    pages = await db.listPages(res.locals.lang);
+    menu = buildMenu(pages);
+    home = pages.find(p=>p.slug === 'home');
+    settings = await db.getSettings?.(res.locals.lang).catch(()=>({})) || {};
+    slider = Array.isArray(settings.slider) ? settings.slider : [];
+  } catch(err) {
+    console.error('[app.get /] Database error:', err.message);
+    // Show placeholder content when DB is unavailable
+  }
     // Fetch EN images + current language content blocks for homepage
   let blocksHtml = '';
   let midRowHtml = '';
@@ -966,10 +985,11 @@ app.get('/', async (req,res) =>{
 });
 
 app.get('/page/:slug', async (req,res)=>{
-  const page = await db.getPage(res.locals.lang, req.params.slug);
-  const pages = await db.listPages(res.locals.lang);
-  const menu = buildMenu(pages);
-  if(!page) return res.status(404).send('Not found');
+  try {
+    const page = await db.getPage(res.locals.lang, req.params.slug);
+    const pages = await db.listPages(res.locals.lang);
+    const menu = buildMenu(pages);
+    if(!page) return res.status(404).send('Not found');
   let contentHtml = page.content;
   // Special rendering for GDPR: use section header like other pages and hide the page title text
   if (req.params.slug === 'gdpr') {
@@ -1175,6 +1195,10 @@ app.get('/page/:slug', async (req,res)=>{
     } catch {}
   }
   return res.render('page', { menu, page: { title: page.title, content: contentHtml, image_url: page.image_url }, lang: res.locals.lang, slider: null, t: res.locals.t });
+  } catch(err) {
+    console.error('[app.get /page/:slug] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 // Contact form handler (stores nothing for now; extend to email/DB later)
@@ -1325,6 +1349,7 @@ app.post('/contact', async (req, res) => {
 
 // Public events listing
 app.get('/events', async (req, res) => {
+  try {
     const pages = await db.listPages(res.locals.lang);
     const menu = buildMenu(pages);
     // Aggregate across languages and deduplicate by group
@@ -1374,6 +1399,10 @@ app.get('/events', async (req, res) => {
     const html = `<div class=\"row\">${cards || `<div class=\"text-muted\">${res.locals.t('noEventsYet')}</div>`}</div>`;
   const shEvents = { kicker: res.locals.t('eventsKicker'), heading: res.locals.t('eventsHeading'), subheading: '' };
   return res.render('page', { menu, page: { title: res.locals.t('eventsTitle'), content: html }, lang: res.locals.lang, slider: null, sectionHeader: shEvents, t: res.locals.t });
+  } catch(err) {
+    console.error('[app.get /events] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
 });
 
 // Simple admin UI to edit content for a language
