@@ -9,8 +9,8 @@
     <script src="/lib/wow/wow.min.js"></script>
     <script src="/lib/easing/easing.min.js"></script>
   
-  <!-- TinyMCE WYSIWYG Editor -->
-  <script src="https://cdn.tiny.cloud/1/4qtyjmzwgrzybn10gx5so9ss4rcmjhtr6367vtfpjowjxhfx/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+  <!-- CKEditor 5 WYSIWYG Editor -->
+  <script src="https://cdn.ckeditor.com/ckeditor5/40.0.0/classic/ckeditor.js"></script>
     
     <!-- Suppress noisy extension errors (e.g., MutationObserver observe target not a Node) to avoid breaking admin UX -->
     <script>
@@ -28,27 +28,28 @@
     <script>
       new WOW().init();
       
-      // Initialize TinyMCE editor for all textareas with class 'wysiwyg'
+      // Initialize CKEditor 5 for all textareas with class 'wysiwyg'
       (function(){
         var INIT_SELECTOR = 'textarea.wysiwyg';
+        var editors = {};
         
         function initEditors(){
-          if(!window.tinymce) {
-            console.warn('[TinyMCE] not loaded yet, retrying...');
+          if(!window.ClassicEditor) {
+            console.warn('[CKEditor] not loaded yet, retrying...');
             return setTimeout(initEditors, 500);
           }
           
           var textareas = document.querySelectorAll(INIT_SELECTOR);
           if(!textareas.length) {
-            console.log('[TinyMCE] No textareas found with class "wysiwyg"');
+            console.log('[CKEditor] No textareas found with class "wysiwyg"');
             return;
           }
           
-          console.log('[TinyMCE] Initializing on', textareas.length, 'textarea(s)');
+          console.log('[CKEditor] Initializing on', textareas.length, 'textarea(s)');
           
           textareas.forEach(function(textarea){
             // Skip if already initialized
-            if(textarea.style.display === 'none' && textarea.nextSibling && textarea.nextSibling.classList && textarea.nextSibling.classList.contains('tox-tinymce')){
+            if(editors[textarea.id]) {
               return;
             }
             
@@ -59,24 +60,59 @@
               textarea.id = textareaId;
             }
             
-            // Initialize TinyMCE
-            tinymce.init({
-              selector: '#' + textareaId,
-              height: 400,
-              menubar: false,
-              plugins: [
-                'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                'insertdatetime', 'media', 'table', 'help', 'wordcount'
-              ],
-              toolbar: 'undo redo | blocks | ' +
-                'bold italic forecolor | alignleft aligncenter ' +
-                'alignright alignjustify | bullist numlist outdent indent | ' +
-                'removeformat | link image | code | help',
-              content_style: 'body { font-family: "Open Sans", Arial, sans-serif; font-size: 14px; }',
-              branding: false,
-              promotion: false
-            });
+            // Hide original textarea
+            textarea.style.display = 'none';
+            
+            // Create editor container
+            var editorDiv = document.createElement('div');
+            editorDiv.id = textareaId + '-editor';
+            editorDiv.innerHTML = textarea.value || '';
+            textarea.parentNode.insertBefore(editorDiv, textarea.nextSibling);
+            
+            // Initialize CKEditor
+            ClassicEditor
+              .create(editorDiv, {
+                toolbar: {
+                  items: [
+                    'heading', '|',
+                    'bold', 'italic', 'link', 'bulletedList', 'numberedList', '|',
+                    'outdent', 'indent', '|',
+                    'blockQuote', 'insertTable', '|',
+                    'undo', 'redo', '|',
+                    'sourceEditing'
+                  ]
+                },
+                heading: {
+                  options: [
+                    { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                    { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                    { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                    { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
+                  ]
+                },
+                table: {
+                  contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
+                }
+              })
+              .then(function(editor) {
+                editors[textareaId] = editor;
+                
+                // Sync editor content to textarea
+                editor.model.document.on('change:data', function() {
+                  textarea.value = editor.getData();
+                });
+                
+                // Sync on form submit
+                var form = textarea.closest('form');
+                if(form){
+                  form.addEventListener('submit', function(){
+                    textarea.value = editor.getData();
+                  });
+                }
+              })
+              .catch(function(error) {
+                console.error('[CKEditor] Initialization error:', error);
+              });
           });
         }
         
