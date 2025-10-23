@@ -9,8 +9,8 @@
     <script src="/lib/wow/wow.min.js"></script>
     <script src="/lib/easing/easing.min.js"></script>
   
-  <!-- TinyMCE WYSIWYG Editor (Self-hosted - no domain restrictions) -->
-  <script src="/lib/tinymce/tinymce.min.js"></script>
+  <!-- Summernote WYSIWYG Editor (100% Free, no restrictions) -->
+  <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js"></script>
     
     <!-- Suppress noisy extension errors (e.g., MutationObserver observe target not a Node) to avoid breaking admin UX -->
     <script>
@@ -28,54 +28,54 @@
     <script>
       new WOW().init();
       
-      // Initialize TinyMCE editor for all textareas with class 'wysiwyg'
+      // Initialize Summernote editor for all textareas with class 'wysiwyg'
       (function(){
         var INIT_SELECTOR = 'textarea.wysiwyg';
         
         function initEditors(){
-          if(!window.tinymce) {
-            console.warn('[TinyMCE] not loaded yet, retrying...');
+          if(!window.jQuery || !$.fn.summernote) {
+            console.warn('[Summernote] jQuery or Summernote not loaded yet, retrying...');
             return setTimeout(initEditors, 500);
           }
           
-          var textareas = document.querySelectorAll(INIT_SELECTOR);
-          if(!textareas.length) {
-            console.log('[TinyMCE] No textareas found with class "wysiwyg"');
+          var $textareas = $(INIT_SELECTOR);
+          if(!$textareas.length) {
+            console.log('[Summernote] No textareas found with class "wysiwyg"');
             return;
           }
           
-          console.log('[TinyMCE] Initializing on', textareas.length, 'textarea(s)');
+          console.log('[Summernote] Initializing on', $textareas.length, 'textarea(s)');
           
-          textareas.forEach(function(textarea){
+          $textareas.each(function(){
+            var $textarea = $(this);
+            
             // Skip if already initialized
-            if(textarea.style.display === 'none' && textarea.nextSibling && textarea.nextSibling.classList && textarea.nextSibling.classList.contains('tox-tinymce')){
+            if($textarea.next('.note-editor').length > 0){
               return;
             }
             
-            // Get textarea ID or create one
-            var textareaId = textarea.id;
-            if(!textareaId){
-              textareaId = 'wysiwyg-' + Math.random().toString(36).substr(2, 9);
-              textarea.id = textareaId;
-            }
-            
-            // Initialize TinyMCE
-            tinymce.init({
-              selector: '#' + textareaId,
+            // Initialize Summernote
+            $textarea.summernote({
               height: 400,
-              menubar: false,
-              plugins: [
-                'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
-                'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                'insertdatetime', 'media', 'table', 'help', 'wordcount'
+              minHeight: 200,
+              maxHeight: 800,
+              focus: false,
+              toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'clear']],
+                ['fontname', ['fontname']],
+                ['color', ['color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['table', ['table']],
+                ['insert', ['link', 'picture', 'video']],
+                ['view', ['fullscreen', 'codeview', 'help']]
               ],
-              toolbar: 'undo redo | blocks | ' +
-                'bold italic forecolor | alignleft aligncenter ' +
-                'alignright alignjustify | bullist numlist outdent indent | ' +
-                'removeformat | link image | code | help',
-              content_style: 'body { font-family: "Open Sans", Arial, sans-serif; font-size: 14px; }',
-              branding: false,
-              promotion: false
+              styleTags: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+              callbacks: {
+                onChange: function(contents) {
+                  $textarea.val(contents);
+                }
+              }
             });
           });
         }
