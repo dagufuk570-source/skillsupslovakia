@@ -716,7 +716,7 @@ const TRANSLATIONS = {
     editPartner: 'Edit Partner', partnerName: 'Partner Name', partnerLogo: 'Partner Logo', sortOrder: 'Sort Order',
     save: 'Save', update: 'Update', cancel: 'Cancel', delete: 'Delete', edit: 'Edit', actions: 'Actions',
     noPartnersYet: 'No partners yet.', partnerCreated: 'Partner created successfully!', partnerUpdated: 'Partner updated successfully!',
-    partnerDeleted: 'Partner deleted successfully!', deleteConfirm: 'Delete this partner?', 
+    partnerDeleted: 'Partner deleted successfully!', deleteConfirm: 'Delete this partner?', noLogo: 'No logo',
     optional: 'Optional', required: 'Required', currentLogo: 'Current Logo', removeLogo: 'Remove current logo',
     defaultPlaceholder: 'will use default placeholder', imageInfo: 'PNG, JPG, or SVG recommended. Max 2MB. Image will be resized to 300x300px.',
     noLogoProvided: 'If not provided, a default placeholder will be used.'
@@ -747,7 +747,7 @@ const TRANSLATIONS = {
     editPartner: 'Upraviť partnera', partnerName: 'Názov partnera', partnerLogo: 'Logo partnera', sortOrder: 'Poradie',
     save: 'Uložiť', update: 'Aktualizovať', cancel: 'Zrušiť', delete: 'Vymazať', edit: 'Upraviť', actions: 'Akcie',
     noPartnersYet: 'Zatiaľ žiadni partneri.', partnerCreated: 'Partner bol úspešne vytvorený!', partnerUpdated: 'Partner bol úspešne aktualizovaný!',
-    partnerDeleted: 'Partner bol úspešne vymazaný!', deleteConfirm: 'Vymazať tohto partnera?',
+    partnerDeleted: 'Partner bol úspešne vymazaný!', deleteConfirm: 'Vymazať tohto partnera?', noLogo: 'Bez loga',
     optional: 'Voliteľné', required: 'Povinné', currentLogo: 'Aktuálne logo', removeLogo: 'Odstrániť aktuálne logo',
     defaultPlaceholder: 'použije sa predvolený zástupný obrázok', imageInfo: 'Odporúčané PNG, JPG alebo SVG. Max 2MB. Obrázok bude zmenšený na 300x300px.',
     noLogoProvided: 'Ak nie je k dispozícii, použije sa predvolený zástupný obrázok.'
@@ -4686,7 +4686,7 @@ app.get('/partners', async (req, res) => {
       menu,
       slider: null,
       page: {
-        title: res.locals.t('ourPartners'),
+        title: '', // No title header for partners page
         slug: 'partners',
         content: `
           <div class="container-xxl py-5">

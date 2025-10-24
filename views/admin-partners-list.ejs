@@ -36,7 +36,7 @@
               <% if(partner.logo_url) { %>
                 <img src="<%= partner.logo_url %>" alt="<%= partner.name %>" style="max-width:80px; max-height:80px; object-fit:contain;">
               <% } else { %>
-                <span class="text-muted">No logo</span>
+                <span class="text-muted"><%= t('noLogo') || 'No logo' %></span>
               <% } %>
             </td>
             <td class="align-middle"><strong><%= partner.name %></strong></td>
