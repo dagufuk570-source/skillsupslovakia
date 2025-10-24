@@ -1,6 +1,6 @@
-<%- include('admin-layout-top', { title: partner ? 'Edit Partner' : 'Add New Partner', active: 'partners' }) %>
+<%- include('admin-layout-top', { title: partner ? t('editPartner') : t('addNewPartner'), active: 'partners' }) %>
 
-<h2 class="mb-4"><%= partner ? 'Edit Partner' : 'Add New Partner' %></h2>
+<h2 class="mb-4"><%= partner ? t('editPartner') : t('addNewPartner') %></h2>
 
 <% if(locals.error) { %>
   <div class="alert alert-danger"><%= error %></div>
@@ -9,39 +9,39 @@
 <form action="/admin/partners<%= partner ? '/' + partner.id : '' %>?lang=<%= lang %>" method="POST" enctype="multipart/form-data">
   
   <div class="mb-3">
-    <label for="name" class="form-label">Partner Name *</label>
+    <label for="name" class="form-label"><%= t('partnerName') %> * (<%= t('required') %>)</label>
     <input type="text" class="form-control" id="name" name="name" value="<%= partner ? partner.name : '' %>" required>
   </div>
 
   <div class="mb-3">
-    <label for="logo" class="form-label">Partner Logo (Optional)</label>
+    <label for="logo" class="form-label"><%= t('partnerLogo') %> (<%= t('optional') %>)</label>
     <% if(partner && partner.logo_url) { %>
       <div class="mb-2">
-        <img src="<%= partner.logo_url %>" alt="Current logo" style="max-width:200px; max-height:200px; object-fit:contain; border:1px solid #ddd; padding:10px;">
+        <img src="<%= partner.logo_url %>" alt="<%= t('currentLogo') %>" style="max-width:200px; max-height:200px; object-fit:contain; border:1px solid #ddd; padding:10px;">
       </div>
       <div class="form-check mb-2">
         <input class="form-check-input" type="checkbox" id="remove_logo" name="remove_logo" value="1">
         <label class="form-check-label" for="remove_logo">
-          Remove current logo (will use default placeholder)
+          <%= t('removeLogo') %> (<%= t('defaultPlaceholder') %>)
         </label>
       </div>
     <% } %>
     <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
-    <small class="form-text text-muted">PNG, JPG, or SVG recommended. Max 2MB. Image will be resized to 300x300px. If not provided, a default placeholder will be used.</small>
+    <small class="form-text text-muted"><%= t('imageInfo') %> <%= t('noLogoProvided') %></small>
   </div>
 
   <div class="mb-3">
-    <label for="sort_order" class="form-label">Sort Order</label>
+    <label for="sort_order" class="form-label"><%= t('sortOrder') %></label>
     <input type="number" class="form-control" id="sort_order" name="sort_order" value="<%= partner ? (partner.sort_order || 0) : 0 %>" min="0">
     <small class="form-text text-muted">Lower numbers appear first.</small>
   </div>
 
   <div class="mt-4">
     <button type="submit" class="btn btn-primary">
-      <i class="bi bi-save"></i> <%= partner ? 'Update' : 'Create' %> Partner
+      <i class="bi bi-save"></i> <%= partner ? t('update') : t('save') %>
     </button>
     <a href="/admin/partners?lang=<%= lang %>" class="btn btn-secondary">
-      <i class="bi bi-x-circle"></i> Cancel
+      <i class="bi bi-x-circle"></i> <%= t('cancel') %>
     </a>
   </div>
 

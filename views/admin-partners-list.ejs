@@ -1,20 +1,20 @@
-<%- include('admin-layout-top', { title: 'Manage Partners', active: 'partners' }) %>
+<%- include('admin-layout-top', { title: t('managePartners'), active: 'partners' }) %>
 
-<h2 class="mb-4">Manage Partners</h2>
+<h2 class="mb-4"><%= t('managePartners') %></h2>
 
 <% if(success === 'created') { %>
-  <div class="alert alert-success">Partner created successfully!</div>
+  <div class="alert alert-success"><%= t('partnerCreated') %></div>
 <% } else if(success === 'updated') { %>
-  <div class="alert alert-success">Partner updated successfully!</div>
+  <div class="alert alert-success"><%= t('partnerUpdated') %></div>
 <% } else if(success === 'deleted') { %>
-  <div class="alert alert-success">Partner deleted successfully!</div>
+  <div class="alert alert-success"><%= t('partnerDeleted') %></div>
 <% } else if(locals.error) { %>
   <div class="alert alert-danger">Error: <%= error %></div>
 <% } %>
 
 <div class="mb-3">
   <a href="/admin/partners/new?lang=<%= lang %>" class="btn btn-primary">
-    <i class="bi bi-plus-circle"></i> Add New Partner
+    <i class="bi bi-plus-circle"></i> <%= t('addNewPartner') %>
   </a>
 </div>
 
@@ -23,10 +23,10 @@
     <table class="table table-bordered table-hover">
       <thead class="table-light">
         <tr>
-          <th style="width:100px">Logo</th>
-          <th>Name</th>
-          <th style="width:120px">Sort Order</th>
-          <th style="width:180px">Actions</th>
+          <th style="width:100px"><%= t('partnerLogo') %></th>
+          <th><%= t('partnerName') %></th>
+          <th style="width:120px"><%= t('sortOrder') %></th>
+          <th style="width:180px"><%= t('actions') %></th>
         </tr>
       </thead>
       <tbody>
@@ -43,11 +43,11 @@
             <td class="align-middle text-center"><%= partner.sort_order || 0 %></td>
             <td class="align-middle">
               <a href="/admin/partners/<%= partner.id %>/edit?lang=<%= lang %>" class="btn btn-sm btn-warning">
-                <i class="bi bi-pencil"></i> Edit
+                <i class="bi bi-pencil"></i> <%= t('edit') %>
               </a>
-              <form action="/admin/partners/<%= partner.id %>/delete?lang=<%= lang %>" method="POST" style="display:inline;" onsubmit="return confirm('Delete this partner?');">
+              <form action="/admin/partners/<%= partner.id %>/delete?lang=<%= lang %>" method="POST" style="display:inline;" onsubmit="return confirm('<%= t('deleteConfirm') %>');">
                 <button type="submit" class="btn btn-sm btn-danger">
-                  <i class="bi bi-trash"></i> Delete
+                  <i class="bi bi-trash"></i> <%= t('delete') %>
                 </button>
               </form>
             </td>
@@ -57,7 +57,7 @@
     </table>
   </div>
 <% } else { %>
-  <div class="alert alert-info">No partners yet. <a href="/admin/partners/new?lang=<%= lang %>">Add the first partner</a>.</div>
+  <div class="alert alert-info"><%= t('noPartnersYet') %> <a href="/admin/partners/new?lang=<%= lang %>"><%= t('addNewPartner') %></a>.</div>
 <% } %>
 
 <%- include('admin-layout-bottom') %>

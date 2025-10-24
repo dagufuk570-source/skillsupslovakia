@@ -104,14 +104,12 @@
                                 <div class="collapse navbar-collapse" id="navbarCollapse">
                     <div class="navbar-nav me-auto">
                                                 <a href="/?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/' ? 'active' : '') %>">
-                                                    <i class="fas fa-house me-1 <%= (currentPath === '/' ? 'text-warning' : 'text-light opacity-75') %>"></i>
                                                     <span class="text-capitalize"><%= t('home') %></span>
                                                 </a>
                                                                         <% if (menu && menu.length > 0) { %>
                                                                             <% const aboutItem = (menu.find(item => item.slug === 'about-us') || menu.find(item => item.slug === 'about')); %>
                                                                             <% if (aboutItem) { %>
                                                                                 <a href="/page/<%= aboutItem.slug %>?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/page/' + aboutItem.slug ? 'active' : '') %>">
-                                                                                    <i class="fas fa-circle-info me-1 <%= (currentPath === '/page/' + aboutItem.slug ? 'text-warning' : 'text-light opacity-75') %>"></i>
                                                                                     <span class="text-capitalize"><%= aboutItem.label || t('about') %></span>
                                                                                 </a>
                                                                             <% } %>
@@ -141,14 +139,12 @@
                                                     <% const gdprItem = menu.find(item => item.slug === 'gdpr'); %>
                                                     <% if (gdprItem) { %>
                                                         <a href="/page/<%= gdprItem.slug %>?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/page/' + gdprItem.slug ? 'active' : '') %>">
-                                                            <i class="fas fa-shield-halved me-1 <%= (currentPath === '/page/' + gdprItem.slug ? 'text-warning' : 'text-light opacity-75') %>"></i>
                                                             <span class="text-capitalize"><%= gdprItem.label || t('gdpr') %></span>
                                                         </a>
                                                     <% } %>
                                                     <% const contactItem = menu.find(item => item.slug === 'contact'); %>
                                                     <% if (contactItem) { %>
                                                         <a href="/page/<%= contactItem.slug %>?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/page/' + contactItem.slug ? 'active' : '') %>">
-                                                            <i class="fas fa-envelope me-1 <%= (currentPath === '/page/' + contactItem.slug ? 'text-warning' : 'text-light opacity-75') %>"></i>
                                                             <span class="text-capitalize"><%= contactItem.label || t('contact') %></span>
                                                         </a>
                                                     <% } %>

@@ -710,7 +710,16 @@ const TRANSLATIONS = {
     // Team
     teamKicker: 'OUR TEAM', teamHeading: 'Meet Our Dedicated Team Members', noTeamYet: 'No team members yet.',
     // Partners
-    ourPartners: 'Our Partners', partnersTitle: 'Organizations We Work With'
+    ourPartners: 'Our Partners', partnersTitle: 'Organizations We Work With',
+    // Admin Panel
+    adminPanel: 'Admin Panel', dashboard: 'Dashboard', managePartners: 'Manage Partners', addNewPartner: 'Add New Partner', 
+    editPartner: 'Edit Partner', partnerName: 'Partner Name', partnerLogo: 'Partner Logo', sortOrder: 'Sort Order',
+    save: 'Save', update: 'Update', cancel: 'Cancel', delete: 'Delete', edit: 'Edit', actions: 'Actions',
+    noPartnersYet: 'No partners yet.', partnerCreated: 'Partner created successfully!', partnerUpdated: 'Partner updated successfully!',
+    partnerDeleted: 'Partner deleted successfully!', deleteConfirm: 'Delete this partner?', 
+    optional: 'Optional', required: 'Required', currentLogo: 'Current Logo', removeLogo: 'Remove current logo',
+    defaultPlaceholder: 'will use default placeholder', imageInfo: 'PNG, JPG, or SVG recommended. Max 2MB. Image will be resized to 300x300px.',
+    noLogoProvided: 'If not provided, a default placeholder will be used.'
   },
   sk: {
     home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
@@ -732,7 +741,16 @@ const TRANSLATIONS = {
   share: 'Zdieľať:', copy: 'Kopírovať', backToList: 'Späť na zoznam',
     themeNotFound: 'Téma sa nenašla', eventNotFound: 'Podujatie sa nenašlo', newsNotFound: 'Novinka sa nenašla', teamNotFound: 'Člen tímu sa nenašiel',
     teamKicker: 'NÁŠ TÍM', teamHeading: 'Zoznámte sa s našimi členmi tímu', noTeamYet: 'Zatiaľ žiadni členovia tímu.',
-    ourPartners: 'Naši partneri', partnersTitle: 'Organizácie, s ktorými spolupracujeme'
+    ourPartners: 'Naši partneri', partnersTitle: 'Organizácie, s ktorými spolupracujeme',
+    // Admin Panel
+    adminPanel: 'Admin Panel', dashboard: 'Prehľad', managePartners: 'Spravovať partnerov', addNewPartner: 'Pridať nového partnera',
+    editPartner: 'Upraviť partnera', partnerName: 'Názov partnera', partnerLogo: 'Logo partnera', sortOrder: 'Poradie',
+    save: 'Uložiť', update: 'Aktualizovať', cancel: 'Zrušiť', delete: 'Vymazať', edit: 'Upraviť', actions: 'Akcie',
+    noPartnersYet: 'Zatiaľ žiadni partneri.', partnerCreated: 'Partner bol úspešne vytvorený!', partnerUpdated: 'Partner bol úspešne aktualizovaný!',
+    partnerDeleted: 'Partner bol úspešne vymazaný!', deleteConfirm: 'Vymazať tohto partnera?',
+    optional: 'Voliteľné', required: 'Povinné', currentLogo: 'Aktuálne logo', removeLogo: 'Odstrániť aktuálne logo',
+    defaultPlaceholder: 'použije sa predvolený zástupný obrázok', imageInfo: 'Odporúčané PNG, JPG alebo SVG. Max 2MB. Obrázok bude zmenšený na 300x300px.',
+    noLogoProvided: 'Ak nie je k dispozícii, použije sa predvolený zástupný obrázok.'
   },
   hu: {
     home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',
@@ -754,7 +772,16 @@ const TRANSLATIONS = {
   share: 'Megosztás:', copy: 'Másolás', backToList: 'Vissza a listához',
     themeNotFound: 'Téma nem található', eventNotFound: 'Esemény nem található', newsNotFound: 'Hír nem található', teamNotFound: 'Csapattag nem található',
     teamKicker: 'CSAPATUNK', teamHeading: 'Ismerje meg elkötelezett csapatunkat', noTeamYet: 'Még nincsenek csapattagok.',
-    ourPartners: 'Partnereink', partnersTitle: 'Szervezetek, amelyekkel együttműködünk'
+    ourPartners: 'Partnereink', partnersTitle: 'Szervezetek, amelyekkel együttműködünk',
+    // Admin Panel
+    adminPanel: 'Admin Panel', dashboard: 'Műszerfal', managePartners: 'Partnerek kezelése', addNewPartner: 'Új partner hozzáadása',
+    editPartner: 'Partner szerkesztése', partnerName: 'Partner neve', partnerLogo: 'Partner logó', sortOrder: 'Sorrend',
+    save: 'Mentés', update: 'Frissítés', cancel: 'Mégse', delete: 'Törlés', edit: 'Szerkesztés', actions: 'Műveletek',
+    noPartnersYet: 'Még nincsenek partnerek.', partnerCreated: 'Partner sikeresen létrehozva!', partnerUpdated: 'Partner sikeresen frissítve!',
+    partnerDeleted: 'Partner sikeresen törölve!', deleteConfirm: 'Törli ezt a partnert?',
+    optional: 'Opcionális', required: 'Kötelező', currentLogo: 'Jelenlegi logó', removeLogo: 'Jelenlegi logó eltávolítása',
+    defaultPlaceholder: 'alapértelmezett helyőrző lesz használva', imageInfo: 'PNG, JPG vagy SVG ajánlott. Max 2MB. A kép 300x300px-re lesz átméretezve.',
+    noLogoProvided: 'Ha nincs megadva, alapértelmezett helyőrző lesz használva.'
   }
 };
 app.use((req, res, next) => {
@@ -2496,7 +2523,7 @@ async function processPartnerLogo(buffer, originalname){
       .png()
       .toBuffer();
     
-    await saveFile(filePath, resizedBuffer);
+    await uploadFile(filePath, resizedBuffer);
     console.log('[partners] Saved logo:', filePath);
     return { logo_url: filePath };
   } catch (err) {
@@ -4664,10 +4691,6 @@ app.get('/partners', async (req, res) => {
         content: `
           <div class="container-xxl py-5">
             <div class="container">
-              <div class="text-center mx-auto mb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 500px;">
-                <div class="d-inline-block rounded-pill bg-secondary text-primary py-1 px-3 mb-3">${res.locals.t('ourPartners')}</div>
-                <h1 class="display-6 mb-5">${res.locals.t('partnersTitle')}</h1>
-              </div>
               <div class="row g-4 justify-content-center">
                 ${partners.map(p => `
                   <div class="col-lg-3 col-md-4 col-sm-6 wow fadeInUp" data-wow-delay="0.1s">
