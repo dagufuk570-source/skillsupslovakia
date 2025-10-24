@@ -837,7 +837,9 @@ const TRANSLATIONS = {
     privacyNotice: 'Privacy notice', gdprSettings: 'GDPR Settings', statsCounters: 'Stats / Counters', homepageCounters: 'Homepage counters',
     statsSettings: 'Stats Settings', pageHome: 'Page: Home', editContent: 'Edit content', editHomePage: 'Edit Home Page',
     pageAboutUs: 'Page: About Us', editAboutUsPage: 'Edit About Us Page', openWebsite: 'Open website', openSite: 'Open Site',
-    adminInterface: 'Admin interface', supportedLanguages: 'Supported languages'
+    adminInterface: 'Admin interface', supportedLanguages: 'Supported languages',
+    // User Guide
+    userGuide: 'User Guide', adminPanelUserGuide: 'Admin Panel User Guide'
   },
   sk: {
     home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
@@ -986,7 +988,9 @@ const TRANSLATIONS = {
     privacyNotice: 'Oznámenie o ochrane údajov', gdprSettings: 'Nastavenia GDPR', statsCounters: 'Štatistiky / Počítadlá', homepageCounters: 'Počítadlá domovskej stránky',
     statsSettings: 'Nastavenia štatistík', pageHome: 'Stránka: Domov', editContent: 'Upraviť obsah', editHomePage: 'Upraviť domovskú stránku',
     pageAboutUs: 'Stránka: O nás', editAboutUsPage: 'Upraviť stránku O nás', openWebsite: 'Otvoriť webovú stránku', openSite: 'Otvoriť stránku',
-    adminInterface: 'Administrátorské rozhranie', supportedLanguages: 'Podporované jazyky'
+    adminInterface: 'Administrátorské rozhranie', supportedLanguages: 'Podporované jazyky',
+    // User Guide
+    userGuide: 'Používateľská príručka', adminPanelUserGuide: 'Používateľská príručka administrátorského panelu'
   },
   hu: {
     home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',

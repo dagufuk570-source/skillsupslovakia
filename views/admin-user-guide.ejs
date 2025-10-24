@@ -1,11 +1,11 @@
-<%- include('admin-layout-top', { title: 'User Guide', active: 'user-guide', lang: lang || 'en', useDb: true }) %>
+<%- include('admin-layout-top', { title: t('userGuide'), active: 'user-guide', lang: lang || 'en', useDb: true }) %>
 
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
       <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
-          <h4 class="mb-0"><i class="fas fa-book me-2"></i>Admin Panel User Guide</h4>
+          <h4 class="mb-0"><i class="fas fa-book me-2"></i><%= t('adminPanelUserGuide') %></h4>
         </div>
         <div class="card-body">
           <!-- Table of Contents -->

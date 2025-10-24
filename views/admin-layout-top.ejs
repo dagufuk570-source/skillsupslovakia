@@ -163,13 +163,13 @@
             <!-- Old Focus Areas page link removed to avoid confusion; use the main Focus Areas (Data) link above -->
             <hr class="sidebar-divider" style="border-color: rgba(255,255,255,0.2);">
             <a class="nav-link <%= active === 'user-guide' ? 'active' : '' %>" href="/admin/user-guide?lang=<%= lang %>">
-              <i class="fas fa-book me-2"></i>User Guide
+              <i class="fas fa-book me-2"></i><%= t('userGuide') %>
             </a>
             <a class="nav-link" href="/?lang=<%= lang %>" target="_blank">
               <i class="fas fa-external-link-alt me-2"></i><%= t('viewSite') %>
             </a>
-            <a class="nav-link text-danger" href="/admin/logout" onclick="return confirm('Are you sure you want to logout?')">
-              <i class="fas fa-sign-out-alt me-2"></i>Logout
+            <a class="nav-link text-danger" href="/admin/logout" onclick="return confirm('<%= t('logoutConfirm') %>')">
+              <i class="fas fa-sign-out-alt me-2"></i><%= t('logout') %>
             </a>
           </nav>
         </div>
