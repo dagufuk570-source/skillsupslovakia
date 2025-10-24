@@ -33,7 +33,7 @@
   <div class="mb-3">
     <label for="sort_order" class="form-label"><%= t('sortOrder') %></label>
     <input type="number" class="form-control" id="sort_order" name="sort_order" value="<%= partner ? (partner.sort_order || 0) : 0 %>" min="0">
-    <small class="form-text text-muted">Lower numbers appear first.</small>
+    <small class="form-text text-muted"><%= t('lowerNumbersFirst') %></small>
   </div>
 
   <div class="mt-4">

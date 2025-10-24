@@ -115,58 +115,58 @@
             </div>
           </div>
           <nav class="nav flex-column">
-            <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/admin">
-              <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            <a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="/admin?lang=<%= lang %>">
+              <i class="fas fa-tachometer-alt me-2"></i><%= t('dashboard') %>
             </a>
-            <a class="nav-link <%= active === 'themes' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/themes' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
-              <i class="fas fa-tags me-2"></i>Themes
+            <a class="nav-link <%= active === 'themes' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/themes?lang=' + lang) : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-tags me-2"></i><%= t('themes') %>
             </a>
-            <a class="nav-link <%= active === 'events' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/events' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
-              <i class="fas fa-calendar-alt me-2"></i>Events
+            <a class="nav-link <%= active === 'events' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/events?lang=' + lang) : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-calendar-alt me-2"></i><%= t('events') %>
             </a>
-            <a class="nav-link <%= active === 'team' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/team' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
-              <i class="fas fa-users me-2"></i>Our Team
+            <a class="nav-link <%= active === 'team' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/team?lang=' + lang) : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-users me-2"></i><%= t('ourTeam') %>
             </a>
-            <a class="nav-link <%= active === 'partners' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/partners' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
-              <i class="fas fa-handshake me-2"></i>Partners
+            <a class="nav-link <%= active === 'partners' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/partners?lang=' + lang) : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-handshake me-2"></i><%= t('partners') %>
             </a>
-            <a class="nav-link <%= active === 'news' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/news' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
-              <i class="fas fa-newspaper me-2"></i>News
+            <a class="nav-link <%= active === 'news' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/news?lang=' + lang) : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-newspaper me-2"></i><%= t('news') %>
             </a>
-            <a class="nav-link <%= active === 'documents' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/documents' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
-              <i class="fas fa-file-alt me-2"></i>Documents
+            <a class="nav-link <%= active === 'documents' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/documents?lang=' + lang) : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-file-alt me-2"></i><%= t('documents') %>
             </a>
             <a class="nav-link <%= active === 'focus-areas' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/focus-areas?lang=' + lang) : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
-              <i class="fas fa-bullseye me-2"></i>Focus Areas
+              <i class="fas fa-bullseye me-2"></i><%= t('focusAreas') %>
             </a>
-            <div class="ms-2 mt-2 text-white-50 small">Settings</div>
+            <div class="ms-2 mt-2 text-white-50 small"><%= t('settings') %></div>
             <a class="nav-link <%= active === 'settings-slider' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/settings/slider?lang=' + lang) : '#' %>">
-              <i class="fas fa-sliders-h me-2"></i>Slider
+              <i class="fas fa-sliders-h me-2"></i><%= t('slider') %>
             </a>
             <a class="nav-link <%= active === 'settings-contact' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/settings/contact?lang=' + lang) : '#' %>">
-              <i class="fas fa-address-book me-2"></i>Contact
+              <i class="fas fa-address-book me-2"></i><%= t('contact') %>
             </a>
             <a class="nav-link <%= active === 'settings-gdpr' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/settings/gdpr?lang=' + lang) : '#' %>">
-              <i class="fas fa-user-shield me-2"></i>GDPR
+              <i class="fas fa-user-shield me-2"></i><%= t('gdpr') %>
             </a>
             <a class="nav-link <%= active === 'settings-stats' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/settings/stats?lang=' + lang) : '#' %>">
-              <i class="fas fa-chart-line me-2"></i>Stats / Counters
+              <i class="fas fa-chart-line me-2"></i><%= t('stats') %>
             </a>
             <!-- Focus Area Columns settings removed (columns are fixed) -->
-            <div class="ms-2 mt-3 text-white-50 small">Pages</div>
+            <div class="ms-2 mt-3 text-white-50 small"><%= t('pages') %></div>
             <a class="nav-link <%= active === 'page-home' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/pages/home?lang=' + lang) : '#' %>">
-              <i class="fas fa-home me-2"></i>Home
+              <i class="fas fa-home me-2"></i><%= t('home') %>
             </a>
             <a class="nav-link <%= active === 'page-about' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? ('/admin/pages/about-us?lang=' + lang) : '#' %>">
-              <i class="fas fa-info-circle me-2"></i>About Us
+              <i class="fas fa-info-circle me-2"></i><%= t('about') %>
             </a>
             <!-- Old Focus Areas page link removed to avoid confusion; use the main Focus Areas (Data) link above -->
             <hr class="sidebar-divider" style="border-color: rgba(255,255,255,0.2);">
-            <a class="nav-link <%= active === 'user-guide' ? 'active' : '' %>" href="/admin/user-guide">
+            <a class="nav-link <%= active === 'user-guide' ? 'active' : '' %>" href="/admin/user-guide?lang=<%= lang %>">
               <i class="fas fa-book me-2"></i>User Guide
             </a>
-            <a class="nav-link" href="/?lang=en" target="_blank">
-              <i class="fas fa-external-link-alt me-2"></i>View Site
+            <a class="nav-link" href="/?lang=<%= lang %>" target="_blank">
+              <i class="fas fa-external-link-alt me-2"></i><%= t('viewSite') %>
             </a>
             <a class="nav-link text-danger" href="/admin/logout" onclick="return confirm('Are you sure you want to logout?')">
               <i class="fas fa-sign-out-alt me-2"></i>Logout
@@ -190,13 +190,13 @@
                   <a href="?lang=sk" class="btn btn-sm <%= (lang === 'sk') ? 'btn-primary' : 'btn-outline-primary' %>">SK</a>
                 </div>
                 <span class="badge bg-info">
-                  <i class="fas fa-globe me-1"></i>Multi-Language Content
+                  <i class="fas fa-globe me-1"></i><%= t('multiLanguageContent') %>
                 </span>
                 <a class="btn btn-sm btn-outline-secondary" href="/?lang=<%= lang %>" target="_blank">
-                  <i class="fas fa-external-link-alt me-1"></i>View Site
+                  <i class="fas fa-external-link-alt me-1"></i><%= t('viewSite') %>
                 </a>
-                <a class="btn btn-sm btn-outline-danger" href="/admin/logout" onclick="return confirm('Are you sure you want to logout?')">
-                  <i class="fas fa-sign-out-alt me-1"></i>Logout
+                <a class="btn btn-sm btn-outline-danger" href="/admin/logout" onclick="return confirm('<%= t('logoutConfirm') %>')">
+                  <i class="fas fa-sign-out-alt me-1"></i><%= t('logout') %>
                 </a>
               </div>
             </div>

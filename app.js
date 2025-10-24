@@ -719,7 +719,11 @@ const TRANSLATIONS = {
     partnerDeleted: 'Partner deleted successfully!', deleteConfirm: 'Delete this partner?', noLogo: 'No logo',
     optional: 'Optional', required: 'Required', currentLogo: 'Current Logo', removeLogo: 'Remove current logo',
     defaultPlaceholder: 'will use default placeholder', imageInfo: 'PNG, JPG, or SVG recommended. Max 2MB. Image will be resized to 300x300px.',
-    noLogoProvided: 'If not provided, a default placeholder will be used.'
+    noLogoProvided: 'If not provided, a default placeholder will be used.',
+    // Admin Menu Items
+    contentManagement: 'Content Management', pages: 'Pages', ourTeam: 'Our Team', settings: 'Settings',
+    slider: 'Slider', stats: 'Stats', multiLanguageContent: 'Multi-Language Content', viewSite: 'View Site',
+    logout: 'Logout', logoutConfirm: 'Are you sure you want to logout?', lowerNumbersFirst: 'Lower numbers appear first.'
   },
   sk: {
     home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
@@ -750,7 +754,11 @@ const TRANSLATIONS = {
     partnerDeleted: 'Partner bol úspešne vymazaný!', deleteConfirm: 'Vymazať tohto partnera?', noLogo: 'Bez loga',
     optional: 'Voliteľné', required: 'Povinné', currentLogo: 'Aktuálne logo', removeLogo: 'Odstrániť aktuálne logo',
     defaultPlaceholder: 'použije sa predvolený zástupný obrázok', imageInfo: 'Odporúčané PNG, JPG alebo SVG. Max 2MB. Obrázok bude zmenšený na 300x300px.',
-    noLogoProvided: 'Ak nie je k dispozícii, použije sa predvolený zástupný obrázok.'
+    noLogoProvided: 'Ak nie je k dispozícii, použije sa predvolený zástupný obrázok.',
+    // Admin Menu Items
+    contentManagement: 'Správa obsahu', pages: 'Stránky', ourTeam: 'Náš tím', settings: 'Nastavenia',
+    slider: 'Posúvač', stats: 'Štatistiky', multiLanguageContent: 'Viacjazyčný obsah', viewSite: 'Zobraziť stránku',
+    logout: 'Odhlásiť sa', logoutConfirm: 'Naozaj sa chcete odhlásiť?', lowerNumbersFirst: 'Nižšie čísla sa zobrazia ako prvé.'
   },
   hu: {
     home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',
@@ -4686,11 +4694,15 @@ app.get('/partners', async (req, res) => {
       menu,
       slider: null,
       page: {
-        title: '', // No title header for partners page
+        title: '',
         slug: 'partners',
         content: `
           <div class="container-xxl py-5">
             <div class="container">
+              <div class="text-center mx-auto mb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 500px;">
+                <div class="d-inline-block rounded-pill bg-secondary text-primary py-1 px-3 mb-3">${res.locals.t('ourPartners')}</div>
+                <h1 class="display-6 mb-5">${res.locals.t('partnersTitle')}</h1>
+              </div>
               <div class="row g-4 justify-content-center">
                 ${partners.map(p => `
                   <div class="col-lg-3 col-md-4 col-sm-6 wow fadeInUp" data-wow-delay="0.1s">
