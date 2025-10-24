@@ -1203,16 +1203,17 @@ app.get('/page/:slug', async (req,res)=>{
 
 // Contact form handler (stores nothing for now; extend to email/DB later)
 app.post('/contact', async (req, res) => {
-  const { name, email, subject, message, website } = req.body || {};
-  const lang = res.locals.lang || req.query.lang || 'en';
-  // Honeypot field should be empty
-  if (website && String(website).trim() !== ''){
-    return res.redirect(`/page/contact?lang=${lang}&success=1`);
-  }
-  // Basic validation
-  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if(!name || !email || !emailRe.test(String(email)) || !message){
-    return res.redirect(`/page/contact?lang=${lang}&success=0`);
+  try {
+    const { name, email, subject, message, website } = req.body || {};
+    const lang = res.locals.lang || req.query.lang || 'en';
+    // Honeypot field should be empty
+    if (website && String(website).trim() !== ''){
+      return res.redirect(`/page/contact?lang=${lang}&success=1`);
+    }
+    // Basic validation
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(!name || !email || !emailRe.test(String(email)) || !message){
+      return res.redirect(`/page/contact?lang=${lang}&success=0`);
   }
   // reCAPTCHA verification (if configured)
   try {
@@ -1343,6 +1344,12 @@ app.post('/contact', async (req, res) => {
       const extra = (e && (e.response || e.code || e.responseCode)) ? ` code=${e.code||''} resp=${e.responseCode||''}:${e.response||''}` : '';
       await db.createContactMessage?.({ name, email, subject, message, lang, status: 'failed', error: `${errMsg}${extra}` });
     } catch {}
+    return res.redirect(`/page/contact?lang=${lang}&success=0`);
+  }
+  } catch(err) {
+    console.error('[app.post /contact] Error:', err.message);
+    // Even on error, try to send the email without DB logging
+    const lang = req.body?.lang || req.query.lang || 'en';
     return res.redirect(`/page/contact?lang=${lang}&success=0`);
   }
 });
