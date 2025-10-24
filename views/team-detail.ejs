@@ -6,7 +6,10 @@
         <div class="card shadow-sm">
           <% 
             const photoUrl = member.photo_url || '/img/default-team.png';
-            const thumbUrl = photoUrl.replace(/\.jpg$/i, '-thumb.jpg');
+            // Only try thumbnail for actual uploaded photos (jpg files)
+            const thumbUrl = (photoUrl && photoUrl.match(/\.jpg$/i)) 
+              ? photoUrl.replace(/\.jpg$/i, '-thumb.jpg') 
+              : photoUrl;
           %>
           <img src="<%= thumbUrl %>" 
                onerror="this.src='<%= photoUrl %>'" 
