@@ -1,4 +1,4 @@
-<%- include('admin-layout-top', { title: 'Dashboard', lang, useDb, active: 'dashboard' }) %>
+<%- include('admin-layout-top', { title: t('dashboard'), lang, useDb, active: 'dashboard' }) %>
 
 <style>
   .dash-tile {
@@ -21,12 +21,12 @@
     <div class="card dash-tile" style="background: linear-gradient(45deg,#2c3e50,#4b6584);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Dashboard</div>
-          <small class="opacity-75">Quick access</small>
+          <div class="fw-semibold"><%= t('dashboard') %></div>
+          <small class="opacity-75"><%= t('quickAccess') %></small>
         </div>
         <i class="fas fa-tachometer-alt fa-2x icon"></i>
       </div>
-      <a href="/admin" class="stretched-link" aria-label="Open Dashboard"></a>
+      <a href="/admin" class="stretched-link" aria-label="<%= t('openDashboard') %>"></a>
     </div>
   </div>
   <!-- Themes -->
@@ -34,12 +34,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#6f42c1,#b07bff);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Themes</div>
-          <small class="opacity-75">Manage topics</small>
+          <div class="fw-semibold"><%= t('themes') %></div>
+          <small class="opacity-75"><%= t('manageTopics') %></small>
         </div>
         <i class="fas fa-tags fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? '/admin/themes' : '#' %>" class="stretched-link" aria-label="Manage Themes" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? '/admin/themes' : '#' %>" class="stretched-link" aria-label="<%= t('manageThemes') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Events -->
@@ -47,12 +47,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#0d6efd,#00b4d8);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Events</div>
-          <small class="opacity-75">Create & edit events</small>
+          <div class="fw-semibold"><%= t('events') %></div>
+          <small class="opacity-75"><%= t('createEditEvents') %></small>
         </div>
         <i class="fas fa-calendar-alt fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? '/admin/events' : '#' %>" class="stretched-link" aria-label="Manage Events" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? '/admin/events' : '#' %>" class="stretched-link" aria-label="<%= t('manageEvents') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Team -->
@@ -60,12 +60,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#17a2b8,#20c997);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Our Team</div>
-          <small class="opacity-75">Manage members</small>
+          <div class="fw-semibold"><%= t('ourTeam') %></div>
+          <small class="opacity-75"><%= t('manageMembers') %></small>
         </div>
         <i class="fas fa-users fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? '/admin/team' : '#' %>" class="stretched-link" aria-label="Manage Team" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? '/admin/team' : '#' %>" class="stretched-link" aria-label="<%= t('manageTeam') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- News -->
@@ -73,12 +73,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#fd7e14,#ffc107);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">News</div>
-          <small class="opacity-75">Publish posts</small>
+          <div class="fw-semibold"><%= t('news') %></div>
+          <small class="opacity-75"><%= t('publishPosts') %></small>
         </div>
         <i class="fas fa-newspaper fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? '/admin/news' : '#' %>" class="stretched-link" aria-label="Manage News" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? '/admin/news' : '#' %>" class="stretched-link" aria-label="<%= t('manageNews') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Documents -->
@@ -86,12 +86,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#6c757d,#95a5a6);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Documents</div>
-          <small class="opacity-75">Upload files</small>
+          <div class="fw-semibold"><%= t('documents') %></div>
+          <small class="opacity-75"><%= t('uploadFiles') %></small>
         </div>
         <i class="fas fa-file-alt fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? '/admin/documents' : '#' %>" class="stretched-link" aria-label="Manage Documents" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? '/admin/documents' : '#' %>" class="stretched-link" aria-label="<%= t('manageDocuments') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Focus Areas -->
@@ -99,12 +99,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#198754,#34d399);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Focus Areas</div>
-          <small class="opacity-75">Manage data</small>
+          <div class="fw-semibold"><%= t('focusAreas') %></div>
+          <small class="opacity-75"><%= t('manageData') %></small>
         </div>
         <i class="fas fa-bullseye fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? ('/admin/focus-areas?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Manage Focus Areas" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? ('/admin/focus-areas?lang=' + lang) : '#' %>" class="stretched-link" aria-label="<%= t('manageFocusAreas') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Settings: Slider -->
@@ -112,12 +112,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#e83e8c,#ff6b6b);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Slider</div>
-          <small class="opacity-75">Hero & slides</small>
+          <div class="fw-semibold"><%= t('slider') %></div>
+          <small class="opacity-75"><%= t('heroSlides') %></small>
         </div>
         <i class="fas fa-sliders-h fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? ('/admin/settings/slider?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Slider Settings" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? ('/admin/settings/slider?lang=' + lang) : '#' %>" class="stretched-link" aria-label="<%= t('sliderSettings') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Settings: Contact -->
@@ -125,12 +125,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#0dcaf0,#5ac8fa);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Contact</div>
-          <small class="opacity-75">Contact details</small>
+          <div class="fw-semibold"><%= t('contact') %></div>
+          <small class="opacity-75"><%= t('contactDetails') %></small>
         </div>
         <i class="fas fa-address-book fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? ('/admin/settings/contact?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Contact Settings" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? ('/admin/settings/contact?lang=' + lang) : '#' %>" class="stretched-link" aria-label="<%= t('contactSettings') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Settings: GDPR -->
@@ -138,12 +138,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#6610f2,#9b59b6);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">GDPR</div>
-          <small class="opacity-75">Privacy notice</small>
+          <div class="fw-semibold"><%= t('gdpr') %></div>
+          <small class="opacity-75"><%= t('privacyNotice') %></small>
         </div>
         <i class="fas fa-user-shield fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? ('/admin/settings/gdpr?lang=' + lang) : '#' %>" class="stretched-link" aria-label="GDPR Settings" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? ('/admin/settings/gdpr?lang=' + lang) : '#' %>" class="stretched-link" aria-label="<%= t('gdprSettings') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Settings: Stats / Counters -->
@@ -151,12 +151,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#f39c12,#f1c40f);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Stats / Counters</div>
-          <small class="opacity-75">Homepage counters</small>
+          <div class="fw-semibold"><%= t('statsCounters') %></div>
+          <small class="opacity-75"><%= t('homepageCounters') %></small>
         </div>
         <i class="fas fa-chart-line fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? ('/admin/settings/stats?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Stats Settings" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? ('/admin/settings/stats?lang=' + lang) : '#' %>" class="stretched-link" aria-label="<%= t('statsSettings') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Pages: Home -->
@@ -164,12 +164,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#20bf6b,#26de81);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Page: Home</div>
-          <small class="opacity-75">Edit content</small>
+          <div class="fw-semibold"><%= t('pageHome') %></div>
+          <small class="opacity-75"><%= t('editContent') %></small>
         </div>
         <i class="fas fa-home fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? ('/admin/pages/home?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Edit Home Page" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? ('/admin/pages/home?lang=' + lang) : '#' %>" class="stretched-link" aria-label="<%= t('editHomePage') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- Pages: About Us -->
@@ -177,12 +177,12 @@
     <div class="card dash-tile <%= !useDb ? 'disabled-tile' : '' %>" style="background: linear-gradient(45deg,#1e90ff,#00a8ff);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">Page: About Us</div>
-          <small class="opacity-75">Edit content</small>
+          <div class="fw-semibold"><%= t('pageAboutUs') %></div>
+          <small class="opacity-75"><%= t('editContent') %></small>
         </div>
         <i class="fas fa-info-circle fa-2x icon"></i>
       </div>
-      <a href="<%= useDb ? ('/admin/pages/about-us?lang=' + lang) : '#' %>" class="stretched-link" aria-label="Edit About Us Page" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
+      <a href="<%= useDb ? ('/admin/pages/about-us?lang=' + lang) : '#' %>" class="stretched-link" aria-label="<%= t('editAboutUsPage') %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>"></a>
     </div>
   </div>
   <!-- View Site -->
@@ -190,12 +190,12 @@
     <div class="card dash-tile" style="background: linear-gradient(45deg,#2d3436,#636e72);">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <div class="fw-semibold">View Site</div>
-          <small class="opacity-75">Open website</small>
+          <div class="fw-semibold"><%= t('viewSite') %></div>
+          <small class="opacity-75"><%= t('openWebsite') %></small>
         </div>
         <i class="fas fa-external-link-alt fa-2x icon"></i>
       </div>
-      <a href="/<%= '?lang=' + (lang || 'en') %>" target="_blank" rel="noopener" class="stretched-link" aria-label="Open Site"></a>
+      <a href="/<%= '?lang=' + (lang || 'en') %>" target="_blank" rel="noopener" class="stretched-link" aria-label="<%= t('openSite') %>"></a>
     </div>
   </div>
 </div>
@@ -208,15 +208,15 @@
         <div class="d-flex align-items-center mb-2 mb-md-0">
           <i class="fas fa-globe fa-lg text-secondary me-3"></i>
           <div>
-            <strong>Multi-Language Content</strong>
-            <div class="text-muted small">Admin interface: English</div>
+            <strong><%= t('multiLanguageContent') %></strong>
+            <div class="text-muted small"><%= t('adminInterface') %>: <%= lang === 'sk' ? 'Slovenčina' : 'English' %></div>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
           <span class="badge bg-primary">EN</span>
           <span class="badge bg-success">SK</span>
           <span class="badge bg-danger">HU</span>
-          <span class="text-muted small ms-2">Supported languages</span>
+          <span class="text-muted small ms-2"><%= t('supportedLanguages') %></span>
         </div>
       </div>
     </div>

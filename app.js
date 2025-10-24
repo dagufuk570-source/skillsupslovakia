@@ -828,7 +828,16 @@ const TRANSLATIONS = {
     instagram: 'Instagram', youtube: 'YouTube', stat: 'Stat', moveUp: 'Move up', moveDown: 'Move down',
     value: 'Value', icon: 'Icon', fontAwesome: 'Font Awesome', iconPlaceholder: 'e.g., fa-trophy',
     suffix: 'Suffix', suffixPlaceholder: 'e.g., +, %', yes: 'Yes', no: 'No', label: 'Label',
-    addNewStat: 'Add Stat', statsManageInfo: 'Define up to 6 counters. Numbers are shared globally; labels are per language. You can reorder with the arrows.'
+    addNewStat: 'Add Stat', statsManageInfo: 'Define up to 6 counters. Numbers are shared globally; labels are per language. You can reorder with the arrows.',
+    // Dashboard tiles
+    quickAccess: 'Quick access', openDashboard: 'Open Dashboard', manageTopics: 'Manage topics', manageThemes: 'Manage Themes',
+    createEditEvents: 'Create & edit events', manageEvents: 'Manage Events', manageMembers: 'Manage members', manageTeam: 'Manage Team',
+    publishPosts: 'Publish posts', uploadFiles: 'Upload files', manageData: 'Manage data', manageFocusAreas: 'Manage Focus Areas',
+    heroSlides: 'Hero & slides', sliderSettings: 'Slider Settings', contactDetails: 'Contact details', contactSettings: 'Contact Settings',
+    privacyNotice: 'Privacy notice', gdprSettings: 'GDPR Settings', statsCounters: 'Stats / Counters', homepageCounters: 'Homepage counters',
+    statsSettings: 'Stats Settings', pageHome: 'Page: Home', editContent: 'Edit content', editHomePage: 'Edit Home Page',
+    pageAboutUs: 'Page: About Us', editAboutUsPage: 'Edit About Us Page', openWebsite: 'Open website', openSite: 'Open Site',
+    adminInterface: 'Admin interface', supportedLanguages: 'Supported languages'
   },
   sk: {
     home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
@@ -968,7 +977,16 @@ const TRANSLATIONS = {
     instagram: 'Instagram', youtube: 'YouTube', stat: 'Štatistika', moveUp: 'Posunúť hore', moveDown: 'Posunúť dole',
     value: 'Hodnota', icon: 'Ikona', fontAwesome: 'Font Awesome', iconPlaceholder: 'napr., fa-trophy',
     suffix: 'Prípona', suffixPlaceholder: 'napr., +, %', yes: 'Áno', no: 'Nie', label: 'Štítok',
-    addNewStat: 'Pridať štatistiku', statsManageInfo: 'Definujte až 6 počítadiel. Čísla sú zdieľané globálne; štítky sú pre každý jazyk. Môžete zmeniť poradie pomocou šípok.'
+    addNewStat: 'Pridať štatistiku', statsManageInfo: 'Definujte až 6 počítadiel. Čísla sú zdieľané globálne; štítky sú pre každý jazyk. Môžete zmeniť poradie pomocou šípok.',
+    // Dashboard tiles
+    quickAccess: 'Rýchly prístup', openDashboard: 'Otvoriť panel', manageTopics: 'Spravovať témy', manageThemes: 'Spravovať témy',
+    createEditEvents: 'Vytvoriť a upraviť podujatia', manageEvents: 'Spravovať podujatia', manageMembers: 'Spravovať členov', manageTeam: 'Spravovať tím',
+    publishPosts: 'Publikovať príspevky', uploadFiles: 'Nahrať súbory', manageData: 'Spravovať údaje', manageFocusAreas: 'Spravovať zamerania',
+    heroSlides: 'Úvodné snímky', sliderSettings: 'Nastavenia posúvača', contactDetails: 'Kontaktné údaje', contactSettings: 'Nastavenia kontaktu',
+    privacyNotice: 'Oznámenie o ochrane údajov', gdprSettings: 'Nastavenia GDPR', statsCounters: 'Štatistiky / Počítadlá', homepageCounters: 'Počítadlá domovskej stránky',
+    statsSettings: 'Nastavenia štatistík', pageHome: 'Stránka: Domov', editContent: 'Upraviť obsah', editHomePage: 'Upraviť domovskú stránku',
+    pageAboutUs: 'Stránka: O nás', editAboutUsPage: 'Upraviť stránku O nás', openWebsite: 'Otvoriť webovú stránku', openSite: 'Otvoriť stránku',
+    adminInterface: 'Administrátorské rozhranie', supportedLanguages: 'Podporované jazyky'
   },
   hu: {
     home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',
