@@ -1,4 +1,4 @@
-<%- include('admin-layout-top', { title: partner ? t('editPartner') : t('addNewPartner'), active: 'partners' }) %>
+<%- include('admin-layout-top', { title: partner ? t('editPartner') : t('addNewPartner'), active: 'partners', lang: lang || 'en', useDb: true }) %>
 
 <h2 class="mb-4"><%= partner ? t('editPartner') : t('addNewPartner') %></h2>
 
