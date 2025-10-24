@@ -1,55 +1,55 @@
-<%- include('admin-layout-top', { title: 'Settings › Contact', lang, useDb, active: 'settings-contact' }) %>
+<%- include('admin-layout-top', { title: t('settingsContact'), lang, useDb, active: 'settings-contact' }) %>
 <div class="row g-3">
   <div class="col-12">
     <div class="card wow fadeIn" data-wow-delay="0.1s">
       <div class="card-header bg-info text-dark d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
           <i class="fas fa-address-book fa-lg me-2"></i>
-          <h5 class="mb-0">Contact Information</h5>
+          <h5 class="mb-0"><%= t('contactInformation') %></h5>
         </div>
-        <small class="badge bg-dark">Language: <%= lang.toUpperCase() %></small>
+        <small class="badge bg-dark"><%= t('language') %>: <%= lang.toUpperCase() %></small>
       </div>
       <div class="card-body">
         <form class="card p-3" method="post" action="/admin/settings/contact?lang=<%= lang %>">
           <% const c = contact || {}; %>
           <div class="row g-4">
             <div class="col-md-6">
-              <label class="form-label" for="contact_address">Address</label>
+              <label class="form-label" for="contact_address"><%= t('address') %></label>
               <input id="contact_address" class="form-control" type="text" name="contact_address" value="<%= c.address || '' %>" />
             </div>
             <div class="col-md-3">
-              <label class="form-label" for="contact_phone">Phone</label>
+              <label class="form-label" for="contact_phone"><%= t('phone') %></label>
               <input id="contact_phone" class="form-control" type="text" name="contact_phone" value="<%= c.phone || '' %>" />
             </div>
             <div class="col-md-3">
-              <label class="form-label" for="contact_email">Email</label>
+              <label class="form-label" for="contact_email"><%= t('email') %></label>
               <input id="contact_email" class="form-control" type="email" name="contact_email" value="<%= c.email || '' %>" />
             </div>
             <div class="col-md-4">
-              <label class="form-label" for="contact_facebook">Facebook</label>
+              <label class="form-label" for="contact_facebook"><%= t('facebook') %></label>
               <input id="contact_facebook" class="form-control" type="text" name="contact_facebook" placeholder="https://facebook.com/yourpage" value="<%= c.facebook || '' %>" />
             </div>
             <div class="col-md-4">
-              <label class="form-label" for="contact_instagram">Instagram</label>
+              <label class="form-label" for="contact_instagram"><%= t('instagram') %></label>
               <input id="contact_instagram" class="form-control" type="text" name="contact_instagram" placeholder="https://instagram.com/yourpage" value="<%= c.instagram || '' %>" />
             </div>
             <div class="col-md-4">
-              <label class="form-label" for="contact_twitter">Twitter/X</label>
+              <label class="form-label" for="contact_twitter"><%= t('twitter') %></label>
               <input id="contact_twitter" class="form-control" type="text" name="contact_twitter" placeholder="https://x.com/yourhandle" value="<%= c.twitter || '' %>" />
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="contact_linkedin">LinkedIn</label>
+              <label class="form-label" for="contact_linkedin"><%= t('linkedin') %></label>
               <input id="contact_linkedin" class="form-control" type="text" name="contact_linkedin" placeholder="https://linkedin.com/company/yourcompany" value="<%= c.linkedin || '' %>" />
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="contact_youtube">YouTube</label>
+              <label class="form-label" for="contact_youtube"><%= t('youtube') %></label>
               <input id="contact_youtube" class="form-control" type="text" name="contact_youtube" placeholder="https://youtube.com/@yourchannel" value="<%= c.youtube || '' %>" />
             </div>
           </div>
 
           <div class="text-center mt-4">
             <button class="btn btn-info btn-lg px-5" type="submit">
-              <i class="fas fa-save me-2"></i>Save Contact
+              <i class="fas fa-save me-2"></i><%= t('saveSettings') %>
             </button>
           </div>
         </form>

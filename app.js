@@ -824,7 +824,11 @@ const TRANSLATIONS = {
     currentSet: 'Currently set', uploadBackgroundImages: 'Upload Background Images', selectedBackground: 'Selected Background',
     noBackgroundSet: 'No background set', removeSelected: 'Remove Selected', use: 'Use', view: 'View',
     textSettings: 'Text Settings', alignment: 'Alignment', slide: 'Slide', slideMultilingualInfo: 'Title/Caption are per language',
-    newNews: 'New Article', editNews: 'Edit Article'
+    newNews: 'New Article', editNews: 'Edit Article',
+    instagram: 'Instagram', youtube: 'YouTube', stat: 'Stat', moveUp: 'Move up', moveDown: 'Move down',
+    value: 'Value', icon: 'Icon', fontAwesome: 'Font Awesome', iconPlaceholder: 'e.g., fa-trophy',
+    suffix: 'Suffix', suffixPlaceholder: 'e.g., +, %', yes: 'Yes', no: 'No', label: 'Label',
+    addNewStat: 'Add Stat', statsManageInfo: 'Define up to 6 counters. Numbers are shared globally; labels are per language. You can reorder with the arrows.'
   },
   sk: {
     home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
@@ -960,7 +964,11 @@ const TRANSLATIONS = {
     currentSet: 'Aktuálne nastavené', selectedBackground: 'Vybrané pozadie',
     noBackgroundSet: 'Žiadne pozadie nastavené', removeSelected: 'Odstrániť vybrané', use: 'Použiť', view: 'Zobraziť',
     textSettings: 'Nastavenia textu', alignment: 'Zarovnanie', slide: 'Snímka', slideMultilingualInfo: 'Nadpis/Titulok sú pre každý jazyk',
-    newNews: 'Nový článok', editNews: 'Upraviť článok'
+    newNews: 'Nový článok', editNews: 'Upraviť článok',
+    instagram: 'Instagram', youtube: 'YouTube', stat: 'Štatistika', moveUp: 'Posunúť hore', moveDown: 'Posunúť dole',
+    value: 'Hodnota', icon: 'Ikona', fontAwesome: 'Font Awesome', iconPlaceholder: 'napr., fa-trophy',
+    suffix: 'Prípona', suffixPlaceholder: 'napr., +, %', yes: 'Áno', no: 'Nie', label: 'Štítok',
+    addNewStat: 'Pridať štatistiku', statsManageInfo: 'Definujte až 6 počítadiel. Čísla sú zdieľané globálne; štítky sú pre každý jazyk. Môžete zmeniť poradie pomocou šípok.'
   },
   hu: {
     home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',
