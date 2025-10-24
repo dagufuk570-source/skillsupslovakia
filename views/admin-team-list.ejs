@@ -1,12 +1,12 @@
-<%- include('admin-layout-top', { title: 'Team Management', lang, useDb: true, active: 'team' }) %>
+<%- include('admin-layout-top', { title: t('teamManagement'), lang, useDb: true, active: 'team' }) %>
 <div class="card wow fadeIn" data-wow-delay="0.1s">
   <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
     <div class="d-flex align-items-center">
       <i class="fas fa-users fa-lg me-2"></i>
-      <h5 class="mb-0">Team - <%= lang.toUpperCase() %></h5>
+      <h5 class="mb-0"><%= t('team') %> - <%= lang.toUpperCase() %></h5>
     </div>
     <a class="btn btn-light btn-sm" href="/admin/team/new?lang=<%= lang %>">
-      <i class="fas fa-plus me-1"></i>New Member
+      <i class="fas fa-plus me-1"></i><%= t('newMember') %>
     </a>
   </div>
   <div class="card-body">
@@ -14,17 +14,17 @@
       <% if(success === 'created') { %>
         <div class="alert alert-success d-flex align-items-center" role="alert">
           <i class="fas fa-check-circle me-2"></i>
-          <div>Member has been created successfully.</div>
+          <div><%= t('memberCreated') %></div>
         </div>
       <% } else if(success === 'updated') { %>
         <div class="alert alert-success d-flex align-items-center" role="alert">
           <i class="fas fa-check-circle me-2"></i>
-          <div>Member has been updated successfully.</div>
+          <div><%= t('memberUpdated') %></div>
         </div>
       <% } else if(success === 'deleted') { %>
         <div class="alert alert-warning d-flex align-items-center" role="alert">
           <i class="fas fa-trash me-2"></i>
-          <div>Member has been deleted.</div>
+          <div><%= t('memberDeleted') %></div>
         </div>
       <% } %>
     <% } %>
@@ -33,10 +33,10 @@
             <div class="display-6 text-muted mb-3">
               <i class="fas fa-users"></i>
             </div>
-            <h5 class="text-muted mb-2">No Team Members Yet</h5>
-            <p class="text-muted">Start by creating your first team member.</p>
+            <h5 class="text-muted mb-2"><%= t('noTeamYet_admin') %></h5>
+            <p class="text-muted"><%= t('startCreatingMember') %></p>
             <a class="btn btn-primary" href="/admin/team/new?lang=<%= lang %>">
-              <i class="fas fa-plus me-1"></i> Create First Member
+              <i class="fas fa-plus me-1"></i> <%= t('createFirstMember') %>
             </a>
           </div>
         <% } else { %>
@@ -44,10 +44,10 @@
         <table class="table table-hover align-middle">
           <thead class="table-light">
             <tr>
-              <th>Member</th>
-              <th>Bio</th>
-              <th>Order</th>
-              <th class="text-end">Actions</th>
+              <th><%= t('member') %></th>
+              <th><%= t('bio') %></th>
+              <th><%= t('order') %></th>
+              <th class="text-end"><%= t('actions') %></th>
             </tr>
           </thead>
           <tbody>
@@ -79,26 +79,26 @@
                 </td>
                 <td class="text-end">
                   <div class="btn-group" role="group">
-                    <a href="/team/<%= m.id %>?lang=<%= lang %>" class="btn btn-sm btn-outline-primary" target="_blank" title="View Member">
+                    <a href="/team/<%= m.id %>?lang=<%= lang %>" class="btn btn-sm btn-outline-primary" target="_blank" title="<%= t('viewDetails') %>">
                       <i class="fas fa-eye"></i>
                     </a>
-                    <a class="btn btn-sm btn-outline-secondary" href="/admin/team/<%= m.id %>/edit?lang=<%= lang %>" title="Edit"><i class="fas fa-edit"></i></a>
+                    <a class="btn btn-sm btn-outline-secondary" href="/admin/team/<%= m.id %>/edit?lang=<%= lang %>" title="<%= t('edit') %>"><i class="fas fa-edit"></i></a>
                     <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#confirmDelete<%= m.id %>"><i class="fas fa-trash"></i></button>
                   </div>
                   <div class="modal fade" id="confirmDelete<%= m.id %>" tabindex="-1" aria-labelledby="confirmDeleteLabel<%= m.id %>" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                       <div class="modal-content">
                         <div class="modal-header">
-                          <h5 class="modal-title" id="confirmDeleteLabel<%= m.id %>">Delete Confirmation</h5>
+                          <h5 class="modal-title" id="confirmDeleteLabel<%= m.id %>"><%= t('delete') %></h5>
                           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                          <p>Are you sure you want to delete <strong><%= m.name %></strong>?</p>
+                          <p><%= t('deleteThisMember') %> <strong><%= m.name %></strong>?</p>
                         </div>
                         <div class="modal-footer">
-                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('cancel') %></button>
                           <form method="post" action="/admin/team/<%= m.id %>/delete?lang=<%= lang %>">
-                            <button class="btn btn-danger" type="submit">Delete</button>
+                            <button class="btn btn-danger" type="submit"><%= t('delete') %></button>
                           </form>
                         </div>
                       </div>

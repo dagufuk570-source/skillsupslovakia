@@ -723,7 +723,68 @@ const TRANSLATIONS = {
     // Admin Menu Items
     contentManagement: 'Content Management', pages: 'Pages', ourTeam: 'Our Team', settings: 'Settings',
     slider: 'Slider', stats: 'Stats', multiLanguageContent: 'Multi-Language Content', viewSite: 'View Site',
-    logout: 'Logout', logoutConfirm: 'Are you sure you want to logout?', lowerNumbersFirst: 'Lower numbers appear first.'
+    logout: 'Logout', logoutConfirm: 'Are you sure you want to logout?', lowerNumbersFirst: 'Lower numbers appear first.',
+    // Admin Common
+    newItem: 'New', editItem: 'Edit', created_successfully: 'has been created successfully.',
+    updated_successfully: 'has been updated successfully.', deleted_successfully: 'has been deleted.',
+    // Admin Events
+    eventsManagement: 'Events Management', newEvent: 'New Event', editEvent: 'Edit Event',
+    event: 'Event', date: 'Date', location: 'Location', eventImage: 'Event Image',
+    eventDeleted: 'Event has been deleted.', eventCreated: 'Event has been created successfully.',
+    eventUpdated: 'Event has been updated successfully.', deleteThisEvent: 'Delete this event?',
+    noEventsYet_admin: 'No events yet.', createFirstEvent: 'Create First Event',
+    startCreatingEvent: 'Start by creating your first event.',
+    eventDate: 'Event Date', eventLocation: 'Event Location', additionalImages: 'Additional Images',
+    uploadMultipleImages: 'Upload multiple images that will be displayed in the event gallery on detail pages.',
+    chooseImages: 'Choose images...', published: 'Published', status: 'Status', active: 'Active', inactive: 'Inactive',
+    // Admin Team
+    teamManagement: 'Team Management', newMember: 'New Member', editMember: 'Edit Member',
+    member: 'Member', bio: 'Bio', order: 'Order', memberPhoto: 'Member Photo',
+    memberDeleted: 'Member has been deleted.', memberCreated: 'Member has been created successfully.',
+    memberUpdated: 'Member has been updated successfully.', deleteThisMember: 'Delete this member?',
+    noTeamYet_admin: 'No Team Members Yet', createFirstMember: 'Create First Member',
+    startCreatingMember: 'Start by creating your first team member.',
+    // Admin News
+    newsManagement: 'News Management', newsArticles: 'News Articles', newArticle: 'New Article',
+    editArticle: 'Edit Article', article: 'Article', publishedDate: 'Published Date',
+    articleDeleted: 'Article has been deleted.', articleCreated: 'Article has been created successfully.',
+    articleUpdated: 'Article has been updated successfully.', deleteThisArticle: 'Delete this article?',
+    noNewsYet_admin: 'No news articles yet.', summary: 'Summary',
+    // Admin Themes
+    themesManagement: 'Themes Management', newTheme: 'New Theme', editTheme: 'Edit Theme',
+    theme: 'Theme', themeDeleted: 'Theme has been deleted.', themeCreated: 'Theme has been created successfully.',
+    themeUpdated: 'Theme has been updated successfully.', deleteThisTheme: 'Delete this theme?',
+    noThemesYet_admin: 'No themes yet.', createFirstTheme: 'Create First Theme',
+    startCreatingTheme: 'Start by creating your first theme.',
+    // Admin Documents
+    documentsManagement: 'Documents Management', newDocument: 'New Document', editDocument: 'Edit Document',
+    document: 'Document', file: 'File', documentDeleted: 'Document has been deleted.',
+    documentCreated: 'Document has been created successfully.', documentUpdated: 'Document has been updated successfully.',
+    deleteThisDocument: 'Delete this document?', editDocumentTitle: 'Edit Document',
+    editingDocument: 'Editing Document', fileUpload: 'File', fileFormats: 'pdf, docx, xlsx, pptx, txt, image',
+    // Admin Focus Areas
+    focusAreasManagement: 'Focus Areas Management', newFocusArea: 'New Focus Area', editFocusArea: 'Edit Focus Area',
+    focusArea: 'Focus Area', focusAreaDeleted: 'Focus Area has been deleted.',
+    focusAreaCreated: 'Focus Area has been created successfully.', focusAreaUpdated: 'Focus Area has been updated successfully.',
+    deleteThisFocusArea: 'Delete this focus area?',
+    // Admin Settings
+    settingsContact: 'Settings › Contact', settingsGDPR: 'Settings › GDPR', settingsSlider: 'Settings › Slider',
+    settingsStats: 'Settings › Stats', saveSlider: 'Save Slider', sliderBackgroundImage: 'Slider Background Image',
+    uploadBackgroundImages: 'Upload Background Images', titleColor: 'Title Color', captionColor: 'Caption Color',
+    textAlignment: 'Text Alignment', left: 'Left', center: 'Center', right: 'Right',
+    slides: 'Slides', addSlide: 'Add Slide', removeSlide: 'Remove Slide', slideLink: 'Slide Link',
+    titleCaptionPerLanguage: 'Title/Caption are per language', linkShared: 'Link is shared; Title/Caption are per language',
+    // Admin Messages
+    messagesManagement: 'Messages Management', messages: 'Messages', from: 'From', subject: 'Subject',
+    receivedAt: 'Received At', messageText: 'Message', noMessagesYet: 'No messages yet.',
+    // Admin Pages
+    pagesManagement: 'Pages Management', editPage: 'Edit Page', pageName: 'Page Name',
+    pageContent: 'Page Content', saveChanges: 'Save Changes',
+    // Common Form Fields
+    title: 'Title', description: 'Description', image: 'Image', currentImage: 'Current Image',
+    removeImage: 'Remove current image', uploadNewImage: 'Upload new image', imageRecommendation: 'PNG, JPG, or SVG recommended.',
+    content: 'Content', link: 'Link', caption: 'Caption', name: 'Name', email: 'Email',
+    position: 'Position', phone: 'Phone', facebook: 'Facebook', linkedin: 'LinkedIn', twitter: 'Twitter'
   },
   sk: {
     home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
@@ -758,7 +819,68 @@ const TRANSLATIONS = {
     // Admin Menu Items
     contentManagement: 'Správa obsahu', pages: 'Stránky', ourTeam: 'Náš tím', settings: 'Nastavenia',
     slider: 'Posúvač', stats: 'Štatistiky', multiLanguageContent: 'Viacjazyčný obsah', viewSite: 'Zobraziť stránku',
-    logout: 'Odhlásiť sa', logoutConfirm: 'Naozaj sa chcete odhlásiť?', lowerNumbersFirst: 'Nižšie čísla sa zobrazia ako prvé.'
+    logout: 'Odhlásiť sa', logoutConfirm: 'Naozaj sa chcete odhlásiť?', lowerNumbersFirst: 'Nižšie čísla sa zobrazia ako prvé.',
+    // Admin Common
+    newItem: 'Nový', editItem: 'Upraviť', created_successfully: 'bol úspešne vytvorený.',
+    updated_successfully: 'bol úspešne aktualizovaný.', deleted_successfully: 'bol vymazaný.',
+    // Admin Events
+    eventsManagement: 'Správa podujatí', newEvent: 'Nové podujatie', editEvent: 'Upraviť podujatie',
+    event: 'Podujatie', date: 'Dátum', location: 'Miesto', eventImage: 'Obrázok podujatia',
+    eventDeleted: 'Podujatie bolo vymazané.', eventCreated: 'Podujatie bolo úspešne vytvorené.',
+    eventUpdated: 'Podujatie bolo úspešne aktualizované.', deleteThisEvent: 'Vymazať toto podujatie?',
+    noEventsYet_admin: 'Zatiaľ žiadne podujatia.', createFirstEvent: 'Vytvoriť prvé podujatie',
+    startCreatingEvent: 'Začnite vytvorením prvého podujatia.',
+    eventDate: 'Dátum podujatia', eventLocation: 'Miesto podujatia', additionalImages: 'Ďalšie obrázky',
+    uploadMultipleImages: 'Nahrajte viacero obrázkov, ktoré sa zobrazia v galérii podujatia na stránkach s detailmi.',
+    chooseImages: 'Vybrať obrázky...', published: 'Zverejnené', status: 'Stav', active: 'Aktívny', inactive: 'Neaktívny',
+    // Admin Team
+    teamManagement: 'Správa tímu', newMember: 'Nový člen', editMember: 'Upraviť člena',
+    member: 'Člen', bio: 'Životopis', order: 'Poradie', memberPhoto: 'Fotografia člena',
+    memberDeleted: 'Člen bol vymazaný.', memberCreated: 'Člen bol úspešne vytvorený.',
+    memberUpdated: 'Člen bol úspešne aktualizovaný.', deleteThisMember: 'Vymazať tohto člena?',
+    noTeamYet_admin: 'Zatiaľ žiadni členovia tímu', createFirstMember: 'Vytvoriť prvého člena',
+    startCreatingMember: 'Začnite vytvorením prvého člena tímu.',
+    // Admin News
+    newsManagement: 'Správa noviniek', newsArticles: 'Články noviniek', newArticle: 'Nový článok',
+    editArticle: 'Upraviť článok', article: 'Článok', publishedDate: 'Dátum zverejnenia',
+    articleDeleted: 'Článok bol vymazaný.', articleCreated: 'Článok bol úspešne vytvorený.',
+    articleUpdated: 'Článok bol úspešne aktualizovaný.', deleteThisArticle: 'Vymazať tento článok?',
+    noNewsYet_admin: 'Zatiaľ žiadne články.', summary: 'Zhrnutie',
+    // Admin Themes
+    themesManagement: 'Správa tém', newTheme: 'Nová téma', editTheme: 'Upraviť tému',
+    theme: 'Téma', themeDeleted: 'Téma bola vymazaná.', themeCreated: 'Téma bola úspešne vytvorená.',
+    themeUpdated: 'Téma bola úspešne aktualizovaná.', deleteThisTheme: 'Vymazať túto tému?',
+    noThemesYet_admin: 'Zatiaľ žiadne témy.', createFirstTheme: 'Vytvoriť prvú tému',
+    startCreatingTheme: 'Začnite vytvorením prvej témy.',
+    // Admin Documents
+    documentsManagement: 'Správa dokumentov', newDocument: 'Nový dokument', editDocument: 'Upraviť dokument',
+    document: 'Dokument', file: 'Súbor', documentDeleted: 'Dokument bol vymazaný.',
+    documentCreated: 'Dokument bol úspešne vytvorený.', documentUpdated: 'Dokument bol úspešne aktualizovaný.',
+    deleteThisDocument: 'Vymazať tento dokument?', editDocumentTitle: 'Upraviť dokument',
+    editingDocument: 'Úprava dokumentu', fileUpload: 'Súbor', fileFormats: 'pdf, docx, xlsx, pptx, txt, obrázok',
+    // Admin Focus Areas
+    focusAreasManagement: 'Správa zameraní', newFocusArea: 'Nové zameranie', editFocusArea: 'Upraviť zameranie',
+    focusArea: 'Zameranie', focusAreaDeleted: 'Zameranie bolo vymazané.',
+    focusAreaCreated: 'Zameranie bolo úspešne vytvorené.', focusAreaUpdated: 'Zameranie bolo úspešne aktualizované.',
+    deleteThisFocusArea: 'Vymazať toto zameranie?',
+    // Admin Settings
+    settingsContact: 'Nastavenia › Kontakt', settingsGDPR: 'Nastavenia › GDPR', settingsSlider: 'Nastavenia › Posúvač',
+    settingsStats: 'Nastavenia › Štatistiky', saveSlider: 'Uložiť posúvač', sliderBackgroundImage: 'Obrázok pozadia posúvača',
+    uploadBackgroundImages: 'Nahrať obrázky pozadia', titleColor: 'Farba nadpisu', captionColor: 'Farba titulku',
+    textAlignment: 'Zarovnanie textu', left: 'Vľavo', center: 'Stred', right: 'Vpravo',
+    slides: 'Snímky', addSlide: 'Pridať snímku', removeSlide: 'Odstrániť snímku', slideLink: 'Odkaz snímky',
+    titleCaptionPerLanguage: 'Nadpis/titulok sú pre každý jazyk', linkShared: 'Odkaz je zdieľaný; Nadpis/titulok sú pre každý jazyk',
+    // Admin Messages
+    messagesManagement: 'Správa správ', messages: 'Správy', from: 'Od', subject: 'Predmet',
+    receivedAt: 'Prijaté', messageText: 'Správa', noMessagesYet: 'Zatiaľ žiadne správy.',
+    // Admin Pages
+    pagesManagement: 'Správa stránok', editPage: 'Upraviť stránku', pageName: 'Názov stránky',
+    pageContent: 'Obsah stránky', saveChanges: 'Uložiť zmeny',
+    // Common Form Fields
+    title: 'Nadpis', description: 'Popis', image: 'Obrázok', currentImage: 'Aktuálny obrázok',
+    removeImage: 'Odstrániť aktuálny obrázok', uploadNewImage: 'Nahrať nový obrázok', imageRecommendation: 'Odporúčané PNG, JPG alebo SVG.',
+    content: 'Obsah', link: 'Odkaz', caption: 'Titulok', name: 'Meno', email: 'Email',
+    position: 'Pozícia', phone: 'Telefón', facebook: 'Facebook', linkedin: 'LinkedIn', twitter: 'Twitter'
   },
   hu: {
     home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',

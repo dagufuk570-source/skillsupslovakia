@@ -1,12 +1,12 @@
-<%- include('admin-layout-top', { title: 'Documents Management', lang, useDb: true, active: 'documents' }) %>
+<%- include('admin-layout-top', { title: t('documentsManagement'), lang, useDb: true, active: 'documents' }) %>
 <div class="card wow fadeIn" data-wow-delay="0.1s">
   <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
     <div class="d-flex align-items-center">
       <i class="fas fa-file-alt fa-lg me-2"></i>
-      <h5 class="mb-0">Documents - <%= lang.toUpperCase() %></h5>
+      <h5 class="mb-0"><%= t('documents') %> - <%= lang.toUpperCase() %></h5>
     </div>
     <a class="btn btn-light btn-sm" href="/admin/documents/new?lang=<%= lang %>">
-      <i class="fas fa-plus me-1"></i>New Document
+      <i class="fas fa-plus me-1"></i><%= t('newDocument') %>
     </a>
   </div>
   <div class="card-body">
@@ -14,17 +14,17 @@
       <% if(success === 'created') { %>
         <div class="alert alert-success d-flex align-items-center" role="alert">
           <i class="fas fa-check-circle me-2"></i>
-          <div>Document has been created successfully.</div>
+          <div><%= t('documentCreated') %></div>
         </div>
       <% } else if(success === 'updated') { %>
         <div class="alert alert-success d-flex align-items-center" role="alert">
           <i class="fas fa-check-circle me-2"></i>
-          <div>Document has been updated successfully.</div>
+          <div><%= t('documentUpdated') %></div>
         </div>
       <% } else if(success === 'deleted') { %>
         <div class="alert alert-warning d-flex align-items-center" role="alert">
           <i class="fas fa-trash me-2"></i>
-          <div>Document has been deleted.</div>
+          <div><%= t('documentDeleted') %></div>
         </div>
       <% } %>
     <% } %>
@@ -33,14 +33,15 @@
         <table class="table table-hover">
           <thead class="table-light">
             <tr>
-              <th>Title</th>
-              <th>File</th>
-              <th>Published</th>
-              <th>Sort</th>
-              <th class="text-end">Actions</th>
+              <th><%= t('title') %></th>
+              <th><%= t('file') %></th>
+              <th><%= t('published') %></th>
+              <th><%= t('sortOrder') %></th>
+              <th class="text-end"><%= t('actions') %></th>
             </tr>
           </thead>
           <tbody>
+            <% const deleteDocMsg = t('deleteThisDocument'); %>
             <% docs.forEach(d => { %>
               <tr>
                 <td style="text-align: justify;">
@@ -49,14 +50,14 @@
                     <div class="text-muted small"><%= (d.description || '').substring(0, 90) %><%= (d.description && d.description.length > 90) ? '...' : '' %></div>
                   <% } %>
                 </td>
-                <td><a href="<%= d.file_url %>" target="_blank"><i class="fas fa-download me-1"></i>view</a></td>
-                <td><span class="badge <%= d.published ? 'bg-success' : 'bg-secondary' %>"><%= d.published ? 'Yes' : 'No' %></span></td>
+                <td><a href="<%= d.file_url %>" target="_blank"><i class="fas fa-download me-1"></i><%= t('download') %></a></td>
+                <td><span class="badge <%= d.published ? 'bg-success' : 'bg-secondary' %>"><%= d.published ? t('active') : t('inactive') %></span></td>
                 <td><%= d.sort_order || 0 %></td>
                 <td class="text-end">
                   <div class="btn-group" role="group">
-                    <a class="btn btn-sm btn-outline-secondary" href="/admin/documents/<%= d.id %>/edit?lang=<%= lang %>" title="Edit Document"><i class="fas fa-edit"></i></a>
-                    <form method="post" action="/admin/documents/<%= d.id %>/delete?lang=<%= lang %>" style="display:inline" onsubmit="return confirm('Delete this document?')">
-                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Document"><i class="fas fa-trash"></i></button>
+                    <a class="btn btn-sm btn-outline-secondary" href="/admin/documents/<%= d.id %>/edit?lang=<%= lang %>" title="<%= t('edit') %>"><i class="fas fa-edit"></i></a>
+                    <form method="post" action="/admin/documents/<%= d.id %>/delete?lang=<%= lang %>" style="display:inline" onsubmit="return confirm('<%= deleteDocMsg %>')">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="<%= t('delete') %>"><i class="fas fa-trash"></i></button>
                     </form>
                   </div>
                 </td>

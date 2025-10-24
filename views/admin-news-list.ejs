@@ -1,13 +1,13 @@
-<%- include('admin-layout-top', { title: 'News Management', lang, useDb, active: 'news' }) %>
+<%- include('admin-layout-top', { title: t('newsManagement'), lang, useDb, active: 'news' }) %>
 
 <div class="card wow fadeIn" data-wow-delay="0.1s">
   <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
     <div class="d-flex align-items-center">
       <i class="fas fa-newspaper fa-lg me-2"></i>
-      <h5 class="mb-0">News Articles</h5>
+      <h5 class="mb-0"><%= t('newsArticles') %></h5>
     </div>
     <a class="btn btn-light btn-sm" href="/admin/news/new">
-      <i class="fas fa-plus me-1"></i>New Article
+      <i class="fas fa-plus me-1"></i><%= t('newArticle') %>
     </a>
   </div>
   <div class="card-body">
@@ -15,17 +15,17 @@
       <% if(success === 'created') { %>
         <div class="alert alert-success d-flex align-items-center" role="alert">
           <i class="fas fa-check-circle me-2"></i>
-          <div>Article has been created successfully.</div>
+          <div><%= t('articleCreated') %></div>
         </div>
       <% } else if(success === 'updated') { %>
         <div class="alert alert-success d-flex align-items-center" role="alert">
           <i class="fas fa-check-circle me-2"></i>
-          <div>Article has been updated successfully.</div>
+          <div><%= t('articleUpdated') %></div>
         </div>
       <% } else if(success === 'deleted') { %>
         <div class="alert alert-warning d-flex align-items-center" role="alert">
           <i class="fas fa-trash me-2"></i>
-          <div>Article has been deleted.</div>
+          <div><%= t('articleDeleted') %></div>
         </div>
       <% } %>
     <% } %>
@@ -34,13 +34,14 @@
         <table class="table table-hover">
           <thead class="table-light">
             <tr>
-              <th>Title</th>
-              <th>Published Date</th>
-              <th>Status</th>
-              <th class="text-end">Actions</th>
+              <th><%= t('title') %></th>
+              <th><%= t('publishedDate') %></th>
+              <th><%= t('status') %></th>
+              <th class="text-end"><%= t('actions') %></th>
             </tr>
           </thead>
           <tbody>
+            <% const deleteArticleMsg = t('deleteThisArticle'); %>
             <% news.forEach(function(n) { %>
               <tr>
                 <td>
@@ -60,12 +61,12 @@
                   <% if(n.published_at) { %>
                     <span class="text-muted"><%= new Date(n.published_at).toLocaleDateString() %></span>
                   <% } else { %>
-                    <span class="text-muted">No date</span>
+                    <span class="text-muted">-</span>
                   <% } %>
                 </td>
                 <td>
                   <% if(n.is_published) { %>
-                    <span class="badge bg-success">Published</span>
+                    <span class="badge bg-success"><%= t('published') %></span>
                   <% } else { %>
                     <span class="badge bg-secondary">Draft</span>
                   <% } %>
@@ -73,15 +74,15 @@
                 <td class="text-end">
                   <div class="btn-group" role="group">
                     <% if(n.slug) { %>
-                      <a href="/news/<%= n.slug %>?lang=<%= lang %>" class="btn btn-sm btn-outline-primary" target="_blank" title="View Article">
+                      <a href="/news/<%= n.slug %>?lang=<%= lang %>" class="btn btn-sm btn-outline-primary" target="_blank" title="<%= t('viewDetails') %>">
                         <i class="fas fa-eye"></i>
                       </a>
                     <% } %>
-                    <a href="/admin/news/<%= n.id %>/edit" class="btn btn-sm btn-outline-secondary" title="Edit Article">
+                    <a href="/admin/news/<%= n.id %>/edit" class="btn btn-sm btn-outline-secondary" title="<%= t('edit') %>">
                       <i class="fas fa-edit"></i>
                     </a>
-                    <form method="post" action="/admin/news/<%= n.id %>/delete" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this news article?')">
-                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Article">
+                    <form method="post" action="/admin/news/<%= n.id %>/delete" style="display: inline;" onsubmit="return confirm('<%= deleteArticleMsg %>')">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="<%= t('delete') %>">
                         <i class="fas fa-trash"></i>
                       </button>
                     </form>
@@ -95,7 +96,7 @@
     <% } else { %>
       <div class="text-center py-5">
         <i class="fas fa-newspaper fa-3x text-muted mb-3"></i>
-        <h5 class="text-muted">No News Articles Yet</h5>
+        <h5 class="text-muted"><%= t('noNewsYet_admin') %></h5>
         <p class="text-muted">Start by creating your first news article.</p>
         <a href="/admin/news/new" class="btn btn-warning">
           <i class="fas fa-plus me-2"></i>Create First Article

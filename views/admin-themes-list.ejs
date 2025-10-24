@@ -1,13 +1,13 @@
-<%- include('admin-layout-top', { title: 'Themes Management', lang, useDb: true, active: 'themes' }) %>
+<%- include('admin-layout-top', { title: t('themesManagement'), lang, useDb: true, active: 'themes' }) %>
 
 <div class="card wow fadeIn" data-wow-delay="0.1s">
   <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
     <div class="d-flex align-items-center">
       <i class="fas fa-tags fa-lg me-2"></i>
-      <h5 class="mb-0">Themes - <%= lang.toUpperCase() %></h5>
+      <h5 class="mb-0"><%= t('themes') %> - <%= lang.toUpperCase() %></h5>
     </div>
     <a class="btn btn-light btn-sm" href="/admin/themes/new?lang=<%= lang %>">
-      <i class="fas fa-plus me-1"></i>New Theme
+      <i class="fas fa-plus me-1"></i><%= t('newTheme') %>
     </a>
   </div>
   <div class="card-body">
@@ -15,17 +15,17 @@
       <% if(success === 'created') { %>
         <div class="alert alert-success d-flex align-items-center" role="alert">
           <i class="fas fa-check-circle me-2"></i>
-          <div>Theme has been created successfully.</div>
+          <div><%= t('themeCreated') %></div>
         </div>
       <% } else if(success === 'updated') { %>
         <div class="alert alert-success d-flex align-items-center" role="alert">
           <i class="fas fa-check-circle me-2"></i>
-          <div>Theme has been updated successfully.</div>
+          <div><%= t('themeUpdated') %></div>
         </div>
       <% } else if(success === 'deleted') { %>
         <div class="alert alert-warning d-flex align-items-center" role="alert">
           <i class="fas fa-trash me-2"></i>
-          <div>Theme has been deleted.</div>
+          <div><%= t('themeDeleted') %></div>
         </div>
       <% } %>
     <% } %>
@@ -34,11 +34,12 @@
         <table class="table table-hover">
           <thead class="table-light">
             <tr>
-              <th>Theme</th>
-              <th class="text-end">Actions</th>
+              <th><%= t('theme') %></th>
+              <th class="text-end"><%= t('actions') %></th>
             </tr>
           </thead>
           <tbody>
+            <% const deleteThemeMsg = t('deleteThisTheme'); %>
             <% themes.forEach(function(t) { %>
               <tr>
                 <td>
@@ -68,7 +69,7 @@
                     <a href="/admin/themes/<%= t.id %>/edit?lang=<%= lang %>" class="btn btn-sm btn-outline-secondary" title="Edit Theme">
                       <i class="fas fa-edit"></i>
                     </a>
-                    <form method="post" action="/admin/themes/<%= t.id %>/delete?lang=<%= lang %>" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this theme?')">
+                    <form method="post" action="/admin/themes/<%= t.id %>/delete?lang=<%= lang %>" style="display: inline;" onsubmit="return confirm('<%= deleteThemeMsg %>')">
                       <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Theme">
                         <i class="fas fa-trash"></i>
                       </button>
