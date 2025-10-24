@@ -4,7 +4,8 @@
     <div class="col-lg-8">
       <% if(member){ %>
         <div class="card shadow-sm">
-          <% if(member.photo_url){ %>
+          <!-- DEBUG: photo_url = "<%= member.photo_url || 'NULL' %>" -->
+          <% if(member.photo_url && member.photo_url.trim()){ %>
             <% 
               const thumbUrl = member.photo_url.replace(/\.jpg$/i, '-thumb.jpg');
             %>
