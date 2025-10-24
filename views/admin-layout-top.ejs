@@ -168,7 +168,7 @@
             <a class="nav-link" href="/?lang=<%= lang %>" target="_blank">
               <i class="fas fa-external-link-alt me-2"></i><%= t('viewSite') %>
             </a>
-            <a class="nav-link text-danger" href="/admin/logout" onclick="return confirm('<%= t('logoutConfirm') %>')">
+            <a class="nav-link text-danger" href="/admin/logout">
               <i class="fas fa-sign-out-alt me-2"></i><%= t('logout') %>
             </a>
           </nav>
@@ -195,7 +195,7 @@
                 <a class="btn btn-sm btn-outline-secondary" href="/?lang=<%= lang %>" target="_blank">
                   <i class="fas fa-external-link-alt me-1"></i><%= t('viewSite') %>
                 </a>
-                <a class="btn btn-sm btn-outline-danger" href="/admin/logout" onclick="return confirm('<%= t('logoutConfirm') %>')">
+                <a class="btn btn-sm btn-outline-danger" href="/admin/logout">
                   <i class="fas fa-sign-out-alt me-1"></i><%= t('logout') %>
                 </a>
               </div>

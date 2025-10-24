@@ -45,7 +45,7 @@
               <a href="/admin/partners/<%= partner.id %>/edit?lang=<%= lang %>" class="btn btn-sm btn-warning">
                 <i class="bi bi-pencil"></i> <%= t('edit') %>
               </a>
-              <form action="/admin/partners/<%= partner.id %>/delete?lang=<%= lang %>" method="POST" style="display:inline;" onsubmit="return confirm('<%= t('deleteConfirm') %>');">
+              <form action="/admin/partners/<%= partner.id %>/delete?lang=<%= lang %>" method="POST" style="display:inline;">
                 <button type="submit" class="btn btn-sm btn-danger">
                   <i class="bi bi-trash"></i> <%= t('delete') %>
                 </button>
