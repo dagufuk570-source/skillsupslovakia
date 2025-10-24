@@ -784,7 +784,36 @@ const TRANSLATIONS = {
     title: 'Title', description: 'Description', image: 'Image', currentImage: 'Current Image',
     removeImage: 'Remove current image', uploadNewImage: 'Upload new image', imageRecommendation: 'PNG, JPG, or SVG recommended.',
     content: 'Content', link: 'Link', caption: 'Caption', name: 'Name', email: 'Email',
-    position: 'Position', phone: 'Phone', facebook: 'Facebook', linkedin: 'LinkedIn', twitter: 'Twitter'
+    position: 'Position', phone: 'Phone', facebook: 'Facebook', linkedin: 'LinkedIn', twitter: 'Twitter',
+    // Dashboard
+    welcomeAdmin: 'Welcome to Admin Panel', quickStats: 'Quick Statistics', recentActivity: 'Recent Activity',
+    totalEvents: 'Total Events', totalThemes: 'Total Themes', totalMembers: 'Total Members', totalPartners: 'Total Partners',
+    totalNews: 'Total News', totalDocuments: 'Total Documents', viewAll: 'View All', manage: 'Manage',
+    // Form Labels
+    slug: 'Slug', galleryImages: 'Gallery Images', uploadImages: 'Upload Images', chooseFiles: 'Choose files...',
+    eventInformation: 'Event Information', themeInformation: 'Theme Information', memberInformation: 'Member Information',
+    newsInformation: 'News Information', documentInformation: 'Document Information',
+    currentPhoto: 'Current Photo', removePhoto: 'Remove current photo', socialMedia: 'Social Media',
+    publishedAt: 'Published At', articleSummary: 'Article Summary', articleContent: 'Article Content',
+    makePublished: 'Make Published', eventDetails: 'Event Details', additionalInformation: 'Additional Information',
+    // Settings Forms
+    contactInformation: 'Contact Information', addressLine1: 'Address Line 1', addressLine2: 'Address Line 2',
+    city: 'City', zipCode: 'Zip Code', country: 'Country', phoneNumber: 'Phone Number', emailAddress: 'Email Address',
+    facebookUrl: 'Facebook URL', linkedinUrl: 'LinkedIn URL', twitterUrl: 'Twitter URL',
+    statsConfiguration: 'Stats Configuration', stat1Label: 'Stat 1 Label', stat1Value: 'Stat 1 Value',
+    stat2Label: 'Stat 2 Label', stat2Value: 'Stat 2 Value', stat3Label: 'Stat 3 Label', stat3Value: 'Stat 3 Value',
+    stat4Label: 'Stat 4 Label', stat4Value: 'Stat 4 Value', saveSettings: 'Save Settings',
+    sliderConfiguration: 'Slider Configuration', backgroundImage: 'Background Image', selectImage: 'Select Image',
+    textColor: 'Text Color', slideTitle: 'Slide Title', slideCaption: 'Slide Caption', buttonText: 'Button Text',
+    buttonUrl: 'Button URL', addNewSlide: 'Add New Slide', deleteSlide: 'Delete Slide',
+    // Validation & Hints
+    requiredField: 'Required field', optionalField: 'Optional field', maxFileSize: 'Maximum file size',
+    recommendedSize: 'Recommended size', multipleFilesAllowed: 'Multiple files allowed',
+    urlFormat: 'URL format', dateFormat: 'Date format', wysiwygEditor: 'Rich text editor',
+    characterLimit: 'Character limit', fillAllLanguages: 'Fill in all languages',
+    // Misc
+    preview: 'Preview', backToList: 'Back to List', viewOnSite: 'View on Site', lastUpdated: 'Last Updated',
+    createdAt: 'Created At', updatedAt: 'Updated At', noDataAvailable: 'No data available'
   },
   sk: {
     home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
@@ -880,7 +909,36 @@ const TRANSLATIONS = {
     title: 'Nadpis', description: 'Popis', image: 'Obrázok', currentImage: 'Aktuálny obrázok',
     removeImage: 'Odstrániť aktuálny obrázok', uploadNewImage: 'Nahrať nový obrázok', imageRecommendation: 'Odporúčané PNG, JPG alebo SVG.',
     content: 'Obsah', link: 'Odkaz', caption: 'Titulok', name: 'Meno', email: 'Email',
-    position: 'Pozícia', phone: 'Telefón', facebook: 'Facebook', linkedin: 'LinkedIn', twitter: 'Twitter'
+    position: 'Pozícia', phone: 'Telefón', facebook: 'Facebook', linkedin: 'LinkedIn', twitter: 'Twitter',
+    // Dashboard
+    welcomeAdmin: 'Vitajte v Admin Paneli', quickStats: 'Rýchle štatistiky', recentActivity: 'Nedávna aktivita',
+    totalEvents: 'Celkový počet podujatí', totalThemes: 'Celkový počet tém', totalMembers: 'Celkový počet členov', totalPartners: 'Celkový počet partnerov',
+    totalNews: 'Celkový počet noviniek', totalDocuments: 'Celkový počet dokumentov', viewAll: 'Zobraziť všetko', manage: 'Spravovať',
+    // Form Labels
+    slug: 'Slug', galleryImages: 'Galéria obrázkov', uploadImages: 'Nahrať obrázky', chooseFiles: 'Vybrať súbory...',
+    eventInformation: 'Informácie o podujatí', themeInformation: 'Informácie o téme', memberInformation: 'Informácie o členovi',
+    newsInformation: 'Informácie o novinke', documentInformation: 'Informácie o dokumente',
+    currentPhoto: 'Aktuálna fotografia', removePhoto: 'Odstrániť aktuálnu fotografiu', socialMedia: 'Sociálne siete',
+    publishedAt: 'Zverejnené', articleSummary: 'Zhrnutie článku', articleContent: 'Obsah článku',
+    makePublished: 'Zverejniť', eventDetails: 'Podrobnosti podujatia', additionalInformation: 'Dodatočné informácie',
+    // Settings Forms
+    contactInformation: 'Kontaktné informácie', addressLine1: 'Adresa riadok 1', addressLine2: 'Adresa riadok 2',
+    city: 'Mesto', zipCode: 'PSČ', country: 'Krajina', phoneNumber: 'Telefónne číslo', emailAddress: 'Emailová adresa',
+    facebookUrl: 'Facebook URL', linkedinUrl: 'LinkedIn URL', twitterUrl: 'Twitter URL',
+    statsConfiguration: 'Konfigurácia štatistík', stat1Label: 'Štítok štatistiky 1', stat1Value: 'Hodnota štatistiky 1',
+    stat2Label: 'Štítok štatistiky 2', stat2Value: 'Hodnota štatistiky 2', stat3Label: 'Štítok štatistiky 3', stat3Value: 'Hodnota štatistiky 3',
+    stat4Label: 'Štítok štatistiky 4', stat4Value: 'Hodnota štatistiky 4', saveSettings: 'Uložiť nastavenia',
+    sliderConfiguration: 'Konfigurácia posúvača', backgroundImage: 'Obrázok pozadia', selectImage: 'Vybrať obrázok',
+    textColor: 'Farba textu', slideTitle: 'Nadpis snímky', slideCaption: 'Titulok snímky', buttonText: 'Text tlačidla',
+    buttonUrl: 'URL tlačidla', addNewSlide: 'Pridať novú snímku', deleteSlide: 'Vymazať snímku',
+    // Validation & Hints
+    requiredField: 'Povinné pole', optionalField: 'Voliteľné pole', maxFileSize: 'Maximálna veľkosť súboru',
+    recommendedSize: 'Odporúčaná veľkosť', multipleFilesAllowed: 'Povolené viacero súborov',
+    urlFormat: 'Formát URL', dateFormat: 'Formát dátumu', wysiwygEditor: 'Editor formátovaného textu',
+    characterLimit: 'Limit znakov', fillAllLanguages: 'Vyplňte všetky jazyky',
+    // Misc
+    preview: 'Náhľad', backToList: 'Späť na zoznam', viewOnSite: 'Zobraziť na stránke', lastUpdated: 'Naposledy aktualizované',
+    createdAt: 'Vytvorené', updatedAt: 'Aktualizované', noDataAvailable: 'Žiadne dostupné údaje'
   },
   hu: {
     home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',
