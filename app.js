@@ -842,11 +842,9 @@ const TRANSLATIONS = {
     userGuide: 'User Guide', adminPanelUserGuide: 'Admin Panel User Guide'
   },
   sk: {
-    home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
     menu: 'Menu', callUs: 'Zavolajte nám', mailUs: 'Napíšte nám', address: 'Adresa', learnMore: 'Zistiť viac', viewEvents: 'Zobraziť podujatia',
     home: 'Domov', themes: 'Témy', focusAreas: 'Zamerania', events: 'Podujatia', team: 'Náš tím', partners: 'Partneri', news: 'Novinky', documents: 'Dokumenty', about: 'O nás', contact: 'Kontakt', gdpr: 'GDPR',
     yourEmail: 'Váš email', subscribe: 'Prihlásiť sa', copied: 'Skopírované', allRightsReserved: 'Všetky práva vyhradené.',
-    home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partners', news: 'Hírek', documents: 'Dokumentumok', about: 'Rólunk', contact: 'Kapcsolat', gdpr: 'GDPR',
     viewDetails: 'Zobraziť podrobnosti', noEventsYet: 'Zatiaľ žiadne podujatia.', eventsKicker: 'NAŠE PODUJATIA', eventsHeading: 'Preskúmajte naše najnovšie podujatia', eventsTitle: 'Podujatia',
     ourAddress: 'Naša adresa', emailLabel: 'Email', getInTouch: 'Kontaktujte nás', nameLabel: 'Meno', subjectLabel: 'Predmet', messageLabel: 'Správa', sendMessage: 'Odoslať správu',
     contactSuccess: 'Vaša správa bola odoslaná. Ďakujeme!',
