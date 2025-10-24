@@ -2484,20 +2484,26 @@ const uploadPartner = multer({
 });
 
 async function processPartnerLogo(buffer, originalname){
-  const ext = '.png';
-  const baseName = safeSlugFilename(path.basename(originalname || 'partner', path.extname(originalname || 'partner')), ext);
-  const fileName = `${baseName}--${Date.now()}${ext}`;
-  const filePath = `/uploads/partners/${fileName}`;
-  
-  // Resize logo (300x300, contain with transparent background)
-  const resizedBuffer = await sharp(buffer)
-    .resize(300, 300, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
-  
-  await saveFile(filePath, resizedBuffer);
-  console.log('[partners] Saved logo:', filePath);
-  return { logo_url: filePath };
+  try {
+    const ext = '.png';
+    const baseName = safeSlugFilename(path.basename(originalname || 'partner', path.extname(originalname || 'partner')), ext);
+    const fileName = `${baseName}--${Date.now()}${ext}`;
+    const filePath = `/uploads/partners/${fileName}`;
+    
+    // Resize logo (300x300, contain with white background)
+    const resizedBuffer = await sharp(buffer)
+      .resize(300, 300, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+      .png()
+      .toBuffer();
+    
+    await saveFile(filePath, resizedBuffer);
+    console.log('[partners] Saved logo:', filePath);
+    return { logo_url: filePath };
+  } catch (err) {
+    console.error('[partners] Failed to process logo:', err.message);
+    // Return default logo on processing error
+    return { logo_url: '/img/default-partner.png' };
+  }
 }
 
 app.get('/admin/partners', basicAuth, async (req,res)=>{
@@ -2528,20 +2534,10 @@ app.post('/admin/partners', basicAuth, uploadPartner.single('logo'), async (req,
       });
     }
     
-    let logo_url = null;
+    let logo_url = '/img/default-partner.png'; // Default logo
     if(req.file){
-      try{
-        const processed = await processPartnerLogo(req.file.buffer, req.file.originalname || name);
-        logo_url = processed.logo_url;
-      }catch(e){
-        return res.status(400).render('admin-partners-form', { 
-          lang: res.locals.lang, 
-          useDb: true, 
-          active: 'partners', 
-          partner: null, 
-          error: 'Image could not be processed.' 
-        });
-      }
+      const processed = await processPartnerLogo(req.file.buffer, req.file.originalname || name);
+      logo_url = processed.logo_url;
     }
     
     await db.createPartner({ name, logo_url, sort_order });
@@ -2583,11 +2579,11 @@ app.post('/admin/partners/:id', basicAuth, uploadPartner.single('logo'), async (
       });
     }
     
-    let logo_url = existing.logo_url || null;
+    let logo_url = existing.logo_url || '/img/default-partner.png';
     
     // Handle logo removal
     if(req.body.remove_logo === '1'){
-      if(logo_url){
+      if(logo_url && logo_url !== '/img/default-partner.png'){
         try {
           await deleteFile(logo_url);
           console.log('[partners] Deleted logo:', logo_url);
@@ -2595,31 +2591,21 @@ app.post('/admin/partners/:id', basicAuth, uploadPartner.single('logo'), async (
           console.warn('[partners] Failed to delete logo:', err.message);
         }
       }
-      logo_url = '';
+      logo_url = '/img/default-partner.png';
     }
     
     // Handle new logo upload
     if(req.file){
-      try{
-        const processed = await processPartnerLogo(req.file.buffer, req.file.originalname || name);
-        // Delete old logo if exists
-        if(logo_url && logo_url !== processed.logo_url){
-          try {
-            await deleteFile(logo_url);
-          } catch (err) {
-            console.warn('[partners] Failed to delete old logo:', err.message);
-          }
+      const processed = await processPartnerLogo(req.file.buffer, req.file.originalname || name);
+      // Delete old logo if exists and not default
+      if(logo_url && logo_url !== processed.logo_url && logo_url !== '/img/default-partner.png'){
+        try {
+          await deleteFile(logo_url);
+        } catch (err) {
+          console.warn('[partners] Failed to delete old logo:', err.message);
         }
-        logo_url = processed.logo_url;
-      }catch(e){
-        return res.status(400).render('admin-partners-form', { 
-          lang: res.locals.lang, 
-          useDb: true, 
-          active: 'partners', 
-          partner: existing, 
-          error: 'Image could not be processed.' 
-        });
       }
+      logo_url = processed.logo_url;
     }
     
     await db.updatePartner(req.params.id, { name, logo_url, sort_order });

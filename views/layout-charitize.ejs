@@ -117,31 +117,24 @@
                                                                             <% } %>
                                                                         <% } %>
                                                 <a href="/themes?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/themes' ? 'active' : '') %>">
-                                                    <i class="fas fa-shapes me-1 <%= (currentPath === '/themes' ? 'text-warning' : 'text-light opacity-75') %>"></i>
                                                     <span class="text-capitalize"><%= t('themes') %></span>
                                                 </a>
                                                 <a href="/focus-areas?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/focus-areas' ? 'active' : '') %>">
-                                                    <i class="fas fa-bullseye me-1 <%= (currentPath === '/focus-areas' ? 'text-warning' : 'text-light opacity-75') %>"></i>
                                                     <span class="text-capitalize"><%= t('focusAreas') %></span>
                                                 </a>
                         <a href="/events?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/events' || currentPath.startsWith('/events/') ? 'active' : '') %>">
-                            <i class="fas fa-calendar-alt me-1 <%= ((currentPath === '/events' || currentPath.startsWith('/events/')) ? 'text-warning' : 'text-light opacity-75') %>"></i>
                             <span class="text-capitalize"><%= t('events') %></span>
                         </a>
                         <a href="/team?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/team' || currentPath.startsWith('/team/') ? 'active' : '') %>">
-                            <i class="fas fa-users me-1 <%= ((currentPath === '/team' || currentPath.startsWith('/team/')) ? 'text-warning' : 'text-light opacity-75') %>"></i>
                             <span class="text-capitalize"><%= t('team') %></span>
                         </a>
                         <a href="/partners?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/partners' ? 'active' : '') %>">
-                            <i class="fas fa-handshake me-1 <%= (currentPath === '/partners' ? 'text-warning' : 'text-light opacity-75') %>"></i>
                             <span class="text-capitalize"><%= t('partners') %></span>
                         </a>
                         <a href="/news?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/news' || currentPath.startsWith('/news/') ? 'active' : '') %>">
-                            <i class="fas fa-newspaper me-1 <%= ((currentPath === '/news' || currentPath.startsWith('/news/')) ? 'text-warning' : 'text-light opacity-75') %>"></i>
                             <span class="text-capitalize"><%= t('news') %></span>
                         </a>
                         <a href="/documents?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/documents' ? 'active' : '') %>">
-                            <i class="fas fa-file-lines me-1 <%= (currentPath === '/documents' ? 'text-warning' : 'text-light opacity-75') %>"></i>
                             <span class="text-capitalize"><%= t('documents') %></span>
                         </a>
                         <% if (menu && menu.length > 0) { %>
