@@ -127,6 +127,9 @@
             <a class="nav-link <%= active === 'team' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/team' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
               <i class="fas fa-users me-2"></i>Our Team
             </a>
+            <a class="nav-link <%= active === 'partners' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/partners' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
+              <i class="fas fa-handshake me-2"></i>Partners
+            </a>
             <a class="nav-link <%= active === 'news' ? 'active' : '' %> <%= !useDb ? 'disabled' : '' %>" href="<%= useDb ? '/admin/news' : '#' %>" tabindex="<%= !useDb ? '-1' : '0' %>" aria-disabled="<%= !useDb ? 'true' : 'false' %>">
               <i class="fas fa-newspaper me-2"></i>News
             </a>

@@ -220,6 +220,7 @@ async function connectDbWithRetry(){
         db.ensureEventsTable?.(),
         db.ensureThemesTable?.(),
         db.ensureTeamMembersTable?.(),
+        db.ensurePartnersTable?.(),
         db.ensureSettingsTable?.(),
         db.ensureFocusAreasTable?.(),
         db.ensureAdditionalImagesTable?.(),
@@ -677,7 +678,7 @@ app.use((req, res, next) => {
 const TRANSLATIONS = {
   en: {
     // Nav
-    home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', news: 'News', documents: 'Documents',
+    home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents',
     // Common UI
     menu: 'Menu', callUs: 'Call Us', mailUs: 'Mail Us', address: 'Address', learnMore: 'Learn More', viewEvents: 'View Events',
     quickLinks: 'Quick Links', languages: 'Languages', newsletter: 'Newsletter', stayUpdated: 'Stay updated with our latest events and programs.',
@@ -707,14 +708,16 @@ const TRANSLATIONS = {
     // Not found
     themeNotFound: 'Theme Not Found', eventNotFound: 'Event Not Found', newsNotFound: 'News Not Found', teamNotFound: 'Team Member Not Found',
     // Team
-    teamKicker: 'OUR TEAM', teamHeading: 'Meet Our Dedicated Team Members', noTeamYet: 'No team members yet.'
+    teamKicker: 'OUR TEAM', teamHeading: 'Meet Our Dedicated Team Members', noTeamYet: 'No team members yet.',
+    // Partners
+    ourPartners: 'Our Partners', partnersTitle: 'Organizations We Work With'
   },
   sk: {
-    home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
+    home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
     menu: 'Menu', callUs: 'Zavolajte nám', mailUs: 'Napíšte nám', address: 'Adresa', learnMore: 'Zistiť viac', viewEvents: 'Zobraziť podujatia',
-    home: 'Domov', themes: 'Témy', focusAreas: 'Zamerania', events: 'Podujatia', team: 'Náš tím', news: 'Novinky', documents: 'Dokumenty', about: 'O nás', contact: 'Kontakt', gdpr: 'GDPR',
+    home: 'Domov', themes: 'Témy', focusAreas: 'Zamerania', events: 'Podujatia', team: 'Náš tím', partners: 'Partneri', news: 'Novinky', documents: 'Dokumenty', about: 'O nás', contact: 'Kontakt', gdpr: 'GDPR',
     yourEmail: 'Váš email', subscribe: 'Prihlásiť sa', copied: 'Skopírované', allRightsReserved: 'Všetky práva vyhradené.',
-    home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', news: 'Hírek', documents: 'Dokumentumok', about: 'Rólunk', contact: 'Kapcsolat', gdpr: 'GDPR',
+    home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partners', news: 'Hírek', documents: 'Dokumentumok', about: 'Rólunk', contact: 'Kapcsolat', gdpr: 'GDPR',
     viewDetails: 'Zobraziť podrobnosti', noEventsYet: 'Zatiaľ žiadne podujatia.', eventsKicker: 'NAŠE PODUJATIA', eventsHeading: 'Preskúmajte naše najnovšie podujatia', eventsTitle: 'Podujatia',
     ourAddress: 'Naša adresa', emailLabel: 'Email', getInTouch: 'Kontaktujte nás', nameLabel: 'Meno', subjectLabel: 'Predmet', messageLabel: 'Správa', sendMessage: 'Odoslať správu',
     contactSuccess: 'Vaša správa bola odoslaná. Ďakujeme!',
@@ -728,10 +731,11 @@ const TRANSLATIONS = {
     fa_group: 'Skupina', fa_field: 'Oblasť', fa_experts: 'Odborník(ovia)', fa_description: 'Popis', fa_activity_description: 'Aktivita - popis', fa_type_of_activity: 'Typ aktivity',
   share: 'Zdieľať:', copy: 'Kopírovať', backToList: 'Späť na zoznam',
     themeNotFound: 'Téma sa nenašla', eventNotFound: 'Podujatie sa nenašlo', newsNotFound: 'Novinka sa nenašla', teamNotFound: 'Člen tímu sa nenašiel',
-    teamKicker: 'NÁŠ TÍM', teamHeading: 'Zoznámte sa s našimi členmi tímu', noTeamYet: 'Zatiaľ žiadni členovia tímu.'
+    teamKicker: 'NÁŠ TÍM', teamHeading: 'Zoznámte sa s našimi členmi tímu', noTeamYet: 'Zatiaľ žiadni členovia tímu.',
+    ourPartners: 'Naši partneri', partnersTitle: 'Organizácie, s ktorými spolupracujeme'
   },
   hu: {
-    home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', news: 'Hírek', documents: 'Dokumentumok',
+    home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',
     menu: 'Menü', callUs: 'Hívjon minket', mailUs: 'Írjon nekünk', address: 'Cím', learnMore: 'Tudjon meg többet', viewEvents: 'Események megtekintése',
     quickLinks: 'Gyors linkek', languages: 'Nyelvek', newsletter: 'Hírlevél', stayUpdated: 'Értesüljön legújabb eseményeinkről és programjainkról.',
     yourEmail: 'Az Ön e-mail címe', subscribe: 'Feliratkozás', copied: 'Másolva', allRightsReserved: 'Minden jog fenntartva.',
@@ -749,7 +753,8 @@ const TRANSLATIONS = {
     fa_group: 'Csoport', fa_field: 'Terület', fa_experts: 'Szakértő(k)', fa_description: 'Leírás', fa_activity_description: 'Tevékenység - leírás', fa_type_of_activity: 'Tevékenység típusa',
   share: 'Megosztás:', copy: 'Másolás', backToList: 'Vissza a listához',
     themeNotFound: 'Téma nem található', eventNotFound: 'Esemény nem található', newsNotFound: 'Hír nem található', teamNotFound: 'Csapattag nem található',
-    teamKicker: 'CSAPATUNK', teamHeading: 'Ismerje meg elkötelezett csapatunkat', noTeamYet: 'Még nincsenek csapattagok.'
+    teamKicker: 'CSAPATUNK', teamHeading: 'Ismerje meg elkötelezett csapatunkat', noTeamYet: 'Még nincsenek csapattagok.',
+    ourPartners: 'Partnereink', partnersTitle: 'Szervezetek, amelyekkel együttműködünk'
   }
 };
 app.use((req, res, next) => {
@@ -2463,6 +2468,182 @@ app.post('/admin/team/:id/delete', basicAuth, async (req,res)=>{
     res.redirect(`/admin/team?lang=${res.locals.lang}&success=deleted`);
   } catch (e) {
     res.redirect(`/admin/team?lang=${res.locals.lang}&error=delete_failed`);
+  }
+});
+
+// Partners management (DB only)
+const uploadPartner = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if(!/^image\//.test(file.mimetype)){
+      return cb(null, false);
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 2 * 1024 * 1024 } // 2 MB
+});
+
+async function processPartnerLogo(buffer, originalname){
+  const ext = '.png';
+  const baseName = safeSlugFilename(path.basename(originalname || 'partner', path.extname(originalname || 'partner')), ext);
+  const fileName = `${baseName}--${Date.now()}${ext}`;
+  const filePath = `/uploads/partners/${fileName}`;
+  
+  // Resize logo (300x300, contain with transparent background)
+  const resizedBuffer = await sharp(buffer)
+    .resize(300, 300, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+  
+  await saveFile(filePath, resizedBuffer);
+  console.log('[partners] Saved logo:', filePath);
+  return { logo_url: filePath };
+}
+
+app.get('/admin/partners', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Partners requires DB backend');
+  const partners = await db.listPartners();
+  const success = req.query.success;
+  res.render('admin-partners-list', { partners, lang: res.locals.lang, useDb: true, active: 'partners', success });
+});
+
+app.get('/admin/partners/new', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Partners requires DB backend');
+  res.render('admin-partners-form', { lang: res.locals.lang, useDb: true, active: 'partners', partner: null });
+});
+
+app.post('/admin/partners', basicAuth, uploadPartner.single('logo'), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Partners requires DB backend');
+  try {
+    const name = (req.body.name || '').trim();
+    const sort_order = parseInt(req.body.sort_order, 10) || 0;
+    
+    if(!name){
+      return res.status(400).render('admin-partners-form', { 
+        lang: res.locals.lang, 
+        useDb: true, 
+        active: 'partners', 
+        partner: null, 
+        error: 'Please enter a partner name.' 
+      });
+    }
+    
+    let logo_url = null;
+    if(req.file){
+      try{
+        const processed = await processPartnerLogo(req.file.buffer, req.file.originalname || name);
+        logo_url = processed.logo_url;
+      }catch(e){
+        return res.status(400).render('admin-partners-form', { 
+          lang: res.locals.lang, 
+          useDb: true, 
+          active: 'partners', 
+          partner: null, 
+          error: 'Image could not be processed.' 
+        });
+      }
+    }
+    
+    await db.createPartner({ name, logo_url, sort_order });
+    res.redirect(`/admin/partners?lang=${res.locals.lang}&success=created`);
+  } catch (e) {
+    return res.status(500).render('admin-partners-form', { 
+      lang: res.locals.lang, 
+      useDb: true, 
+      active: 'partners', 
+      partner: null, 
+      error: e?.message || 'An error occurred.' 
+    });
+  }
+});
+
+app.get('/admin/partners/:id/edit', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Partners requires DB backend');
+  const partner = await db.getPartner(req.params.id);
+  if(!partner) return res.status(404).send('Partner not found');
+  res.render('admin-partners-form', { lang: res.locals.lang, useDb: true, active: 'partners', partner });
+});
+
+app.post('/admin/partners/:id', basicAuth, uploadPartner.single('logo'), async (req,res)=>{
+  if(!useDb) return res.status(501).send('Partners requires DB backend');
+  try {
+    const existing = await db.getPartner(req.params.id);
+    if(!existing) return res.status(404).send('Partner not found');
+    
+    const name = (req.body.name || '').trim();
+    const sort_order = parseInt(req.body.sort_order, 10) || 0;
+    
+    if(!name){
+      return res.status(400).render('admin-partners-form', { 
+        lang: res.locals.lang, 
+        useDb: true, 
+        active: 'partners', 
+        partner: existing, 
+        error: 'Please enter a partner name.' 
+      });
+    }
+    
+    let logo_url = existing.logo_url || null;
+    
+    // Handle logo removal
+    if(req.body.remove_logo === '1'){
+      if(logo_url){
+        try {
+          await deleteFile(logo_url);
+          console.log('[partners] Deleted logo:', logo_url);
+        } catch (err) {
+          console.warn('[partners] Failed to delete logo:', err.message);
+        }
+      }
+      logo_url = '';
+    }
+    
+    // Handle new logo upload
+    if(req.file){
+      try{
+        const processed = await processPartnerLogo(req.file.buffer, req.file.originalname || name);
+        // Delete old logo if exists
+        if(logo_url && logo_url !== processed.logo_url){
+          try {
+            await deleteFile(logo_url);
+          } catch (err) {
+            console.warn('[partners] Failed to delete old logo:', err.message);
+          }
+        }
+        logo_url = processed.logo_url;
+      }catch(e){
+        return res.status(400).render('admin-partners-form', { 
+          lang: res.locals.lang, 
+          useDb: true, 
+          active: 'partners', 
+          partner: existing, 
+          error: 'Image could not be processed.' 
+        });
+      }
+    }
+    
+    await db.updatePartner(req.params.id, { name, logo_url, sort_order });
+    res.redirect(`/admin/partners?lang=${res.locals.lang}&success=updated`);
+  } catch (e) {
+    return res.status(500).send(e?.message || 'An error occurred.');
+  }
+});
+
+app.post('/admin/partners/:id/delete', basicAuth, async (req,res)=>{
+  if(!useDb) return res.status(501).send('Partners requires DB backend');
+  try {
+    const partner = await db.getPartner(req.params.id);
+    if(partner?.logo_url){
+      try {
+        await deleteFile(partner.logo_url);
+      } catch (err) {
+        console.warn('[partners] Failed to delete logo:', err.message);
+      }
+    }
+    await db.deletePartner(req.params.id);
+    res.redirect(`/admin/partners?lang=${res.locals.lang}&success=deleted`);
+  } catch (e) {
+    res.redirect(`/admin/partners?lang=${res.locals.lang}&error=delete_failed`);
   }
 });
 
@@ -4477,6 +4658,49 @@ app.get('/team/:id', async (req, res) => {
   return res.render('page', { menu, page: { title: res.locals.t('team'), content: html, image_url: '' }, lang: res.locals.lang, slider: null, sectionHeader: sh, backLink: `/team?lang=${res.locals.lang}`, t: res.locals.t });
   } catch(err) {
     console.error('[app.get /team/:id] Database error:', err.message);
+    return res.status(500).send('Database connection error. Please try again later.');
+  }
+});
+
+// Partners public page
+app.get('/partners', async (req, res) => {
+  try {
+    const pages = await db.listPages(res.locals.lang);
+    const menu = buildMenu(pages);
+    const partners = await db.listPartners();
+    
+    res.render('page', {
+      menu,
+      slider: null,
+      page: {
+        title: res.locals.t('ourPartners'),
+        slug: 'partners',
+        content: `
+          <div class="container-xxl py-5">
+            <div class="container">
+              <div class="text-center mx-auto mb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 500px;">
+                <div class="d-inline-block rounded-pill bg-secondary text-primary py-1 px-3 mb-3">${res.locals.t('ourPartners')}</div>
+                <h1 class="display-6 mb-5">${res.locals.t('partnersTitle')}</h1>
+              </div>
+              <div class="row g-4 justify-content-center">
+                ${partners.map(p => `
+                  <div class="col-lg-3 col-md-4 col-sm-6 wow fadeInUp" data-wow-delay="0.1s">
+                    <div class="partner-item text-center p-4" style="background: #fff; border-radius: 10px; box-shadow: 0 0 45px rgba(0,0,0,.08); min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                      ${p.logo_url ? `<img src="${p.logo_url}" alt="${p.name}" style="max-width: 100%; max-height: 150px; object-fit: contain; margin-bottom: 15px;">` : ''}
+                      <h5 class="mb-0">${p.name}</h5>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `
+      },
+      lang: res.locals.lang,
+      t: res.locals.t
+    });
+  } catch (err) {
+    console.error('[app.get /partners] Database error:', err.message);
     return res.status(500).send('Database connection error. Please try again later.');
   }
 });

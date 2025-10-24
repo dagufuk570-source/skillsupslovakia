@@ -849,3 +849,45 @@ export async function listRecentContactMessages(limit = 50){
   );
   return res.rows;
 }
+
+// Partners management
+export async function ensurePartnersTable(){
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partners (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      logo_url TEXT,
+      sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
+    )`);
+}
+
+export async function listPartners(){
+  const res = await pool.query('SELECT * FROM partners ORDER BY sort_order, id');
+  return res.rows;
+}
+
+export async function getPartner(id){
+  const res = await pool.query('SELECT * FROM partners WHERE id=$1', [id]);
+  return res.rows[0];
+}
+
+export async function createPartner({ name, logo_url, sort_order }){
+  const res = await pool.query(
+    `INSERT INTO partners (name, logo_url, sort_order) VALUES ($1,$2,$3) RETURNING id`,
+    [name, logo_url || null, sort_order || 0]
+  );
+  return res.rows[0].id;
+}
+
+export async function updatePartner(id, { name, logo_url, sort_order }){
+  await pool.query(
+    `UPDATE partners SET name=$1, logo_url=$2, sort_order=$3, updated_at=now() WHERE id=$4`,
+    [name, logo_url || null, sort_order || 0, id]
+  );
+}
+
+export async function deletePartner(id){
+  await pool.query('DELETE FROM partners WHERE id=$1', [id]);
+}

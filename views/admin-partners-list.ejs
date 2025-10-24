@@ -1,0 +1,63 @@
+<%- include('admin-layout-top', { title: 'Manage Partners', active: 'partners' }) %>
+
+<h2 class="mb-4">Manage Partners</h2>
+
+<% if(success === 'created') { %>
+  <div class="alert alert-success">Partner created successfully!</div>
+<% } else if(success === 'updated') { %>
+  <div class="alert alert-success">Partner updated successfully!</div>
+<% } else if(success === 'deleted') { %>
+  <div class="alert alert-success">Partner deleted successfully!</div>
+<% } else if(locals.error) { %>
+  <div class="alert alert-danger">Error: <%= error %></div>
+<% } %>
+
+<div class="mb-3">
+  <a href="/admin/partners/new?lang=<%= lang %>" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Add New Partner
+  </a>
+</div>
+
+<% if(partners && partners.length > 0) { %>
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover">
+      <thead class="table-light">
+        <tr>
+          <th style="width:100px">Logo</th>
+          <th>Name</th>
+          <th style="width:120px">Sort Order</th>
+          <th style="width:180px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% partners.forEach(partner => { %>
+          <tr>
+            <td class="text-center">
+              <% if(partner.logo_url) { %>
+                <img src="<%= partner.logo_url %>" alt="<%= partner.name %>" style="max-width:80px; max-height:80px; object-fit:contain;">
+              <% } else { %>
+                <span class="text-muted">No logo</span>
+              <% } %>
+            </td>
+            <td class="align-middle"><strong><%= partner.name %></strong></td>
+            <td class="align-middle text-center"><%= partner.sort_order || 0 %></td>
+            <td class="align-middle">
+              <a href="/admin/partners/<%= partner.id %>/edit?lang=<%= lang %>" class="btn btn-sm btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+              </a>
+              <form action="/admin/partners/<%= partner.id %>/delete?lang=<%= lang %>" method="POST" style="display:inline;" onsubmit="return confirm('Delete this partner?');">
+                <button type="submit" class="btn btn-sm btn-danger">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } else { %>
+  <div class="alert alert-info">No partners yet. <a href="/admin/partners/new?lang=<%= lang %>">Add the first partner</a>.</div>
+<% } %>
+
+<%- include('admin-layout-bottom') %>

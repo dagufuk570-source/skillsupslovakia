@@ -132,6 +132,10 @@
                             <i class="fas fa-users me-1 <%= ((currentPath === '/team' || currentPath.startsWith('/team/')) ? 'text-warning' : 'text-light opacity-75') %>"></i>
                             <span class="text-capitalize"><%= t('team') %></span>
                         </a>
+                        <a href="/partners?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/partners' ? 'active' : '') %>">
+                            <i class="fas fa-handshake me-1 <%= (currentPath === '/partners' ? 'text-warning' : 'text-light opacity-75') %>"></i>
+                            <span class="text-capitalize"><%= t('partners') %></span>
+                        </a>
                         <a href="/news?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/news' || currentPath.startsWith('/news/') ? 'active' : '') %>">
                             <i class="fas fa-newspaper me-1 <%= ((currentPath === '/news' || currentPath.startsWith('/news/')) ? 'text-warning' : 'text-light opacity-75') %>"></i>
                             <span class="text-capitalize"><%= t('news') %></span>
@@ -325,6 +329,7 @@
                     <a class="btn btn-link text-light" href="/themes?lang=<%= lang %>"><%= t('themes') %></a>
                     <a class="btn btn-link text-light" href="/events?lang=<%= lang %>"><%= t('events') %></a>
                     <a class="btn btn-link text-light" href="/team?lang=<%= lang %>"><%= t('team') %></a>
+                    <a class="btn btn-link text-light" href="/partners?lang=<%= lang %>"><%= t('partners') %></a>
                     <a class="btn btn-link text-light" href="/news?lang=<%= lang %>"><%= t('news') %></a>
                     <a class="btn btn-link text-light" href="/documents?lang=<%= lang %>"><%= t('documents') %></a>
                     <% if (menu && menu.length > 0) { %>
