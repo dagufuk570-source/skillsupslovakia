@@ -1,12 +1,12 @@
-<%- include('admin-layout-top', { title: (theme ? 'Edit Theme' : 'New Theme'), lang: lang, useDb: true, active: 'themes' }) %>
+<%- include('admin-layout-top', { title: (theme ? t('editTheme') : t('newTheme')), lang: lang, useDb: true, active: 'themes' }) %>
       <div class="card wow fadeIn" data-wow-delay="0.1s">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
           <div class="d-flex align-items-center">
             <i class="fas fa-<%= theme ? 'edit' : 'plus' %> fa-lg me-2"></i>
-            <h5 class="mb-0"><%= theme ? 'Edit' : 'New' %> Theme</h5>
+            <h5 class="mb-0"><%= theme ? t('editTheme') : t('newTheme') %></h5>
           </div>
           <a class="btn btn-light btn-sm" href="/admin/themes">
-            <i class="fas fa-arrow-left me-1"></i>Back to Themes
+            <i class="fas fa-arrow-left me-1"></i><%= t('backToList') %>
           </a>
         </div>
         <div class="card-body">
@@ -17,7 +17,7 @@
         <% if(!theme){ %>
           <div class="alert alert-info mb-4">
             <i class="fas fa-info-circle me-2"></i>
-            Create content for all languages at once. This will create linked versions of the theme.
+            <%= t('fillAllLanguages') %>
           </div>
 
           <!-- Multi-language tabs for creation -->
@@ -36,16 +36,16 @@
             <div class="tab-pane fade show active" id="pane-en" role="tabpanel">
               <div class="row">
                 <div class="col-md-6 mb-3">
-                  <label class="form-label" for="title_en">Title (EN)</label>
+                  <label class="form-label" for="title_en"><%= t('title') %> (EN)</label>
                   <input id="title_en" class="form-control" type="text" name="title_en" value="" />
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label" for="slug_en">Slug (EN, optional)</label>
+                  <label class="form-label" for="slug_en"><%= t('slug') %> (EN, <%= t('optional') %>)</label>
                   <input id="slug_en" class="form-control" type="text" name="slug_en" placeholder="auto from title if empty" />
                 </div>
               </div>
               <div class="mb-3">
-                <label class="form-label" for="description_en">Description (EN)</label>
+                <label class="form-label" for="description_en"><%= t('description') %> (EN)</label>
                 <textarea id="description_en" class="form-control wysiwyg" name="description_en" rows="4"></textarea>
               </div>
             </div>
@@ -53,16 +53,16 @@
             <div class="tab-pane fade" id="pane-sk" role="tabpanel">
               <div class="row">
                 <div class="col-md-6 mb-3">
-                  <label class="form-label" for="title_sk">Title (SK)</label>
+                  <label class="form-label" for="title_sk"><%= t('title') %> (SK)</label>
                   <input id="title_sk" class="form-control" type="text" name="title_sk" value="" />
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label" for="slug_sk">Slug (SK, optional)</label>
+                  <label class="form-label" for="slug_sk"><%= t('slug') %> (SK, <%= t('optional') %>)</label>
                   <input id="slug_sk" class="form-control" type="text" name="slug_sk" placeholder="auto from title if empty" />
                 </div>
               </div>
               <div class="mb-3">
-                <label class="form-label" for="description_sk">Description (SK)</label>
+                <label class="form-label" for="description_sk"><%= t('description') %> (SK)</label>
                 <textarea id="description_sk" class="form-control wysiwyg" name="description_sk" rows="4"></textarea>
               </div>
             </div>
@@ -70,16 +70,16 @@
             <div class="tab-pane fade" id="pane-hu" role="tabpanel">
               <div class="row">
                 <div class="col-md-6 mb-3">
-                  <label class="form-label" for="title_hu">Title (HU)</label>
+                  <label class="form-label" for="title_hu"><%= t('title') %> (HU)</label>
                   <input id="title_hu" class="form-control" type="text" name="title_hu" value="" />
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label" for="slug_hu">Slug (HU, optional)</label>
+                  <label class="form-label" for="slug_hu"><%= t('slug') %> (HU, <%= t('optional') %>)</label>
                   <input id="slug_hu" class="form-control" type="text" name="slug_hu" placeholder="auto from title if empty" />
                 </div>
               </div>
               <div class="mb-3">
-                <label class="form-label" for="description_hu">Description (HU)</label>
+                <label class="form-label" for="description_hu"><%= t('description') %> (HU)</label>
                 <textarea id="description_hu" class="form-control wysiwyg" name="description_hu" rows="4"></textarea>
               </div>
             </div>
@@ -87,25 +87,25 @@
 
           <!-- Cover Image -->
           <div class="mb-4">
-            <h5 class="text-secondary border-bottom pb-2"><i class="fas fa-image me-2"></i>Cover Image</h5>
+            <h5 class="text-secondary border-bottom pb-2"><i class="fas fa-image me-2"></i><%= t('coverImage') %></h5>
             <div class="mb-3">
-              <label class="form-label" for="cover_image">Cover Image (optional)</label>
+              <label class="form-label" for="cover_image"><%= t('coverImage') %> (<%= t('optional') %>)</label>
               <input id="cover_image" class="form-control" type="file" name="cover_image" accept="image/*" />
-              <div class="form-text">If provided, this will be used as the theme's main image and appear first in the gallery.</div>
+              <div class="form-text"><%= t('coverImageHelp') %></div>
             </div>
           </div>
 
           <!-- Additional Images -->
           <div class="mb-4">
-            <h5 class="text-info border-bottom pb-2"><i class="fas fa-images me-2"></i>Additional Images</h5>
+            <h5 class="text-info border-bottom pb-2"><i class="fas fa-images me-2"></i><%= t('additionalImages') %></h5>
             <div class="alert alert-light">
               <i class="fas fa-info-circle me-2"></i>
-              Upload multiple images that will be displayed in the theme gallery on detail pages.
+              <%= t('uploadMultipleImages') %>
             </div>
             <div class="mb-3">
-              <label class="form-label" for="additional_images">Gallery Images</label>
+              <label class="form-label" for="additional_images"><%= t('galleryImages') %></label>
               <input id="additional_images" class="form-control" type="file" name="additional_images" accept="image/*" multiple />
-              <div class="form-text">You can select multiple images at once (Ctrl+click or Shift+click).</div>
+              <div class="form-text"><%= t('multipleFilesAllowed') %></div>
             </div>
           </div>
 
@@ -114,7 +114,7 @@
   <% if(theme){ %>
           <!-- Gallery management on edit -->
           <div class="mb-4">
-            <h5 class="text-info border-bottom pb-2"><i class="fas fa-images me-2"></i>Gallery</h5>
+            <h5 class="text-info border-bottom pb-2"><i class="fas fa-images me-2"></i><%= t('gallery') %></h5>
             <% var _imgs = (typeof additionalImages !== 'undefined' && additionalImages) ? additionalImages : []; %>
             <% if(_imgs.length > 0){ %>
               <div class="row g-3 mb-3">
@@ -125,11 +125,11 @@
                       <div class="card-body p-2">
                         <div class="form-check">
                           <input class="form-check-input" type="checkbox" name="remove_image_ids" value="<%= img.id %>" id="rm_<%= img.id %>">
-                          <label class="form-check-label" for="rm_<%= img.id %>">Remove</label>
+                          <label class="form-check-label" for="rm_<%= img.id %>"><%= t('delete') %></label>
                         </div>
                         <div class="form-check mt-2">
                           <input class="form-check-input" type="radio" name="lead_image_url" value="<%= img.image_url %>" id="lead_<%= img.id %>" <%= (theme.image_url === img.image_url) ? 'checked' : '' %> >
-                          <label class="form-check-label" for="lead_<%= img.id %>">Set as cover</label>
+                          <label class="form-check-label" for="lead_<%= img.id %>"><%= t('setAsCover') %></label>
                         </div>
                       </div>
                     </div>
@@ -137,15 +137,15 @@
                 <% }) %>
               </div>
             <% } else { %>
-              <div class="alert alert-light">No images yet. You can upload below.</div>
+              <div class="alert alert-light"><%= t('noDataAvailable') %></div>
             <% } %>
             <div class="mb-3">
-              <label class="form-label" for="cover_image_edit">Add Cover (optional)</label>
+              <label class="form-label" for="cover_image_edit"><%= t('addCoverImage') %> (<%= t('optional') %>)</label>
               <input id="cover_image_edit" class="form-control" type="file" name="cover_image" accept="image/*" />
-              <div class="form-text">If provided, this image will be set as the cover; you can also select any existing image above as cover.</div>
+              <div class="form-text"><%= t('coverImageEditHelp') %></div>
             </div>
             <div class="mb-3">
-              <label class="form-label" for="additional_images_edit">Add Images</label>
+              <label class="form-label" for="additional_images_edit"><%= t('uploadImages') %></label>
               <input id="additional_images_edit" class="form-control" type="file" name="additional_images" accept="image/*" multiple />
             </div>
           </div>
@@ -167,43 +167,43 @@
             <div class="tab-content">
             <div class="tab-pane fade show active" id="pane-en" role="tabpanel">
               <div class="mb-3">
-                <label class="form-label" for="title_en_edit">Title (EN)</label>
+                <label class="form-label" for="title_en_edit"><%= t('title') %> (EN)</label>
                 <input id="title_en_edit" class="form-control" type="text" name="title_en" value="<%= tEn.title || '' %>" />
               </div>
               <div class="mb-3">
-                <label class="form-label" for="slug_en_edit">Slug (EN, optional)</label>
+                <label class="form-label" for="slug_en_edit"><%= t('slug') %> (EN, <%= t('optional') %>)</label>
                 <input id="slug_en_edit" class="form-control" type="text" name="slug_en" value="<%= tEn.slug || '' %>" placeholder="auto from title if empty" />
               </div>
               <div class="mb-3">
-                <label class="form-label" for="description_en_edit">Description (EN)</label>
+                <label class="form-label" for="description_en_edit"><%= t('description') %> (EN)</label>
                 <textarea id="description_en_edit" class="form-control wysiwyg" name="description_en" rows="6"><%= tEn.description || '' %></textarea>
               </div>
             </div>
             <div class="tab-pane fade" id="pane-sk" role="tabpanel">
               <div class="mb-3">
-                <label class="form-label" for="title_sk_edit">Title (SK)</label>
+                <label class="form-label" for="title_sk_edit"><%= t('title') %> (SK)</label>
                 <input id="title_sk_edit" class="form-control" type="text" name="title_sk" value="<%= tSk.title || '' %>" />
               </div>
               <div class="mb-3">
-                <label class="form-label" for="slug_sk_edit">Slug (SK, optional)</label>
+                <label class="form-label" for="slug_sk_edit"><%= t('slug') %> (SK, <%= t('optional') %>)</label>
                 <input id="slug_sk_edit" class="form-control" type="text" name="slug_sk" value="<%= tSk.slug || '' %>" placeholder="auto from title if empty" />
               </div>
               <div class="mb-3">
-                <label class="form-label" for="description_sk_edit">Description (SK)</label>
+                <label class="form-label" for="description_sk_edit"><%= t('description') %> (SK)</label>
                 <textarea id="description_sk_edit" class="form-control wysiwyg" name="description_sk" rows="6"><%= tSk.description || '' %></textarea>
               </div>
             </div>
             <div class="tab-pane fade" id="pane-hu" role="tabpanel">
               <div class="mb-3">
-                <label class="form-label" for="title_hu_edit">Title (HU)</label>
+                <label class="form-label" for="title_hu_edit"><%= t('title') %> (HU)</label>
                 <input id="title_hu_edit" class="form-control" type="text" name="title_hu" value="<%= tHu.title || '' %>" />
               </div>
               <div class="mb-3">
-                <label class="form-label" for="slug_hu_edit">Slug (HU, optional)</label>
+                <label class="form-label" for="slug_hu_edit"><%= t('slug') %> (HU, <%= t('optional') %>)</label>
                 <input id="slug_hu_edit" class="form-control" type="text" name="slug_hu" value="<%= tHu.slug || '' %>" placeholder="auto from title if empty" />
               </div>
               <div class="mb-3">
-                <label class="form-label" for="description_hu_edit">Description (HU)</label>
+                <label class="form-label" for="description_hu_edit"><%= t('description') %> (HU)</label>
                 <textarea id="description_hu_edit" class="form-control wysiwyg" name="description_hu" rows="6"><%= tHu.description || '' %></textarea>
               </div>
             </div>
@@ -214,7 +214,7 @@
             <div class="text-center">
               <button class="btn btn-primary btn-lg px-5" type="submit">
                 <i class="fas fa-<%= theme ? 'save' : 'plus' %> me-2"></i>
-                <%= theme ? 'Update Theme' : 'Create Theme' %>
+                <%= theme ? t('update') : t('save') %>
               </button>
             </div>
           </form>
