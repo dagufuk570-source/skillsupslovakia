@@ -813,7 +813,18 @@ const TRANSLATIONS = {
     characterLimit: 'Character limit', fillAllLanguages: 'Fill in all languages',
     // Misc
     preview: 'Preview', backToList: 'Back to List', viewOnSite: 'View on Site', lastUpdated: 'Last Updated',
-    createdAt: 'Created At', updatedAt: 'Updated At', noDataAvailable: 'No data available'
+    createdAt: 'Created At', updatedAt: 'Updated At', noDataAvailable: 'No data available',
+    // Additional form keys
+    role: 'Role', sortOrder: 'Sort Order', sortOrderHelp: 'Lower numbers appear first', coverImage: 'Cover Image',
+    setAsCover: 'Set as cover', addCoverImage: 'Add Cover Image', coverImageHelp: 'If provided, this will be used as the main image and appear first in the gallery',
+    coverImageEditHelp: 'If provided, this image will be set as the cover; you can also select any existing image above as cover',
+    publishingOptions: 'Publishing Options', publishedAtHelp: 'Leave empty to use current date/time', summaryPlaceholder: 'Brief summary for article cards',
+    visibleOnSite: 'Visible on site', fileTypesAllowed: 'pdf, docx, xlsx, pptx, txt, image', currentFile: 'Current file', download: 'Download',
+    language: 'Language', sliderManageInfo: 'Manage slides dynamically. You can add or remove slides as needed.',
+    currentSet: 'Currently set', uploadBackgroundImages: 'Upload Background Images', selectedBackground: 'Selected Background',
+    noBackgroundSet: 'No background set', removeSelected: 'Remove Selected', use: 'Use', view: 'View',
+    textSettings: 'Text Settings', alignment: 'Alignment', slide: 'Slide', slideMultilingualInfo: 'Title/Caption are per language',
+    newNews: 'New Article', editNews: 'Edit Article'
   },
   sk: {
     home: 'Home', themes: 'Themes', focusAreas: 'Focus Areas', events: 'Events', team: 'Our Team', partners: 'Partners', news: 'News', documents: 'Documents', about: 'About Us', contact: 'Contact', gdpr: 'GDPR',
@@ -938,7 +949,18 @@ const TRANSLATIONS = {
     characterLimit: 'Limit znakov', fillAllLanguages: 'Vyplňte všetky jazyky',
     // Misc
     preview: 'Náhľad', backToList: 'Späť na zoznam', viewOnSite: 'Zobraziť na stránke', lastUpdated: 'Naposledy aktualizované',
-    createdAt: 'Vytvorené', updatedAt: 'Aktualizované', noDataAvailable: 'Žiadne dostupné údaje'
+    createdAt: 'Vytvorené', updatedAt: 'Aktualizované', noDataAvailable: 'Žiadne dostupné údaje',
+    // Additional form keys
+    role: 'Funkcia', sortOrder: 'Poradie', sortOrderHelp: 'Nižšie čísla sa zobrazia ako prvé', coverImage: 'Hlavný obrázok',
+    setAsCover: 'Nastaviť ako hlavný', addCoverImage: 'Pridať hlavný obrázok', coverImageHelp: 'Ak je uvedený, použije sa ako hlavný obrázok a zobrazí sa ako prvý v galérii',
+    coverImageEditHelp: 'Ak je uvedený, tento obrázok bude nastavený ako hlavný; môžete tiež vybrať akýkoľvek existujúci obrázok vyššie ako hlavný',
+    publishingOptions: 'Možnosti zverejnenia', publishedAtHelp: 'Nechajte prázdne pre použitie aktuálneho dátumu/času', summaryPlaceholder: 'Stručné zhrnutie pre karty článkov',
+    visibleOnSite: 'Viditeľné na stránke', fileTypesAllowed: 'pdf, docx, xlsx, pptx, txt, obrázok', currentFile: 'Aktuálny súbor', download: 'Stiahnuť',
+    language: 'Jazyk', sliderManageInfo: 'Dynamicky spravujte snímky. Môžete pridávať alebo odstraňovať snímky podľa potreby.',
+    currentSet: 'Aktuálne nastavené', selectedBackground: 'Vybrané pozadie',
+    noBackgroundSet: 'Žiadne pozadie nastavené', removeSelected: 'Odstrániť vybrané', use: 'Použiť', view: 'Zobraziť',
+    textSettings: 'Nastavenia textu', alignment: 'Zarovnanie', slide: 'Snímka', slideMultilingualInfo: 'Nadpis/Titulok sú pre každý jazyk',
+    newNews: 'Nový článok', editNews: 'Upraviť článok'
   },
   hu: {
     home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',

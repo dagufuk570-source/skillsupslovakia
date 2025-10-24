@@ -1,55 +1,55 @@
-<%- include('admin-layout-top', { title: 'Settings › Slider', lang, useDb, active: 'settings-slider' }) %>
+<%- include('admin-layout-top', { title: t('sliderConfiguration'), lang, useDb, active: 'settings-slider' }) %>
 <div class="row g-3">
   <div class="col-12">
     <div class="card wow fadeIn" data-wow-delay="0.1s">
       <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
           <i class="fas fa-sliders-h fa-lg me-2"></i>
-          <h5 class="mb-0">Homepage Slider Configuration</h5>
+          <h5 class="mb-0"><%= t('sliderConfiguration') %></h5>
         </div>
-        <small class="badge bg-dark">Language: <%= lang.toUpperCase() %></small>
+        <small class="badge bg-dark"><%= t('language') %>: <%= lang.toUpperCase() %></small>
       </div>
       <div class="card-body">
         <form id="slider-form" class="card p-3" method="post" enctype="multipart/form-data" action="/admin/settings/slider?lang=<%= lang %>">
           <div class="alert alert-info d-flex justify-content-between align-items-center">
-            <span>Manage slides dynamically. You can add or remove slides as needed.</span>
+            <span><%= t('sliderManageInfo') %></span>
             <div>
-              <button class="btn btn-sm btn-outline-primary" type="button" id="add-slide-btn"><i class="fas fa-plus me-1"></i>Add Slide</button>
+              <button class="btn btn-sm btn-outline-primary" type="button" id="add-slide-btn"><i class="fas fa-plus me-1"></i><%= t('addNewSlide') %></button>
             </div>
           </div>
           <% const curBgGlobal = (cfgs && ((cfgs[lang] && cfgs[lang].slider_bg_image_url) || (cfgs.en && cfgs.en.slider_bg_image_url) || (cfgs.sk && cfgs.sk.slider_bg_image_url) || (cfgs.hu && cfgs.hu.slider_bg_image_url))) || ''; %>
           <% const bgGallery = (cfgs && ((cfgs[lang] && cfgs[lang].slider_bg_gallery) || (cfgs.en && cfgs.en.slider_bg_gallery) || (cfgs.sk && cfgs.sk.slider_bg_gallery) || (cfgs.hu && cfgs.hu.slider_bg_gallery))) || []; %>
           <div class="card mb-3">
             <div class="card-header d-flex align-items-center justify-content-between">
-              <span>Slider Background Image</span>
+              <span><%= t('backgroundImage') %></span>
               <% if (curBgGlobal) { %>
-                <small class="text-muted">Current set</small>
+                <small class="text-muted"><%= t('currentSet') %></small>
               <% } %>
             </div>
             <div class="card-body">
               <div class="row g-3 align-items-end">
                 <div class="col-md-6">
-                  <label class="form-label" for="slider_bg_images">Upload Background Images</label>
+                  <label class="form-label" for="slider_bg_images"><%= t('uploadBackgroundImages') %></label>
                   <input id="slider_bg_images" class="form-control" type="file" name="slider_bg_images" accept="image/*" multiple />
                   <% if (curBgGlobal) { %>
                     <input type="hidden" name="slider_bg_existing" value="<%= curBgGlobal %>" />
                   <% } %>
                 </div>
                 <div class="col-md-6">
-                  <div class="form-label">Selected Background (thumbnail)</div>
+                  <div class="form-label"><%= t('selectedBackground') %></div>
                   <div class="d-flex align-items-center gap-3">
                     <div class="border rounded p-2 bg-light text-center" style="width:160px;">
                       <% if (curBgGlobal) { %>
                         <img id="slider_bg_preview" src="<%= curBgGlobal %>" alt="Background preview" style="max-width:100%; max-height:120px; object-fit:cover;" />
                       <% } else { %>
                         <img id="slider_bg_preview" src="" alt="Background preview" style="max-width:100%; max-height:120px; object-fit:cover; display:none;" />
-                        <span id="slider_bg_placeholder" class="text-muted small">No background set</span>
+                        <span id="slider_bg_placeholder" class="text-muted small"><%= t('noBackgroundSet') %></span>
                       <% } %>
                     </div>
                     <div>
                       <input type="hidden" id="slider_bg_selected" name="slider_bg_selected" value="<%= curBgGlobal %>">
                       <% if (curBgGlobal) { %>
-                        <button class="btn btn-sm btn-outline-danger" type="button" id="btn-clear-selected"><i class="fas fa-trash me-1"></i>Remove Selected</button>
+                        <button class="btn btn-sm btn-outline-danger" type="button" id="btn-clear-selected"><i class="fas fa-trash me-1"></i><%= t('removeSelected') %></button>
                       <% } %>
                     </div>
                   </div>
@@ -65,10 +65,10 @@
                         <div class="card-body p-2 d-flex flex-column gap-1">
                           <div class="form-check">
                             <input class="form-check-input bg-radio" type="radio" name="bg_choice" id="bg_choice_<%= idx %>" value="<%= u %>" <%= isSel ? 'checked' : '' %>>
-                            <label class="form-check-label" for="bg_choice_<%= idx %>">Use</label>
+                            <label class="form-check-label" for="bg_choice_<%= idx %>"><%= t('use') %></label>
                           </div>
                           <div class="d-flex gap-2">
-                            <a href="<%= u %>" target="_blank" class="btn btn-sm btn-outline-secondary w-100">View</a>
+                            <a href="<%= u %>" target="_blank" class="btn btn-sm btn-outline-secondary w-100"><%= t('view') %></a>
                             <button class="btn btn-sm btn-outline-danger w-100 btn-del-bg" type="button" data-url="<%= u %>"><i class="fas fa-trash"></i></button>
                           </div>
                         </div>
@@ -86,24 +86,24 @@
           <% const curCaptionColor = (cfgs && ((cfgs[lang] && cfgs[lang].slider_caption_color) || (cfgs.en && cfgs.en.slider_caption_color) || (cfgs.sk && cfgs.sk.slider_caption_color) || (cfgs.hu && cfgs.hu.slider_caption_color))) || '#ffffff'; %>
           <div class="card mb-3">
             <div class="card-header d-flex align-items-center justify-content-between">
-              <span>Text Settings</span>
+              <span><%= t('textSettings') %></span>
             </div>
             <div class="card-body">
               <div class="row g-3 align-items-end">
                 <div class="col-md-4">
-                  <label class="form-label" for="slider_text_align">Alignment</label>
+                  <label class="form-label" for="slider_text_align"><%= t('alignment') %></label>
                   <select id="slider_text_align" class="form-select" name="slider_text_align">
-                    <option value="left" <%= curAlign==='left'?'selected':'' %>>Left</option>
-                    <option value="center" <%= curAlign==='center'?'selected':'' %>>Center</option>
-                    <option value="right" <%= curAlign==='right'?'selected':'' %>>Right</option>
+                    <option value="left" <%= curAlign==='left'?'selected':'' %>><%= t('left') %></option>
+                    <option value="center" <%= curAlign==='center'?'selected':'' %>><%= t('center') %></option>
+                    <option value="right" <%= curAlign==='right'?'selected':'' %>><%= t('right') %></option>
                   </select>
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label" for="slider_title_color">Title Color</label>
+                  <label class="form-label" for="slider_title_color"><%= t('textColor') %></label>
                   <input id="slider_title_color" class="form-control form-control-color" type="color" name="slider_title_color" value="<%= curTitleColor %>" />
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label" for="slider_caption_color">Caption Color</label>
+                  <label class="form-label" for="slider_caption_color"><%= t('slideCaption') %> <%= t('textColor') %></label>
                   <input id="slider_caption_color" class="form-control form-control-color" type="color" name="slider_caption_color" value="<%= curCaptionColor %>" />
                 </div>
               </div>
@@ -119,10 +119,10 @@
             <% const N = preCount; for(let i=0;i<N;i++){ const s_en = slides_en[i] || {}; const s_sk = slides_sk[i] || {}; const s_hu = slides_hu[i] || {}; %>
             <div class="card mb-3 slide-item" data-index="<%= i %>">
               <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Slide <span class="slide-number"><%= i+1 %></span></span>
+                <span><%= t('slide') %> <span class="slide-number"><%= i+1 %></span></span>
                 <div class="d-flex align-items-center gap-2">
-                  <small class="text-muted">Title/Caption are per language</small>
-                  <button class="btn btn-sm btn-outline-danger remove-slide-btn" type="button"><i class="fas fa-trash me-1"></i>Remove</button>
+                  <small class="text-muted"><%= t('slideMultilingualInfo') %></small>
+                  <button class="btn btn-sm btn-outline-danger remove-slide-btn" type="button"><i class="fas fa-trash me-1"></i><%= t('delete') %></button>
                 </div>
               </div>
               <div class="card-body">
@@ -144,11 +144,11 @@
                   <div class="tab-pane fade show active" id="slide<%= i %>-en" role="tabpanel" aria-labelledby="slide<%= i %>-en-tab">
                     <div class="row g-3">
                       <div class="col-md-6">
-                        <label class="form-label" for="slide<%= i %>_title_en">Title (EN)</label>
+                        <label class="form-label" for="slide<%= i %>_title_en"><%= t('slideTitle') %> (EN)</label>
                         <input id="slide<%= i %>_title_en" class="form-control" type="text" name="slide<%= i %>_title_en" value="<%= s_en.title || '' %>" />
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="slide<%= i %>_caption_en">Caption (EN)</label>
+                        <label class="form-label" for="slide<%= i %>_caption_en"><%= t('slideCaption') %> (EN)</label>
                         <input id="slide<%= i %>_caption_en" class="form-control" type="text" name="slide<%= i %>_caption_en" value="<%= s_en.caption || '' %>" />
                       </div>
                     </div>
@@ -156,11 +156,11 @@
                   <div class="tab-pane fade" id="slide<%= i %>-sk" role="tabpanel" aria-labelledby="slide<%= i %>-sk-tab">
                     <div class="row g-3">
                       <div class="col-md-6">
-                        <label class="form-label" for="slide<%= i %>_title_sk">Title (SK)</label>
+                        <label class="form-label" for="slide<%= i %>_title_sk"><%= t('slideTitle') %> (SK)</label>
                         <input id="slide<%= i %>_title_sk" class="form-control" type="text" name="slide<%= i %>_title_sk" value="<%= s_sk.title || '' %>" />
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="slide<%= i %>_caption_sk">Caption (SK)</label>
+                        <label class="form-label" for="slide<%= i %>_caption_sk"><%= t('slideCaption') %> (SK)</label>
                         <input id="slide<%= i %>_caption_sk" class="form-control" type="text" name="slide<%= i %>_caption_sk" value="<%= s_sk.caption || '' %>" />
                       </div>
                     </div>
@@ -168,11 +168,11 @@
                   <div class="tab-pane fade" id="slide<%= i %>-hu" role="tabpanel" aria-labelledby="slide<%= i %>-hu-tab">
                     <div class="row g-3">
                       <div class="col-md-6">
-                        <label class="form-label" for="slide<%= i %>_title_hu">Title (HU)</label>
+                        <label class="form-label" for="slide<%= i %>_title_hu"><%= t('slideTitle') %> (HU)</label>
                         <input id="slide<%= i %>_title_hu" class="form-control" type="text" name="slide<%= i %>_title_hu" value="<%= s_hu.title || '' %>" />
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="slide<%= i %>_caption_hu">Caption (HU)</label>
+                        <label class="form-label" for="slide<%= i %>_caption_hu"><%= t('slideCaption') %> (HU)</label>
                         <input id="slide<%= i %>_caption_hu" class="form-control" type="text" name="slide<%= i %>_caption_hu" value="<%= s_hu.caption || '' %>" />
                       </div>
                     </div>
@@ -185,7 +185,7 @@
 
           <div class="text-center mt-3">
             <button class="btn btn-warning btn-lg px-5" type="submit">
-              <i class="fas fa-save me-2"></i>Save Slider
+              <i class="fas fa-save me-2"></i><%= t('saveSettings') %>
             </button>
           </div>
         </form>
@@ -194,10 +194,10 @@
         <template id="slide-template">
           <div class="card mb-3 slide-item" data-index="__IDX__">
             <div class="card-header d-flex justify-content-between align-items-center">
-              <span>Slide <span class="slide-number">__NUM__</span></span>
+              <span><%= t('slide') %> <span class="slide-number">__NUM__</span></span>
               <div class="d-flex align-items-center gap-2">
-                <small class="text-muted">Link is shared; Title/Caption are per language</small>
-                <button class="btn btn-sm btn-outline-danger remove-slide-btn" type="button"><i class="fas fa-trash me-1"></i>Remove</button>
+                <small class="text-muted"><%= t('slideMultilingualInfo') %></small>
+                <button class="btn btn-sm btn-outline-danger remove-slide-btn" type="button"><i class="fas fa-trash me-1"></i><%= t('delete') %></button>
               </div>
             </div>
             <div class="card-body">
@@ -218,11 +218,11 @@
                 <div class="tab-pane fade show active" id="slide__IDX__-en" role="tabpanel">
                     <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label" for="slide__IDX___title_en">Title (EN)</label>
+                        <label class="form-label" for="slide__IDX___title_en"><%= t('slideTitle') %> (EN)</label>
                         <input id="slide__IDX___title_en" class="form-control" type="text" name="slide__IDX___title_en" />
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label" for="slide__IDX___caption_en">Caption (EN)</label>
+                      <label class="form-label" for="slide__IDX___caption_en"><%= t('slideCaption') %> (EN)</label>
                       <input id="slide__IDX___caption_en" class="form-control" type="text" name="slide__IDX___caption_en" />
                     </div>
                   </div>
@@ -230,11 +230,11 @@
                 <div class="tab-pane fade" id="slide__IDX__-sk" role="tabpanel">
                   <div class="row g-3">
                     <div class="col-md-6">
-                      <label class="form-label" for="slide__IDX___title_sk">Title (SK)</label>
+                      <label class="form-label" for="slide__IDX___title_sk"><%= t('slideTitle') %> (SK)</label>
                       <input id="slide__IDX___title_sk" class="form-control" type="text" name="slide__IDX___title_sk" />
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label" for="slide__IDX___caption_sk">Caption (SK)</label>
+                      <label class="form-label" for="slide__IDX___caption_sk"><%= t('slideCaption') %> (SK)</label>
                       <input id="slide__IDX___caption_sk" class="form-control" type="text" name="slide__IDX___caption_sk" />
                     </div>
                   </div>
@@ -242,11 +242,11 @@
                 <div class="tab-pane fade" id="slide__IDX__-hu" role="tabpanel">
                   <div class="row g-3">
                     <div class="col-md-6">
-                      <label class="form-label" for="slide__IDX___title_hu">Title (HU)</label>
+                      <label class="form-label" for="slide__IDX___title_hu"><%= t('slideTitle') %> (HU)</label>
                       <input id="slide__IDX___title_hu" class="form-control" type="text" name="slide__IDX___title_hu" />
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label" for="slide__IDX___caption_hu">Caption (HU)</label>
+                      <label class="form-label" for="slide__IDX___caption_hu"><%= t('slideCaption') %> (HU)</label>
                       <input id="slide__IDX___caption_hu" class="form-control" type="text" name="slide__IDX___caption_hu" />
                     </div>
                   </div>
