@@ -4884,6 +4884,7 @@ app.get('/team/:id', async (req, res) => {
     member = await resolveTeamVariant(member, res.locals.lang);
   } catch {}
   const photo = member.photo_url || '';
+  const photoDisplay = photo ? photo : '/img/default-team.png';
   const socials = [
     member.facebook ? `<a class="btn btn-sm btn-outline-primary me-2" href="${member.facebook}" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i></a>` : '',
     member.twitter ? `<a class="btn btn-sm btn-outline-primary me-2" href="${member.twitter}" target="_blank" rel="noopener"><i class="fab fa-x-twitter"></i></a>` : '',
@@ -4894,7 +4895,7 @@ app.get('/team/:id', async (req, res) => {
     <div class="bg-white p-4 rounded">
       <div class="row g-4 align-items-start">
         <div class="col-md-4">
-          ${photo ? `<a href="${photo}" class="lightbox" data-gallery="team-${member.id}"><img src="${photo}" alt="${member.name}" class="img-fluid rounded w-100" style="object-fit:cover;"></a>` : ''}
+          ${photo ? `<a href="${photo}" class="lightbox" data-gallery="team-${member.id}"><img src="${photoDisplay}" alt="${member.name}" class="img-fluid rounded w-100" style="object-fit:cover;"></a>` : `<img src="${photoDisplay}" alt="${member.name}" class="img-fluid rounded w-100" style="object-fit:cover;">`}
         </div>
         <div class="col-md-8">
           <h3 class="mb-1">${member.name}</h3>
