@@ -2755,7 +2755,6 @@ async function processPartnerLogo(buffer, originalname){
     const ext = '.png';
     const baseName = safeSlugFilename(path.basename(originalname || 'partner', path.extname(originalname || 'partner')), ext);
     const fileName = `${baseName}--${Date.now()}${ext}`;
-    const filePath = `/uploads/partners/${fileName}`;
     
     // Resize logo (300x300, contain with white background)
     const resizedBuffer = await sharp(buffer)
@@ -2763,9 +2762,9 @@ async function processPartnerLogo(buffer, originalname){
       .png()
       .toBuffer();
     
-    await uploadFile(filePath, resizedBuffer);
-    console.log('[partners] Saved logo:', filePath);
-    return { logo_url: filePath };
+    const logo_url = await uploadFile(resizedBuffer, `partners/${fileName}`, 'image/png');
+    console.log('[partners] Saved logo:', logo_url);
+    return { logo_url };
   } catch (err) {
     console.error('[partners] Failed to process logo:', err.message);
     // Return default logo on processing error
