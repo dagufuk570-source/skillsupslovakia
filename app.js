@@ -4307,25 +4307,25 @@ app.get('/themes', async (req, res) => {
       const themes = await db.listThemes(res.locals.lang);
       const cards = themes.map(t => {
       const listImage = t.image_url && String(t.image_url).trim() ? t.image_url : '/img/placeholder-theme.svg';
+      const safeTitle = String(t.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const safeDesc = t.description ? String(t.description).replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 120) + (t.description.length > 120 ? '...' : '') : '';
       return `
       <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card bg-light shadow-sm h-100 d-flex flex-column">
+        <div class="card bg-light shadow-sm h-100">
           <a href="/themes/${t.slug || t.id}?lang=${res.locals.lang}${t.group_id ? (`&gid=${encodeURIComponent(t.group_id)}`) : ''}">
-            <img src="${listImage}" class="card-img-top" alt="${t.title}" style="height:200px; object-fit:cover;">
+            <img src="${listImage}" class="card-img-top" alt="${safeTitle}" style="height:250px; width:100%; object-fit:cover; display:block;">
           </a>
           <div class="card-body d-flex flex-column">
-            <h5 class="card-title text-primary mb-2">${t.title}</h5>
-            <p class="card-text">${t.description ? t.description.substring(0, 100) + (t.description.length > 100 ? '...' : '') : ''}</p>
-            <div class="mt-auto pt-2">
-              <a href="/themes/${t.slug || t.id}?lang=${res.locals.lang}${t.group_id ? (`&gid=${encodeURIComponent(t.group_id)}`) : ''}" class="btn btn-primary btn-sm w-100 text-center">
-                <i class="fas fa-eye me-1"></i>${res.locals.t('viewDetails')}
-              </a>
-            </div>
+            <h5 class="card-title text-primary mb-2">${safeTitle}</h5>
+            <p class="card-text flex-grow-1">${safeDesc}</p>
+            <a href="/themes/${t.slug || t.id}?lang=${res.locals.lang}${t.group_id ? (`&gid=${encodeURIComponent(t.group_id)}`) : ''}" class="btn btn-primary btn-sm w-100">
+              <i class="fas fa-eye me-1"></i>${res.locals.t('viewDetails')}
+            </a>
           </div>
         </div>
       </div>`
     }).join('');
-    const html = `<div class="row">${cards || `<div class=\"text-muted\">${res.locals.t('noThemesYet')}</div>`}</div>`;
+    const html = `<div class="row g-4">${cards || `<div class=\"col-12 text-center text-muted\">${res.locals.t('noThemesYet')}</div>`}</div>`;
   const shThemes = { kicker: res.locals.t('themesKicker'), heading: res.locals.t('themesHeading'), subheading: '' };
   return res.render('page', { menu, page: { title: res.locals.t('themesTitle'), content: html }, lang: res.locals.lang, slider: null, sectionHeader: shThemes, t: res.locals.t });
   }
