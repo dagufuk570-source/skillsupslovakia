@@ -4307,8 +4307,9 @@ app.get('/themes', async (req, res) => {
       const themes = await db.listThemes(res.locals.lang);
       const cards = themes.map(t => {
       const listImage = t.image_url && String(t.image_url).trim() ? t.image_url : '/img/placeholder-theme.svg';
-      const safeTitle = String(t.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const safeDesc = t.description ? String(t.description).replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 120) + (t.description.length > 120 ? '...' : '') : '';
+      const safeTitle = String(t.title || '').replace(/<[^>]*>/g, '');
+      const rawDesc = t.description ? String(t.description).replace(/<[^>]*>/g, '').trim() : '';
+      const safeDesc = rawDesc.substring(0, 120) + (rawDesc.length > 120 ? '...' : '');
       return `
       <div class="col-lg-4 col-md-6 mb-4">
         <div class="card bg-light shadow-sm h-100">
