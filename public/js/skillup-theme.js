@@ -42,6 +42,35 @@
     split(title);
   }
 
+  // Scroll reveal: blocks rise and fade in as they enter the screen (skipped when the visitor prefers reduced motion)
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce && 'IntersectionObserver' in window) {
+    var picks = Array.prototype.slice.call(document.querySelectorAll(
+      '.container .row > [class*="col-"], .section-title-bar, h1.display-6, h2.display-6, .stats-card, .about-mid-card, .card, .team-item, ' +
+      '.partner-card, .fo-card, .ab-head, .ab-photo, .ab-split > .ab-text, .ab-card, .contact-map-iframe'
+    )).filter(function (el) { return !el.closest('.su-header, .su-hero, .footer, .bg-dark, .modal, form'); });
+    // wrappers that hold other picked blocks stay still, so every block moves on its own
+    picks = picks.filter(function (el) { return !picks.some(function (o) { return o !== el && el.contains(o); }); });
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var el = e.target; io.unobserve(el);
+        el.classList.add('in');
+        // afterwards hand the element back to its own hover transitions
+        setTimeout(function () { el.classList.remove('su-reveal', 'in'); el.style.removeProperty('--d'); }, 1400);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    var groups = new Map();
+    picks.forEach(function (el) {
+      // blocks of one row come in one after another
+      var group = el.closest('.row, .partner-grid, .fo-list, .ab-pair, .ab-split') || el.parentElement;
+      var n = groups.get(group) || 0; groups.set(group, n + 1);
+      el.style.setProperty('--d', ((n % 4) * 0.09) + 's');
+      el.classList.add('su-reveal');
+      io.observe(el);
+    });
+  }
+
   // Images whose file is missing get a branded placeholder instead of a broken-image box
   var swap = function (img) {
     if (!img || img.dataset.suFallback || img.closest('.su-logo, .su-hero')) return;
