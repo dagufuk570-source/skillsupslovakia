@@ -34,8 +34,8 @@
     <!-- SkillUp theme: teal + gold from the logo, light and dark mode (loaded last on purpose) -->
     <link href="/css/skillup-theme.css?v=20261123-8" rel="stylesheet">
     <script>
-      /* theme before first paint: saved choice, else the device setting */
-      (function () { var t = null; try { t = localStorage.getItem('su-theme'); } catch (e) {} if (t !== 'light' && t !== 'dark') t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t); })();
+      /* theme before first paint: saved choice, else light (new visitors start in light mode) */
+      (function () { var t = null; try { t = localStorage.getItem('su-theme'); } catch (e) {} if (t !== 'light' && t !== 'dark') t = 'light'; document.documentElement.setAttribute('data-theme', t); })();
     </script>
 </head>
 
