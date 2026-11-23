@@ -165,6 +165,9 @@
             <a class="nav-link <%= active === 'user-guide' ? 'active' : '' %>" href="/admin/user-guide?lang=<%= lang %>">
               <i class="fas fa-book me-2"></i><%= t('userGuide') %>
             </a>
+            <a class="nav-link <%= active === 'change-password' ? 'active' : '' %>" href="/admin/change-password?lang=<%= lang %>">
+              <i class="fas fa-key me-2"></i><%= t('changePassword') === 'changePassword' ? 'Change password' : t('changePassword') %>
+            </a>
             <a class="nav-link" href="/?lang=<%= lang %>" target="_blank">
               <i class="fas fa-external-link-alt me-2"></i><%= t('viewSite') %>
             </a>

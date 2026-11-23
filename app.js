@@ -881,7 +881,7 @@ const TRANSLATIONS = {
     pageAboutUs: 'Page: About Us', editAboutUsPage: 'Edit About Us Page', openWebsite: 'Open website', openSite: 'Open Site',
     adminInterface: 'Admin interface', supportedLanguages: 'Supported languages',
     // User Guide
-    userGuide: 'User Guide', adminPanelUserGuide: 'Admin Panel User Guide'
+    userGuide: 'User Guide', adminPanelUserGuide: 'Admin Panel User Guide', changePassword: 'Change password'
   },
   sk: {
     menu: 'Menu', callUs: 'Zavolajte nám', mailUs: 'Napíšte nám', address: 'Adresa', learnMore: 'Zistiť viac', viewEvents: 'Zobraziť podujatia',
@@ -1030,7 +1030,7 @@ const TRANSLATIONS = {
     pageAboutUs: 'Stránka: O nás', editAboutUsPage: 'Upraviť stránku O nás', openWebsite: 'Otvoriť webovú stránku', openSite: 'Otvoriť stránku',
     adminInterface: 'Administrátorské rozhranie', supportedLanguages: 'Podporované jazyky',
     // User Guide
-    userGuide: 'Používateľská príručka', adminPanelUserGuide: 'Používateľská príručka administrátorského panelu'
+    userGuide: 'Používateľská príručka', adminPanelUserGuide: 'Používateľská príručka administrátorského panelu', changePassword: 'Zmeniť heslo'
   },
   hu: {
     home: 'Főoldal', themes: 'Témák', focusAreas: 'Fókuszterületek', events: 'Események', team: 'Csapatunk', partners: 'Partnerek', news: 'Hírek', documents: 'Dokumentumok',
@@ -1104,25 +1104,50 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// Admin password: the one chosen in the panel (scrypt hash in the database) wins; until one is set, ADMIN_PASS applies.
+let adminHash; // undefined = not loaded yet, null = none set
+async function loadAdminHash(){
+  if (adminHash === undefined) { try { adminHash = await db.getAdminPasswordHash(); } catch (e) { console.error('[admin auth] could not read the stored password:', e.message); return null; } }
+  return adminHash;
+}
+function hashAdminPassword(pw){
+  const salt = crypto.randomBytes(16).toString('hex');
+  return `scrypt$${salt}$${crypto.scryptSync(String(pw), salt, 64).toString('hex')}`;
+}
+function safeEqual(x, y){
+  const p = Buffer.from(String(x)), q = Buffer.from(String(y));
+  return p.length === q.length && crypto.timingSafeEqual(p, q);
+}
+async function adminPasswordOk(pw){
+  const stored = await loadAdminHash();
+  if (stored) {
+    const [, salt, hash] = stored.split('$');
+    return safeEqual(crypto.scryptSync(String(pw), salt, 64).toString('hex'), hash);
+  }
+  return safeEqual(pw, process.env.ADMIN_PASS || '');
+}
+
 // Basic auth middleware for admin routes (optional)
-function basicAuth(req, res, next){
+async function basicAuth(req, res, next){
   const adminUser = process.env.ADMIN_USER;
   const adminPass = process.env.ADMIN_PASS;
   // if not configured, allow access (dev convenience)
   if(!adminUser || !adminPass) return next();
 
+  const ask = () => { res.setHeader('WWW-Authenticate', 'Basic realm="Admin"'); return res.status(401).send('Authentication required'); };
   const auth = req.headers['authorization'];
-  if(!auth){
-    res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
-    return res.status(401).send('Authentication required');
-  }
+  if(!auth) return ask();
   const parts = auth.split(' ');
   if(parts.length !== 2 || parts[0] !== 'Basic') return res.status(400).send('Bad authorization header');
   const creds = Buffer.from(parts[1], 'base64').toString('utf8');
-  const [user, pass] = creds.split(':');
-  if(user === adminUser && pass === adminPass) return next();
-  res.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
-  return res.status(403).send('Forbidden');
+  const sep = creds.indexOf(':');
+  const user = sep < 0 ? creds : creds.slice(0, sep);
+  const pass = sep < 0 ? '' : creds.slice(sep + 1);
+  try {
+    if(user === adminUser && await adminPasswordOk(pass)) return next();
+  } catch (e) { console.error('[admin auth]', e.message); }
+  // 401 (not 403) so the browser asks again, e.g. right after the password was changed
+  return ask();
 }
 
 app.get('/', async (req,res) =>{
@@ -1721,6 +1746,27 @@ app.get('/admin', basicAuth, async (req,res)=>{
 // Admin User Guide
 app.get('/admin/user-guide', basicAuth, (req, res) => {
   res.render('admin-user-guide', { lang: res.locals.lang, useDb: true, active: 'user-guide', title: 'User Guide' });
+});
+
+// Admin: change the panel password
+app.get('/admin/change-password', basicAuth, (req, res) => {
+  res.render('admin-change-password', { lang: res.locals.lang, useDb: true, active: 'change-password', title: 'Change password', error: null, done: false });
+});
+app.post('/admin/change-password', basicAuth, async (req, res) => {
+  const { current = '', password = '', confirm = '' } = req.body || {};
+  const view = (error, done = false) => res.status(error ? 400 : 200).render('admin-change-password', { lang: res.locals.lang, useDb: true, active: 'change-password', title: 'Change password', error, done });
+  try {
+    if (!(await adminPasswordOk(current))) return view('current');
+    if (String(password).length < 8) return view('short');
+    if (password !== confirm) return view('mismatch');
+    const hash = hashAdminPassword(password);
+    await db.setAdminPasswordHash(hash);
+    adminHash = hash;
+    return view(null, true);
+  } catch (err) {
+    console.error('[admin change-password]', err.message);
+    return view('server');
+  }
 });
 
 // Admin logout endpoint

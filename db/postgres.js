@@ -705,6 +705,20 @@ export async function setFocusAreaGroup(id, group_id){
   return res.rows[0];
 }
 
+// Admin password set from the panel (one row). Empty until someone changes the password; then it replaces ADMIN_PASS.
+async function ensureAdminAuth(){
+  await pool.query('CREATE TABLE IF NOT EXISTS admin_auth (id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1), password_hash text NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())');
+}
+export async function getAdminPasswordHash(){
+  await ensureAdminAuth();
+  const res = await pool.query('SELECT password_hash FROM admin_auth WHERE id = 1');
+  return res.rows[0]?.password_hash || null;
+}
+export async function setAdminPasswordHash(hash){
+  await ensureAdminAuth();
+  await pool.query('INSERT INTO admin_auth (id, password_hash) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET password_hash = EXCLUDED.password_hash, updated_at = now()', [hash]);
+}
+
 export async function getSettings(lang){
   const res = await pool.query('SELECT config FROM settings WHERE lang=$1', [lang]);
   return res.rows[0]?.config || {};
