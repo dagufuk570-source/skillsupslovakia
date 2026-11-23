@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title><%= page.title %> - SkillsUp Slovakia</title>
+    <title><%= page.title ? page.title + ' · ' : '' %>SkillUp Slovakia</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="" name="keywords">
     <meta content="" name="description">
@@ -16,7 +16,7 @@
     <!-- Google Web Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Open+Sans&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Icon Font Stylesheet -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
@@ -31,193 +31,104 @@
 
     <!-- Template Stylesheet -->
     <link href="/css/style.css?v=20251010-2" rel="stylesheet">
+    <!-- SkillUp theme: teal + gold from the logo, light and dark mode (loaded last on purpose) -->
+    <link href="/css/skillup-theme.css?v=20261123-5" rel="stylesheet">
+    <script>
+      /* theme before first paint: saved choice, else the device setting */
+      (function () { var t = null; try { t = localStorage.getItem('su-theme'); } catch (e) {} if (t !== 'light' && t !== 'dark') t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t); })();
+    </script>
 </head>
 
 <body>
     <% if (typeof t === 'undefined' || !t) { 
         var t = function(k){ try { return (typeof lang !== 'undefined' && lang.toLowerCase() === 'sk') ? k : k; } catch(e){ return k; } } 
     } %>
-    <!-- Spinner Start -->
-    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
-        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-    </div>
-    <!-- Spinner End -->
-
-    <!-- Topbar Start -->
-    <div class="container-fluid bg-secondary top-bar wow fadeIn" data-wow-delay="0.1s">
-        <div class="row align-items-center h-100">
-            <div class="col-lg-4 text-center text-lg-start">
-                <a href="/?lang=<%= lang %>" class="d-inline-flex align-items-center">
-                    <img src="/img/logo.png" alt="SkillsUp Slovakia" class="img-fluid site-logo" style="max-height:64px; width:auto;" />
-                    <span class="visually-hidden">SkillsUp Slovakia</span>
-                </a>
-            </div>
-            <div class="col-lg-8 d-none d-lg-block">
-                <div class="row">
-                    <div class="col-lg-4">
-                        <div class="d-flex justify-content-end">
-                            <div class="flex-shrink-0 btn-square bg-primary">
-                                <i class="fa fa-phone-alt text-dark"></i>
-                            </div>
-                            <div class="ms-2">
-                                <h6 class="text-primary mb-0"><%= t('callUs') %></h6>
-                                <span class="text-white"><%= (typeof site !== 'undefined' && site.contact && site.contact.phone) ? site.contact.phone : '+421 123 456 789' %></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <div class="d-flex justify-content-end">
-                            <div class="flex-shrink-0 btn-square bg-primary">
-                                <i class="fa fa-envelope-open text-dark"></i>
-                            </div>
-                            <div class="ms-2">
-                                <h6 class="text-primary mb-0"><%= t('mailUs') %></h6>
-                                <span class="text-white"><%= (typeof site !== 'undefined' && site.contact && site.contact.email) ? site.contact.email : 'info@skillupslovakia.com' %></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <div class="d-flex justify-content-end">
-                            <div class="flex-shrink-0 btn-square bg-primary">
-                                <i class="fa fa-map-marker-alt text-dark"></i>
-                            </div>
-                            <div class="ms-2">
-                                <h6 class="text-primary mb-0"><%= t('address') %></h6>
-                                <span class="text-white"><%= (typeof site !== 'undefined' && site.contact && site.contact.address) ? site.contact.address : 'Bratislava, Slovakia' %></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Topbar End -->
-
-    <!-- Navbar Start -->
-    <div class="container-fluid bg-secondary px-0 wow fadeIn" data-wow-delay="0.1s">
-        <div class="nav-bar">
-            <nav class="navbar navbar-expand-lg bg-primary navbar-dark px-4 py-lg-0">
-                <h4 class="d-lg-none m-0"><%= t('menu') %></h4>
-                <button type="button" class="navbar-toggler me-0" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                                <div class="collapse navbar-collapse" id="navbarCollapse">
-                    <div class="navbar-nav me-auto">
-                                                <a href="/?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/' ? 'active' : '') %>">
-                                                    <span class="text-capitalize"><%= t('home') %></span>
-                                                </a>
-                                                                        <% if (menu && menu.length > 0) { %>
-                                                                            <% const aboutItem = (menu.find(item => item.slug === 'about-us') || menu.find(item => item.slug === 'about')); %>
-                                                                            <% if (aboutItem) { %>
-                                                                                <a href="/page/<%= aboutItem.slug %>?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/page/' + aboutItem.slug ? 'active' : '') %>">
-                                                                                    <span class="text-capitalize"><%= aboutItem.label || t('about') %></span>
-                                                                                </a>
-                                                                            <% } %>
-                                                                        <% } %>
-                                                <a href="/themes?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/themes' ? 'active' : '') %>">
-                                                    <span class="text-capitalize"><%= t('themes') %></span>
-                                                </a>
-                                                <a href="/focus-areas?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/focus-areas' ? 'active' : '') %>">
-                                                    <span class="text-capitalize"><%= t('focusAreas') %></span>
-                                                </a>
-                        <a href="/events?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/events' || currentPath.startsWith('/events/') ? 'active' : '') %>">
-                            <span class="text-capitalize"><%= t('events') %></span>
-                        </a>
-                        <a href="/team?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/team' || currentPath.startsWith('/team/') ? 'active' : '') %>">
-                            <span class="text-capitalize"><%= t('team') %></span>
-                        </a>
-                        <a href="/partners?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/partners' ? 'active' : '') %>">
-                            <span class="text-capitalize"><%= t('partners') %></span>
-                        </a>
-                        <a href="/news?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/news' || currentPath.startsWith('/news/') ? 'active' : '') %>">
-                            <span class="text-capitalize"><%= t('news') %></span>
-                        </a>
-                        <a href="/documents?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/documents' ? 'active' : '') %>">
-                            <span class="text-capitalize"><%= t('documents') %></span>
-                        </a>
-                        <% if (menu && menu.length > 0) { %>
-                                                    <% const gdprItem = menu.find(item => item.slug === 'gdpr'); %>
-                                                    <% if (gdprItem) { %>
-                                                        <a href="/page/<%= gdprItem.slug %>?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/page/' + gdprItem.slug ? 'active' : '') %>">
-                                                            <span class="text-capitalize"><%= gdprItem.label || t('gdpr') %></span>
-                                                        </a>
-                                                    <% } %>
-                                                    <% const contactItem = menu.find(item => item.slug === 'contact'); %>
-                                                    <% if (contactItem) { %>
-                                                        <a href="/page/<%= contactItem.slug %>?lang=<%= lang %>" class="nav-item nav-link <%= (currentPath === '/page/' + contactItem.slug ? 'active' : '') %>">
-                                                            <span class="text-capitalize"><%= contactItem.label || t('contact') %></span>
-                                                        </a>
-                                                    <% } %>
-                        <% } %>
-                    </div>
-                    <div class="d-none d-lg-flex ms-auto align-items-center ps-3">
-                        <% 
-                            const scTop = (typeof site !== 'undefined' && site.contact) ? site.contact : {}; 
-                            const hasFbTop = !!(scTop.facebook && (''+scTop.facebook).trim());
-                            const hasTwTop = !!(scTop.twitter && (''+scTop.twitter).trim());
-                            const hasIgTop = !!(scTop.instagram && (''+scTop.instagram).trim());
-                            const hasLiTop = !!(scTop.linkedin && (''+scTop.linkedin).trim());
-                            const hasYtTop = !!(scTop.youtube && (''+scTop.youtube).trim());
-                            const hasAnyTopSocial = hasFbTop || hasTwTop || hasIgTop || hasLiTop || hasYtTop;
-                        %>
-                        <% if (hasAnyTopSocial) { %>
-                        <div class="d-flex align-items-center me-3">
-                            <% if (hasFbTop) { %><a class="btn btn-sm btn-outline-light btn-social me-2" href="<%= scTop.facebook %>" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a><% } %>
-                            <% if (hasTwTop) { %><a class="btn btn-sm btn-outline-light btn-social me-2" href="<%= scTop.twitter %>" target="_blank" rel="noopener" aria-label="Twitter"><i class="fab fa-twitter"></i></a><% } %>
-                            <% if (hasIgTop) { %><a class="btn btn-sm btn-outline-light btn-social me-2" href="<%= scTop.instagram %>" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a><% } %>
-                            <% if (hasLiTop) { %><a class="btn btn-sm btn-outline-light btn-social me-2" href="<%= scTop.linkedin %>" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a><% } %>
-                            <% if (hasYtTop) { %><a class="btn btn-sm btn-outline-light btn-social" href="<%= scTop.youtube %>" target="_blank" rel="noopener" aria-label="YouTube"><i class="fab fa-youtube"></i></a><% } %>
-                        </div>
-                        <div class="vr bg-light opacity-50 mx-2" style="height:24px;"></div>
-                        <% } %>
-                        <a class="btn btn-sm btn-outline-light me-2 <%= lang==='en' ? 'active' : '' %>" href="?lang=en">EN</a>
-                        <a class="btn btn-sm btn-outline-light me-2 <%= lang==='sk' ? 'active' : '' %>" href="?lang=sk">SK</a>
-                        <a class="btn btn-sm btn-outline-light <%= lang==='hu' ? 'active' : '' %>" href="?lang=hu">HU</a>
-                    </div>
+    <%
+        const __m = (typeof menu !== 'undefined' && Array.isArray(menu)) ? menu : [];
+        const __about = __m.find(i => i.slug === 'about-us') || __m.find(i => i.slug === 'about');
+        const __gdpr = __m.find(i => i.slug === 'gdpr');
+        const __contact = __m.find(i => i.slug === 'contact');
+        const __cp = (typeof currentPath !== 'undefined' && currentPath) ? currentPath : '/';
+        const __nav = [
+            ['/', t('home'), __cp === '/'],
+            __about ? ['/page/' + __about.slug, __about.label || t('about'), __cp === '/page/' + __about.slug] : null,
+            ['/themes', t('themes'), __cp === '/themes' || __cp.startsWith('/themes/')],
+            ['/focus-areas', t('focusAreas'), __cp === '/focus-areas'],
+            ['/events', t('events'), __cp === '/events' || __cp.startsWith('/events/')],
+            ['/team', t('team'), __cp === '/team' || __cp.startsWith('/team/')],
+            ['/partners', t('partners'), __cp === '/partners'],
+            ['/news', t('news'), __cp === '/news' || __cp.startsWith('/news/')],
+            ['/documents', t('documents'), __cp === '/documents'],
+            __gdpr ? ['/page/' + __gdpr.slug, __gdpr.label || t('gdpr'), __cp === '/page/' + __gdpr.slug] : null
+        ].filter(Boolean);
+        const __href = (u) => u + (u.includes('?') ? '&' : '?') + 'lang=' + lang;
+    %>
+    <!-- Header: one sticky row (logo, menu, languages, contact) -->
+    <header class="su-header" id="suHeader">
+        <div class="container su-header-inner">
+            <a href="/?lang=<%= lang %>" class="su-logo" aria-label="SkillUp Slovakia">
+                <img src="/img/logo.png" alt="SkillUp Slovakia" />
+            </a>
+            <nav class="su-nav" id="suNav" aria-label="Main">
+                <% __nav.forEach(([u, label, on]) => { %>
+                    <a href="<%= __href(u) %>" class="su-nav-link <%= on ? 'active' : '' %>"><%= label %></a>
+                <% }) %>
+                <% if (__contact) { %>
+                    <a href="<%= __href('/page/' + __contact.slug) %>" class="su-nav-link su-nav-contact-mobile <%= __cp === '/page/' + __contact.slug ? 'active' : '' %>"><%= __contact.label || t('contact') %></a>
+                <% } %>
+                <div class="su-lang su-lang-mobile">
+                    <a class="<%= lang==='en' ? 'active' : '' %>" href="?lang=en">EN</a><a class="<%= lang==='sk' ? 'active' : '' %>" href="?lang=sk">SK</a><a class="<%= lang==='hu' ? 'active' : '' %>" href="?lang=hu">HU</a>
                 </div>
             </nav>
+            <div class="su-actions">
+                <div class="su-lang">
+                    <a class="<%= lang==='en' ? 'active' : '' %>" href="?lang=en">EN</a><a class="<%= lang==='sk' ? 'active' : '' %>" href="?lang=sk">SK</a><a class="<%= lang==='hu' ? 'active' : '' %>" href="?lang=hu">HU</a>
+                </div>
+                <button type="button" class="su-theme" id="suTheme" aria-label="Light / dark"><i class="fas fa-moon"></i><i class="fas fa-sun"></i></button>
+                <% if (__contact) { %>
+                    <a href="<%= __href('/page/' + __contact.slug) %>" class="su-btn su-btn-main su-header-cta"><%= __contact.label || t('contact') %></a>
+                <% } %>
+                <button type="button" class="su-burger" id="suBurger" aria-label="<%= t('menu') %>" aria-expanded="false" aria-controls="suNav"><span></span><span></span><span></span></button>
+            </div>
         </div>
-    </div>
-    <!-- Navbar End -->
+    </header>
 
     <!-- Back-to-list will be shown alongside the section header below if provided -->
 
-    <!-- Hero/Slider Section (for homepage only) -->
+    <!-- Hero (homepage only). Light mode: floating photo stack on soft colour fields. Dark mode: arch photo on deep teal. -->
     <% if (typeof slider !== 'undefined' && Array.isArray(slider) && slider.length > 0) { %>
-    <% const __bgAttr = (typeof sliderBg !== 'undefined' && sliderBg) ? (' style="background-position:center;background-size:cover;background-repeat:no-repeat;background-image:url(\'' + sliderBg + '\');"') : '';%>
-        <% const __align = (typeof sliderTextAlign !== 'undefined' && sliderTextAlign) ? sliderTextAlign : 'center'; %>
-        <% const __titleColor = (typeof sliderTitleColor !== 'undefined' && sliderTitleColor) ? sliderTitleColor : '#ffffff'; %>
-        <% const __captionColor = (typeof sliderCaptionColor !== 'undefined' && sliderCaptionColor) ? sliderCaptionColor : '#ffffff'; %>
-        <% const __textAlignClass = (__align === 'left') ? 'text-start' : ((__align === 'right') ? 'text-end' : 'text-center'); %>
-        <% const __justifyClass = (__align === 'left') ? 'justify-content-start' : ((__align === 'right') ? 'justify-content-end' : 'justify-content-center'); %>
-        <% const __titleStyleAttr = ' style="color:' + __titleColor + ';"'; %>
-        <% const __captionStyleAttr = ' style="color:' + __captionColor + ';"'; %>
-        <div class="container-fluid p-0 wow fadeIn" data-wow-delay="0.1s">
-            <div class="owl-carousel header-carousel py-5"<%- __bgAttr %>>
-                <% slider.forEach((s, idx) => { const _title = (typeof s.title === 'string') ? s.title : ''; const _caption = (typeof s.caption === 'string') ? s.caption : ''; %>
-                    <div class="container py-5">
-                        <div class="row g-5 align-items-center">
-                            <div class="col-12">
-                                <div class="carousel-text <%= __textAlignClass %>">
-                                    <% if (_title) { %>
-                                        <h1 class="display-1 text-uppercase mb-3"<%- __titleStyleAttr %>><%= _title %></h1>
-                                    <% } %>
-                                    <% if (_caption) { %>
-                                        <p class="fs-5 mb-5"<%- __captionStyleAttr %>><%= _caption %></p>
-                                    <% } %>
-                                    <div class="d-flex <%= __justifyClass %>">
-                                        <% if (s.link) { %>
-                                            <a class="btn btn-primary py-3 px-4 me-3" href="<%= s.link %>"><%= t('learnMore') %></a>
-                                        <% } %>
-                                        <a class="btn btn-secondary py-3 px-4" href="/events?lang=<%= lang %>"><%= t('viewEvents') %></a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        <% const __s = slider.find(x => x && (x.title || x.caption)) || {}; %>
+        <% const __esc = (v) => String(v || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); %>
+        <% const __title = __esc(__s.title).replace(/\*([^*]+)\*/, '<em>$1<svg viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M4 14 C 70 2, 150 2, 296 12"/></svg></em>'); %>
+        <% const __ph = ((typeof heroPhotos !== 'undefined' && Array.isArray(heroPhotos)) ? heroPhotos : []).filter(Boolean); %>
+        <% const __st = (typeof heroStats !== 'undefined' && Array.isArray(heroStats)) ? heroStats[1] || heroStats[0] : null; %>
+        <% const __aboutHref = (typeof menu !== 'undefined' && Array.isArray(menu) && (menu.find(i => i.slug === 'about-us') || menu.find(i => i.slug === 'about'))) ? '/page/' + (menu.find(i => i.slug === 'about-us') || menu.find(i => i.slug === 'about')).slug + '?lang=' + lang : ''; %>
+        <section class="su-hero">
+            <div class="su-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="container su-hero-grid">
+                <div class="su-hero-copy">
+                    <h1 class="su-hero-title" id="suHeroTitle"><%- __title %></h1>
+                    <% if (__s.caption) { %><p class="su-hero-lead"><%= __s.caption %></p><% } %>
+                    <div class="su-hero-actions">
+                        <a class="su-btn su-btn-main" href="<%= __s.link || ('/events?lang=' + lang) %>"><%= __s.link ? t('learnMore') : t('viewEvents') %></a>
+                        <% if (__aboutHref) { %><a class="su-btn su-btn-quiet" href="<%= __aboutHref %>"><%= t('about') %></a><% } %>
                     </div>
-                <% }) %>
+                </div>
+                <% if (__ph.length) { %>
+                <div class="su-hero-visual" aria-hidden="true">
+                    <div class="su-stack">
+                        <% __ph.slice(0, 3).forEach((u, i) => { %><div class="su-ph su-ph-<%= i + 1 %>"><img src="<%= u %>" alt="" <%= i === 0 ? 'fetchpriority="high"' : '' %>></div><% }) %>
+                    </div>
+                    <div class="su-arch-wrap">
+                        <div class="su-arch"><img src="<%= __ph[0] %>" alt=""></div>
+                        <div class="su-ring"></div>
+                        <% if (__ph[1]) { %><div class="su-small"><img src="<%= __ph[1] %>" alt=""></div><% } %>
+                    </div>
+                    <% if (__st && __st.label) { %><div class="su-chip"><strong><%= __st.value %><%= __st.suffix || '' %></strong><span><%= __st.label %></span></div><% } %>
+                </div>
+                <% } %>
             </div>
-        </div>
+        </section>
     <% } %>
 
     <!-- Optional Page Hero injected by route (e.g., contact map) -->
@@ -281,7 +192,7 @@
             <div class="row g-5">
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-primary mb-3">
-                        <img src="/img/logo.png" alt="SkillsUp Slovakia" class="img-fluid" style="max-height:72px; width:auto;" />
+                        <img src="/img/logo.png" alt="SkillUp Slovakia" class="img-fluid" style="max-height:72px; width:auto;" />
                     </h4>
                     <% const sc = (typeof site !== 'undefined' && site.contact) ? site.contact : {}; %>
                     <% 
@@ -338,6 +249,8 @@
                     <a class="btn btn-link text-light" href="?lang=sk">Slovenčina</a>
                     <a class="btn btn-link text-light" href="?lang=hu">Magyar</a>
                 </div>
+                <% const __galleryAll = (typeof footerGallery !== 'undefined' && Array.isArray(footerGallery)) ? footerGallery : []; %>
+                <% if (__galleryAll.length > 0) { %>
                 <div class="col-lg-3 col-md-6">
                     <% const __galTitleMap = { en: 'Gallery', sk: 'Galéria', hu: 'Galéria' }; %>
                     <h4 class="text-primary mb-3"><%= __galTitleMap[(lang||'en').toLowerCase()] || 'Gallery' %></h4>
@@ -352,10 +265,9 @@
                         </div>
                         <% }) %>
                     </div>
-                    <% } else { %>
-                        <div class="text-muted small">No images yet.</div>
                     <% } %>
                 </div>
+                <% } %>
             </div>
         </div>
     </div>
@@ -366,7 +278,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                    &copy; <a class="border-bottom" href="#">SkillsUp Slovakia</a>, <%= t('allRightsReserved') %>
+                    &copy; <%= new Date().getFullYear() %> <a class="border-bottom" href="/?lang=<%= lang %>">SkillUp Slovakia</a>, <%= t('allRightsReserved') %>
                 </div>
                 <div class="col-md-6 text-center text-md-end"></div>
             </div>
@@ -388,6 +300,7 @@
 
     <!-- Template Javascript -->
     <script src="/js/main.js"></script>
+    <script src="/js/skillup-theme.js?v=20261123-5"></script>
         <script>
             // Simple, dependency-free lightbox for elements with class="lightbox"
             (function(){

@@ -84,6 +84,48 @@ function sanitizeLocation(input){
   return s || null;
 }
 
+// Text pasted from Word / Google Docs / chat tools arrives full of inline fonts, colours and wrapper tags.
+// Keep the structure (headings, paragraphs, lists, links, bold) and drop the rest so it follows the site theme.
+function cleanPasted(html){
+  let out = String(html || '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<(script|style|svg|button)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<\/?(span|font|div|article|section|o:p)\b[^>]*>/gi, '')
+    .replace(/<([a-z0-9]+)\s[^>]*>/gi, (m, tag) => {
+      const pick = (n) => { const x = new RegExp(n + '="([^"]*)"', 'i').exec(m); return x ? ` ${n}="${x[1]}"` : ''; };
+      if (/^a$/i.test(tag)) return `<a${pick('href')}>`;
+      if (/^img$/i.test(tag)) return `<img${pick('src')}${pick('alt')}>`;
+      return `<${tag}>`;
+    })
+    .replace(/<p>(\s|&nbsp;|<br>)*<\/p>/gi, '')
+    .replace(/<h1>/gi, '<h2>').replace(/<\/h1>/gi, '</h2>');
+  // "- item" paragraphs are really a list
+  out = out.replace(/<p>\s*[-•–]\s+([\s\S]*?)<\/p>/gi, '<li data-d>$1</li>')
+           .replace(/(?:<li data-d>[\s\S]*?<\/li>\s*)+/g, (m) => `<ul>${m.replace(/ data-d/g, '')}</ul>`)
+           .replace(/<li>\s*<p>([\s\S]*?)<\/p>\s*<\/li>/gi, '<li>$1</li>');
+  return out.trim();
+}
+
+// "Mgr. Tamás Dobosi" -> "TD" (academic titles are skipped)
+function nameInitials(name){
+  return String(name || '').replace(/\b(Mgr|Ing|Bc|PhD|Dr|PaedDr|RNDr|MUDr|JUDr|doc|prof)\.?/gi, '').trim().split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+// True when an uploaded file is still on disk (files outside /uploads are assumed to exist)
+function uploadExists(u){
+  const clean = String(u || '').split('?')[0];
+  if (!clean) return false;
+  try { return !clean.startsWith('/uploads/') || fsSync.existsSync(path.join(__dirname, 'public', clean)); } catch { return false; }
+}
+
+// Gallery for a detail page: skip files that are missing on disk and the photo already shown as the cover.
+// A single photo that is the cover therefore gives no gallery at all.
+function galleryPhotos(images, coverUrl){
+  const clean = (u) => String(u || '').split('?')[0];
+  const onDisk = (u) => { try { return !clean(u).startsWith('/uploads/') || fsSync.existsSync(path.join(__dirname, 'public', clean(u))); } catch { return false; } };
+  return (images || []).filter(i => i && i.image_url && onDisk(i.image_url) && clean(i.image_url) !== clean(coverUrl));
+}
+
 // Resolve canonical gallery owner record within a group for events/news/themes
 async function resolveEventGalleryOwnerId(base){
   try{
@@ -1050,7 +1092,9 @@ app.use(async (req, res, next) => {
       // Footer gallery: get a few random images for display
       try{
         const imgs = await db.listRandomImages?.(12).catch(()=>[]);
-        res.locals.footerGallery = (imgs || []).slice(0, 12);
+        // Skip images whose file is missing on disk (some old uploads were lost in the hosting move)
+        const onDisk = (u) => { try { return !String(u).startsWith('/uploads/') || fsSync.existsSync(path.join(__dirname, 'public', String(u).split('?')[0])); } catch { return false; } };
+        res.locals.footerGallery = (imgs || []).filter(onDisk).slice(0, 12);
       }catch{ res.locals.footerGallery = []; }
     }catch(e){
       res.locals.site.contact = {};
@@ -1102,6 +1146,7 @@ app.get('/', async (req,res) =>{
   let blocksHtml = '';
   let midRowHtml = '';
   let b4RowHtml = '';
+  let heroPhotos = [];
   try {
     const enHome = await db.getPage('en', 'home');
     const curHome = await db.getPage(res.locals.lang, 'home');
@@ -1124,6 +1169,7 @@ app.get('/', async (req,res) =>{
       const b2 = { img: getImg(1), txt: getTxt(1) };
       const b3 = { img: getImg(2), txt: getTxt(2) };
       const b4 = { img: getImg(3), txt: getTxt(3) };
+      heroPhotos = [b1.img, b4.img].filter(Boolean);
       const hasAny = (b1.img || b1.txt || b2.txt || b3.txt || b4.txt);
       if (hasAny) {
         const imageCol = b1.img ? `
@@ -1246,12 +1292,17 @@ app.get('/', async (req,res) =>{
   // Home section header (like other pages): localized small kicker + big heading
   const shLang = (res.locals.lang || 'en').toLowerCase();
   const shMap = {
-    en: { kicker: 'WELCOME', heading: 'Welcome to our site' },
-    sk: { kicker: 'VITAJTE', heading: 'Vitajte na našej stránke' },
-    hu: { kicker: 'ÜDVÖZÖLJÜK', heading: 'Üdvözöljük oldalunkon' }
+    en: { kicker: 'WHO WE ARE', heading: 'Learning that reaches beyond the classroom' },
+    sk: { kicker: 'KTO SME', heading: 'Vzdelávanie, ktoré presahuje triedu' },
+    hu: { kicker: 'KIK VAGYUNK', heading: 'Tanulás, amely túlmutat az osztálytermen' }
   };
   const sectionHeader = shMap[shLang] || shMap.en;
-  return res.render('page', { menu, page: merged, lang: res.locals.lang, slider, sliderBg, sliderTextAlign, sliderTitleColor, sliderCaptionColor, sectionHeader, t: res.locals.t });
+  // Two headline numbers for the hero (first active stats)
+  const heroStats = (Array.isArray(settings.stats) ? settings.stats : [])
+    .filter(st => (typeof st.active === 'boolean' ? st.active : true))
+    .slice(0, 2)
+    .map(st => ({ value: Number.isFinite(+st.value) ? Number(st.value) : 0, suffix: (st.suffix || '').trim(), label: (st.labels && (st.labels[res.locals.lang] || st.labels.en || st.labels.sk || st.labels.hu)) || '' }));
+  return res.render('page', { menu, page: merged, lang: res.locals.lang, slider, sliderBg, sliderTextAlign, sliderTitleColor, sliderCaptionColor, sectionHeader, heroStats, heroPhotos: (Array.isArray(settings.slider_bg_gallery) && settings.slider_bg_gallery.length ? settings.slider_bg_gallery : [sliderBg, ...heroPhotos]).filter(Boolean), t: res.locals.t });
 });
 
 app.get('/page/:slug', async (req,res)=>{
@@ -1410,49 +1461,28 @@ app.get('/page/:slug', async (req,res)=>{
         const txt = ((curA && curA.alt_text) || (enA && enA.alt_text) || '').trim();
         return { img, txt };
       });
+      const onDisk = (u) => { try { return !!u && (!u.startsWith('/uploads/') || fsSync.existsSync(path.join(__dirname, 'public', u.split('?')[0]))); } catch { return false; } };
+      sec.forEach(x => { x.txt = cleanPasted(x.txt); if (!onDisk(x.img)) x.img = ''; });
+      const photo = (u) => u ? `<figure class="ab-photo"><img src="${u}" alt="${aboutL.heading}" loading="lazy"></figure>` : '';
       const rows = [];
-      // Row 1: image left, text right — equal heights
-      if (sec[0] && (sec[0].img || sec[0].txt)){
-        const imageCol = sec[0].img ? `<div class=\"col-md-6 mb-3 mb-md-0\"><div class=\"about-img-fill rounded shadow-sm\"><img src=\"${sec[0].img}\" class=\"w-100\" alt=\"${aboutL.heading}\"></div></div>` : `<div class=\"col-md-6 mb-3 mb-md-0\"></div>`;
-        const textCol = `<div class=\"col-md-6\"><div class=\"bg-white p-3 rounded shadow-sm h-100\">${sec[0].txt}</div></div>`;
-        rows.push(`<div class=\"row align-items-stretch mb-4 about-row wow fadeInUp\" data-wow-delay=\"0.05s\">${imageCol}${textCol}</div>`);
-      }
-      // Row 2: texts for sections 2 and 3 side-by-side (no images) with headers/icons and background variants
-      const t2 = (sec[1] && sec[1].txt) || '';
-      const t3 = (sec[2] && sec[2].txt) || '';
-      if (t2 || t3){
-        const col2 = t2 ? `
-          <div class=\"about-mid-card about-mid-card-left h-100\">
-            <div class=\"about-mid-icon\"><i class=\"fas fa-hands-helping\"></i></div>
-            <div class=\"about-mid-body\">${t2}</div>
-          </div>` : '';
-        const col3 = t3 ? `
-          <div class=\"about-mid-card about-mid-card-right h-100\">
-            <div class=\"about-mid-icon\"><i class=\"fas fa-people-group\"></i></div>
-            <div class=\"about-mid-body\">${t3}</div>
-          </div>` : '';
-        rows.push(`
-          <div class=\"row g-3 align-items-stretch mb-4 about-row wow fadeInUp\" data-wow-delay=\"0.1s\">
-            <div class=\"col-12 col-md-6\">${col2}</div>
-            <div class=\"col-12 col-md-6\">${col3}</div>
-          </div>`);
-      }
-      // Row 3: section 4, text left, image right (reverse of row 1) — equal heights
-      if (sec[3] && (sec[3].img || sec[3].txt)){
-        const textCol = `<div class=\"col-md-6 mb-3 mb-md-0\"><div class=\"bg-white p-3 rounded shadow-sm h-100\">${sec[3].txt}</div></div>`;
-        const imageCol = sec[3].img ? `<div class=\"col-md-6\"><div class=\"about-img-fill rounded shadow-sm\"><img src=\"${sec[3].img}\" class=\"w-100\" alt=\"${aboutL.heading}\"></div></div>` : `<div class=\"col-md-6\"></div>`;
-        rows.push(`<div class=\"row align-items-stretch mb-4 about-row wow fadeInUp\" data-wow-delay=\"0.15s\">${textCol}${imageCol}</div>`);
-      }
-      // Optional decorative header for the About page section
+      // 1: who we are, photo beside the text
+      if (sec[0].img || sec[0].txt) rows.push(`<section class="ab-split${sec[0].img ? '' : ' ab-solo'}">${photo(sec[0].img)}<div class="ab-text">${sec[0].txt}</div></section>`);
+      // 2: two short lists side by side (areas of activity, target groups)
+      if (sec[1].txt || sec[2].txt) rows.push(`<section class="ab-pair">
+          ${sec[1].txt ? `<div class="ab-card"><i class="fas fa-seedling"></i><div class="ab-text">${sec[1].txt}</div></div>` : ''}
+          ${sec[2].txt ? `<div class="ab-card"><i class="fas fa-people-group"></i><div class="ab-text">${sec[2].txt}</div></div>` : ''}
+        </section>`);
+      // 3: mission, text first and photo on the other side
+      if (sec[3].img || sec[3].txt) rows.push(`<section class="ab-split ab-flip${sec[3].img ? '' : ' ab-solo'}">${photo(sec[3].img)}<div class="ab-text">${sec[3].txt}</div></section>`);
       const hdr = `
-        <div class=\"container pt-5\">
-          <div class=\"text-center mx-auto mb-4\" style=\"max-width:820px;\">
-            <div class=\"section-title-bar mb-2\"><div class=\"bar\"></div><span class=\"section-title text-warning\">${aboutL.kicker}</span><div class=\"bar\"></div></div>
-            <h2 class=\"display-6\" style=\"font-family:'Josefin Sans',sans-serif; font-weight:700;\">${aboutL.heading}</h2>
-            <p class=\"text-muted\">${aboutL.subheading}</p>
+        <div class="container pt-5">
+          <div class="ab-head">
+            <div class="section-title-bar mb-2"><span class="section-title">${aboutL.kicker}</span></div>
+            <h1 class="display-6">${aboutL.heading}</h1>
+            <p class="text-muted">${aboutL.subheading}</p>
           </div>
         </div>`;
-  const blocks = rows.length ? `${hdr}<div class=\"container pb-5 about-page\">${rows.join('')}</div>` : `<div class=\"container py-5 about-page\"><div class=\"text-muted\">${aboutL.empty}</div></div>`;
+      const blocks = rows.length ? `${hdr}<div class="container pb-5 about-page">${rows.join('')}</div>` : `<div class="container py-5 about-page"><div class="text-muted">${aboutL.empty}</div></div>`;
       // Render only our custom layout (no default title/card)
       return res.render('page', { 
         menu, 
@@ -4395,12 +4425,30 @@ app.get('/focus-areas', async (req, res) => {
   }
   const bases = Array.from(byGroup.values());
   const rows = await Promise.all(bases.map(b => resolveFocusAreaVariant(b, res.locals.lang)));
-  const thead = `<thead><tr>${labels.map(lb=>`<th class="text-uppercase small">${lb}</th>`).join('')}</tr></thead>`;
-  const tbody = `<tbody>${rows.map(r=>{
+  // One expandable card per focus area: field name and experts up front, the long texts inside
+  const cell = (f, n) => (f[cols[n]] ?? '').toString().trim();
+  const cards = rows.map((r, n) => {
     const f = r.fields || {};
-    return `<tr>${cols.map(c=>`<td>${(f[c] ?? '').toString()}</td>`).join('')}</tr>`;
-  }).join('')}</tbody>`;
-  const tableHtml = `<div class="table-responsive"><table class="table table-striped align-middle focus-areas-table">${thead}${tbody}</table></div>`;
+    const experts = cell(f, 2).replace(/<[^>]+>/g, ' ').split(/,|\n/).map(x => x.trim()).filter(Boolean);
+    const blocks = [3, 4].filter(k => cell(f, k)).map(k => `<div class="fo-block"><h4>${labels[k] || ''}</h4><div>${cell(f, k)}</div></div>`).join('');
+    return `
+      <details class="fo-card"${n === 0 ? ' open' : ''}>
+        <summary>
+          <span class="fo-num">${String(n + 1).padStart(2, '0')}</span>
+          <span class="fo-head">
+            ${cell(f, 0) ? `<span class="fo-group">${cell(f, 0)}</span>` : ''}
+            <span class="fo-title">${cell(f, 1)}</span>
+            ${experts.length ? `<span class="fo-experts">${experts.map(x => `<span>${x}</span>`).join('')}</span>` : ''}
+          </span>
+          <span class="fo-toggle" aria-hidden="true"></span>
+        </summary>
+        <div class="fo-body">
+          <div class="fo-cols">${blocks}</div>
+          ${cell(f, 5) ? `<p class="fo-type"><strong>${labels[5] || ''}:</strong> ${cell(f, 5)}</p>` : ''}
+        </div>
+      </details>`;
+  }).join('');
+  const tableHtml = `<div class="fo-list">${cards}</div>`;
   const shFocus = { kicker: res.locals.t('focusAreasKicker'), heading: res.locals.t('focusAreasHeading'), subheading: '' };
   return res.render('page', { menu, page: { title: res.locals.t('focusAreasTitle'), content: tableHtml }, lang: res.locals.lang, slider: null, sectionHeader: shFocus, t: res.locals.t });
   } catch(err) {
@@ -4616,7 +4664,7 @@ app.get('/themes/:slug', async (req, res) => {
   const pages = await db.listPages(res.locals.lang);
   const menu = buildMenu(pages);
   const ownerId = await resolveThemeGalleryOwnerId(theme);
-  const additionalImages = await db.getAdditionalImages('theme', ownerId);
+  const additionalImages = galleryPhotos(await db.getAdditionalImages('theme', ownerId), theme.image_url);
   const gallery = (additionalImages && additionalImages.length) ? `
     <div class="mt-4">
       <h3 class="mb-3">${res.locals.t('gallery')}</h3>
@@ -4720,7 +4768,7 @@ app.get('/events/:id', async (req, res) => {
   const pages = await db.listPages(res.locals.lang);
   const menu = buildMenu(pages);
   const ownerId = await resolveEventGalleryOwnerId(event);
-  const additionalImages = await db.getAdditionalImages('event', ownerId);
+  const additionalImages = galleryPhotos(await db.getAdditionalImages('event', ownerId), event.image_url);
   const dateBadge = event.event_date ? `<span class="badge bg-primary me-2"><i class="fas fa-calendar me-1"></i>${new Date(event.event_date).toLocaleDateString()}</span>` : '';
   const locBadge = event.location ? `<span class="badge bg-secondary"><i class="fas fa-map-marker-alt me-1"></i>${event.location}</span>` : '';
   const gallery = (additionalImages && additionalImages.length) ? `
@@ -4825,7 +4873,7 @@ app.get('/team', async (req, res) => {
         <div class="team-item d-flex flex-column align-items-stretch h-100 p-0" style="background:#fff; box-shadow:0 0 30px rgba(0,0,0,.05); border-radius:12px; overflow:hidden;">
           <div class="d-flex">
             <div class="p-4 d-flex flex-column align-items-center justify-content-center" style="flex:1 1 0;">
-              ${m.photo_url ? `<a href="/team/${linkId}?lang=${res.locals.lang}"><img class="img-fluid" src="${thumb}" onerror="this.src='${m.photo_url}'" alt="${m.name}" style="width:180px; height:180px; object-fit:cover; border-radius:8px;"></a>` : `<a href="/team/${linkId}?lang=${res.locals.lang}"><img class="img-fluid" src="/img/placeholder-member.svg" alt="${m.name}" style="width:180px; height:180px; object-fit:cover; border-radius:8px;"></a>`}
+              ${uploadExists(m.photo_url) ? `<a href="/team/${linkId}?lang=${res.locals.lang}"><img class="img-fluid" src="${thumb}" onerror="this.src='${m.photo_url}'" alt="${m.name}" style="width:180px; height:180px; object-fit:cover; border-radius:8px;"></a>` : `<a href="/team/${linkId}?lang=${res.locals.lang}" class="team-initials" aria-label="${m.name}"><span>${nameInitials(m.name)}</span></a>`}
             </div>
             <div class="d-flex flex-column justify-content-center align-items-center bg-warning bg-opacity-25 px-3" style="min-width:64px;">
               ${socials}
@@ -4884,7 +4932,7 @@ app.get('/team/:id', async (req, res) => {
   try{
     member = await resolveTeamVariant(member, res.locals.lang);
   } catch {}
-  const photo = member.photo_url || '';
+  const photo = uploadExists(member.photo_url) ? member.photo_url : '';
   const photoDisplay = photo ? photo : '/img/default-team.png';
   const socials = [
     member.facebook ? `<a class="btn btn-sm btn-outline-primary me-2" href="${member.facebook}" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i></a>` : '',
@@ -4896,7 +4944,7 @@ app.get('/team/:id', async (req, res) => {
     <div class="bg-white p-4 rounded">
       <div class="row g-4 align-items-start">
         <div class="col-md-4">
-          ${photo ? `<a href="${photo}" class="lightbox" data-gallery="team-${member.id}"><img src="${photoDisplay}" alt="${member.name}" class="img-fluid rounded w-100" style="object-fit:cover;"></a>` : `<img src="${photoDisplay}" alt="${member.name}" class="img-fluid rounded w-100" style="object-fit:cover;">`}
+          ${photo ? `<a href="${photo}" class="lightbox" data-gallery="team-${member.id}"><img src="${photoDisplay}" alt="${member.name}" class="img-fluid rounded w-100" style="object-fit:cover;"></a>` : `<div class="team-initials team-initials-lg"><span>${nameInitials(member.name)}</span></div>`}
         </div>
         <div class="col-md-8">
           <h3 class="mb-1">${member.name}</h3>
@@ -4928,22 +4976,23 @@ app.get('/partners', async (req, res) => {
         title: '',
         slug: 'partners',
         content: `
-          <div class="container-xxl py-5">
-            <div class="container">
-              <div class="text-center mx-auto mb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 500px;">
-                <div class="d-inline-block rounded-pill bg-secondary text-primary py-1 px-3 mb-3">${res.locals.t('ourPartners')}</div>
-                <h1 class="display-6 mb-5">${res.locals.t('partnersTitle')}</h1>
-              </div>
-              <div class="row g-4 justify-content-center">
-                ${partners.map(p => `
-                  <div class="col-lg-3 col-md-4 col-sm-6 wow fadeInUp" data-wow-delay="0.1s">
-                    <div class="partner-item text-center p-4" style="background: #fff; border-radius: 10px; box-shadow: 0 0 45px rgba(0,0,0,.08); min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                      ${p.logo_url ? `<img src="${p.logo_url}" alt="${p.name}" style="max-width: 100%; max-height: 150px; object-fit: contain; margin-bottom: 15px;">` : ''}
-                      <h5 class="mb-0">${p.name}</h5>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
+          <div class="container py-5">
+            <div class="text-center mx-auto mb-5" style="max-width: 640px;">
+              <div class="section-title-bar mb-2"><span class="section-title">${res.locals.t('ourPartners')}</span></div>
+              <h1 class="display-6">${res.locals.t('partnersTitle')}</h1>
+            </div>
+            <div class="partner-grid">
+              ${partners.map(p => {
+                // "Name, street, town" -> name on top, address underneath
+                const parts = String(p.name || '').split(',');
+                const name = parts.shift().trim();
+                const address = parts.join(',').trim();
+                return `
+                <div class="partner-card">
+                  <div class="partner-logo">${uploadExists(p.logo_url) ? `<img src="${p.logo_url}" alt="${name}" loading="lazy">` : `<span>${name.split(/[\s-]+/).filter(w => /^\p{L}/u.test(w)).map(w => w[0]).slice(0, 3).join('').toUpperCase()}</span>`}</div>
+                  <div class="partner-text"><h3>${name}</h3>${address ? `<p>${address}</p>` : ''}</div>
+                </div>`;
+              }).join('')}
             </div>
           </div>
         `
@@ -5034,7 +5083,7 @@ app.get('/news/:slug', async (req, res) => {
   const pages = await db.listPages(res.locals.lang);
   const menu = buildMenu(pages);
   const ownerId = await resolveNewsGalleryOwnerId(news);
-  const additionalImages = await db.getAdditionalImages('news', ownerId);
+  const additionalImages = galleryPhotos(await db.getAdditionalImages('news', ownerId), news.image_url);
   const summary = news.summary ? `<p class="lead mb-3">${news.summary}</p>` : '';
   const gallery = (additionalImages && additionalImages.length) ? `
     <div class="mt-4">
